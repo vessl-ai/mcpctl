@@ -85,7 +85,7 @@ mcpctl install --repo glama --name my-mcp-server --client claude --client cursor
 And they will use the same mcp server instance.
 
 
-### MCP Servers and Connections
+### MCP Servers and Connection Sessions
 
 To list all MCP servers you have:
 ```bash
@@ -100,9 +100,9 @@ ID     REPO/NAME    PROFILE     STATUS    MODE    TRANSPORT    SSE_ENDPOINT    C
 2      glama/my-mcp-server-2    default    running    container    SSE    http://localhost:8081/sse   2024-01-01 12:00:00
 ```
 
-To list all connections you have:
+To list all connection sessions you have:
 ```bash
-mcpctl connect --list
+mcpctl session list
 ```
 
 This will list all connections you have, including the status of the connection.

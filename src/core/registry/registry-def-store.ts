@@ -5,6 +5,7 @@ interface RegistryDefStore {
   getRegistryDef: (name: string) => RegistryDef;
   addRegistryDef: (registry: RegistryDef) => void;
   listRegistryDefs: () => RegistryDef[];
+  deleteRegistryDef: (name: string) => void;
 }
 
 class ConfigRegistryDefStore implements RegistryDefStore {
@@ -32,6 +33,12 @@ class ConfigRegistryDefStore implements RegistryDefStore {
   listRegistryDefs(): RegistryDef[] {
     const registrySection = this.configService.getConfigSection("registry");
     return registrySection.registries;
+  }
+
+  deleteRegistryDef(name: string): void {
+    const registrySection = this.configService.getConfigSection("registry");
+    registrySection.registries = registrySection.registries.filter((r) => r.name !== name);
+    this.configService.saveConfig();
   }
 }
 

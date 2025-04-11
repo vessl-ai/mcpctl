@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { Command } from "commander";
 import { SearchResult } from "../../core/search/search-result";
 import { App } from "../app";
@@ -7,6 +8,8 @@ type EntryResultFormat = {
   url: string;
   description: string;
   sourceUrl: string;
+  hosting: string;
+  attributes: string[];
 }
 
 type RegistryResultFormat = {
@@ -24,7 +27,9 @@ const formatSearchResult = (result: SearchResult): RegistryResultFormat[] => {
       name: result.name,
       url: result.url,
       description: result.description,
-      sourceUrl: result.sourceUrl
+      sourceUrl: result.sourceUrl,
+      hosting: result.entry.hosting,
+      attributes: result.entry.attributes
     });
     return acc;
   }, {} as Record<string, EntryResultFormat[]>);
@@ -33,6 +38,38 @@ const formatSearchResult = (result: SearchResult): RegistryResultFormat[] => {
     registry,
     items
   }));
+};
+
+const printSearchResults = (results: RegistryResultFormat[]): void => {
+  if (results.length === 0) {
+    console.log(chalk.yellow("\nNo results found."));
+    return;
+  }
+
+  console.log(chalk.bold("\nSearch Results:\n"));
+  
+  results.forEach(registryResult => {
+    console.log(chalk.bold.blue(`Registry: ${registryResult.registry}`));
+    
+    if (registryResult.items.length === 0) {
+      console.log(chalk.dim("  No matches found in this registry\n"));
+      return;
+    }
+
+    registryResult.items.forEach(item => {
+      console.log(chalk.bold.green(`\n  ${item.name}`));
+      console.log(chalk.dim("  Description:"));
+      console.log(`    ${item.description}`);
+      console.log(chalk.dim("  Hosting:"));
+      console.log(`    ${item.hosting || "Not specified"}`);
+      console.log(chalk.dim("  Attributes:"));
+      console.log(`    ${item.attributes?.join(", ") || "None"}`);
+      console.log(chalk.dim("  URLs:"));
+      console.log(`    Main URL:     ${chalk.cyan(item.url)}`);
+      console.log(`    Source URL:   ${chalk.cyan(item.sourceUrl)}`);
+    });
+    console.log(); // Add empty line between registries
+  });
 };
 
 const buildSearchCommand = (app: App): Command => {
@@ -45,51 +82,62 @@ const buildSearchCommand = (app: App): Command => {
     .option("-n, --name <name>", "Name of the MCP server")
     .option("-s, --semantic", "Use semantic search")
 
-
   searchCommand
     .action(async (options: any) => {
       const registry = options.registry;
       const query = options.query;
       const name = options.name;
       const semantic = options.semantic;
+
       if (!name && !query) {
-        searchCommand.error("Either name or query must be provided");
+        console.error(chalk.red("Error: Either name or query must be provided"));
+        process.exit(1);
       }
 
       if (name && query) {
-        searchCommand.error("Only one of name or query can be provided");
+        console.error(chalk.red("Error: Only one of name or query can be provided"));
+        process.exit(1);
       }
       
-      let searchResult: SearchResult | null = null;
+      try {
+        let searchResult: SearchResult | null = null;
 
-      if (registry) {
-        if (semantic) {
-          searchCommand.error("Semantic search is not supported yet");
-        } else {
-        if (query) {
-          searchResult = await searchService.searchByQuery(query);
-        } 
-        if (name) {
-          searchResult = await searchService.searchByRegistryAndName(registry, name);
-        }
-        }
-      } else {
-        if (semantic) {
-          searchCommand.error("Semantic search is not supported yet");
-        } else {
-          if (name) {
-            searchCommand.error("Name search is not supported for all registries");
+        if (registry) {
+          if (semantic) {
+            console.error(chalk.red("Error: Semantic search is not supported yet"));
+            process.exit(1);
+          } else {
+            if (query) {
+              searchResult = await searchService.searchByQueryForRegistry(registry, query);
+            } 
+            if (name) {
+              searchResult = await searchService.searchByRegistryAndName(registry, name);
+            }
           }
-          if (query) {
-            searchResult = await searchService.searchByQuery(query);
+        } else {
+          if (semantic) {
+            console.error(chalk.red("Error: Semantic search is not supported yet"));
+            process.exit(1);
+          } else {
+            if (name) {
+              console.error(chalk.red("Error: Name search is not supported for all registries"));
+              process.exit(1);
+            }
+            if (query) {
+              searchResult = await searchService.searchByQuery(query);
+            }
           }
         }
-      }
 
-      if (searchResult) {
-        console.log(formatSearchResult(searchResult));
-      } else {
-        console.log("No results found");
+        if (searchResult) {
+          const formattedResults = formatSearchResult(searchResult);
+          printSearchResults(formattedResults);
+        } else {
+          console.log(chalk.yellow("\nNo results found."));
+        }
+      } catch (error) {
+        console.error(chalk.red(`\nError: ${error instanceof Error ? error.message : 'An unknown error occurred'}`));
+        process.exit(1);
       }
     });
 

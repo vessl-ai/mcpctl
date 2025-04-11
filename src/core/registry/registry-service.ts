@@ -5,6 +5,7 @@ interface RegistryService {
   getRegistryDef: (name: string) => RegistryDef;
   addRegistryDef: (registry: RegistryDef) => void;
   listRegistryDefs: () => RegistryDef[];
+  deleteRegistryDef: (name: string) => void;
   getRegistryProvider: (name: string) => RegistryProvider;
 };
 
@@ -32,6 +33,10 @@ class RegistryServiceImpl implements RegistryService {
   getRegistryProvider(name: string): RegistryProvider {
     const registryDef = this.getRegistryDef(name);
     return this.registryProviderFactory.createOrGetRegistryProvider(registryDef);
+  }
+
+  deleteRegistryDef(name: string): void {
+    this.registryDefStore.deleteRegistryDef(name);
   }
 }
 

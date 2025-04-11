@@ -8,6 +8,8 @@ type RegistryDef = {
 enum RegistryType {
   GLAMA = "glama",
   SMITHERY = "smithery", 
+  GITHUB = "github",
+  CUSTOM = "custom",
 }
 
 // Base type for all registry entries
@@ -16,6 +18,8 @@ type RegistryEntry = {
   description: string;
   url: string;
   sourceUrl: string;
+  hosting: "local" | "remote";
+  attributes: string[];
 }
 
 
@@ -25,11 +29,11 @@ const defaultRegistryDefs: RegistryDef[] = [
     url: "https://glama.ai/mcp/servers.data",
     knownType: RegistryType.GLAMA,
   },
-  {
-    name: "smithery",
-    url: "https://smithery.io",
-    knownType: RegistryType.SMITHERY,
-  },
+  // {
+  //   name: "smithery",
+  //   url: "https://smithery.io",
+  //   knownType: RegistryType.SMITHERY,
+  // },
 ];
 
 export { defaultRegistryDefs, RegistryDef, RegistryEntry, RegistryType };

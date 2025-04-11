@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { getConfigPath } from "../lib/env";
+import { getConfigDir, getConfigPath } from "../lib/env";
+import { logger } from '../lib/logger';
 import { Config } from "./config";
-
 interface ConfigStore {
   getConfig: () => Config;
   saveConfig: (config: Config) => void;
@@ -12,14 +12,23 @@ class FileConfigStoreImpl implements ConfigStore {
 
 
   constructor(private readonly configPath: string = getConfigPath()) {
+    if (!fs.existsSync(this.configPath)) {
+      fs.mkdirSync(getConfigDir(), { recursive: true });
+      fs.writeFileSync(this.configPath, JSON.stringify({}));
+    }
   }
 
   getConfig(): Config {
-    return JSON.parse(fs.readFileSync(this.configPath, 'utf8'));
+    logger.verbose(`Loading config from ${this.configPath}`);
+    const config = JSON.parse(fs.readFileSync(this.configPath, 'utf8'));
+    logger.verbose(`Loaded config: ${JSON.stringify(config, null, 2)}`);
+    return config;
   }
   
   saveConfig(config: Config): void {
+    logger.verbose(`Saving config to ${this.configPath}, ${JSON.stringify(config, null, 2)}`);
     fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2));
+    logger.verbose(`Saved config to ${this.configPath}`);
   }
 } 
 

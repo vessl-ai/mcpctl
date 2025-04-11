@@ -14,7 +14,15 @@ class ConfigServiceImpl implements ConfigService {
     private readonly configStore: ConfigStore,
     initialConfig?: Config
   ) {
-    this.config = initialConfig ?? defaultConfig;
+    if (initialConfig) {
+      this.config = initialConfig;
+    } else {
+      this.config = this.configStore.getConfig();
+      if (!this.config || Object.keys(this.config).length === 0) {
+        this.config = defaultConfig;
+        this.configStore.saveConfig(this.config);
+      }
+    }
   }
 
   public getConfig(): Config {

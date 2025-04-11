@@ -2,6 +2,7 @@
 
 import { ConfigService, newConfigService } from '../core/config/config-service';
 import { ConfigStore, newFileConfigStore } from '../core/config/config-store';
+import { verboseLog } from '../core/lib/env';
 import { Logger, newConsoleLogger } from '../core/lib/logger';
 import { RegistryProviderFactory, newRegistryProviderFactory } from '../core/registry/providers';
 import { RegistryDefStore, newConfigRegistryDefStore } from '../core/registry/registry-def-store';
@@ -19,7 +20,7 @@ class App {
 
   private initializeDependencies(): void {
     // Register core dependencies
-    this.container.register<Logger>("Logger", newConsoleLogger());
+    this.container.register<Logger>("Logger", newConsoleLogger({showVerbose: verboseLog()}));
 
     // Register ConfigService
     this.container.register<ConfigStore>("ConfigStore", newFileConfigStore());

@@ -18,17 +18,28 @@ const getProfileDir = (): string => {
   return path.join(homeDir, '.mcpctl', 'profiles');
 }
 
-const getConfigPath = (): string => {
+const getConfigDir = (): string => {
   const configDir = process.env.MCPCTL_CONFIG_DIR;
   if (configDir) {
-    return path.join(configDir, 'config.json');
-  }
+    return configDir;
+  } 
   const homeDir = os.homedir();
-  return path.join(homeDir, '.mcpctl', 'config.json');
+  return path.join(homeDir, '.mcpctl', 'config');
+}
+
+const getConfigPath = (): string => {
+  const configDir = getConfigDir();
+  return path.join(configDir, 'config.json');
+}
+
+const verboseLog = (): boolean => {
+  const verbose = process.env.MCPCTL_VERBOSE;
+  if (verbose) {
+    return verbose === 'true';
+  }
+  return false;
 }
 
 
-export {
-  getConfigPath, getProfileDir, getProfileName
-};
+export { getConfigDir, getConfigPath, getProfileDir, getProfileName, verboseLog };
 
