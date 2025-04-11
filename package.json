@@ -1,20 +1,22 @@
 {
   "name": "mcpctl",
-  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cli": "ts-node src/cli/cli.ts",
+    "build": "tsc"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
-    "prettier": "^3.5.3",
-    "turbo": "^2.5.0",
-    "typescript": "5.8.2"
+    "@types/node": "^22.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
-  "packageManager": "pnpm@9.0.0",
-  "engines": {
-    "node": ">=18"
+  "dependencies": {
+    "commander": "^13.1.0"
   }
 }
