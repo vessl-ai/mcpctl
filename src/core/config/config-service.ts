@@ -4,6 +4,7 @@ interface ConfigService {
   getConfig: () => Config;
   getConfigSection<T extends keyof Config>(section: T): Config[T];
   saveConfig: () => void;
+  updateConfig: (config: Partial<Config>) => void;
 }
 
 class ConfigServiceImpl implements ConfigService {
@@ -34,6 +35,11 @@ class ConfigServiceImpl implements ConfigService {
   }
 
   public saveConfig(): void {
+    this.configStore.saveConfig(this.config);
+  }
+
+  public updateConfig(config: Partial<Config>): void {
+    this.config = { ...this.config, ...config };
     this.configStore.saveConfig(this.config);
   }
 

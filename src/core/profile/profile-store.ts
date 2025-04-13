@@ -1,12 +1,14 @@
 import fs from "fs";
 import path from "path";
 import { getProfileDir } from "../lib/env";
-import { Profile } from "./profile";
+import { defaultProfile, Profile } from "./profile";
 interface ProfileStore {
   exists: (name: string) => boolean;
   loadProfile: (name: string) => Profile;
   saveProfile: (name: string, profile: Profile) => void;
   listProfileNames: () => string[];
+  listProfiles: () => Profile[];
+  deleteProfile: (name: string) => void;
 }
 
 
@@ -15,6 +17,13 @@ class ProfileStoreImpl implements ProfileStore {
   constructor(
     private readonly profileDir: string = getProfileDir()
   ) {
+    if (!fs.existsSync(this.profileDir)) {
+      fs.mkdirSync(this.profileDir, { recursive: true });
+    }
+    const defaultProfilePath = path.join(this.profileDir, "default.json");
+    if (!fs.existsSync(defaultProfilePath)) {
+      fs.writeFileSync(defaultProfilePath, JSON.stringify(defaultProfile, null, 2));
+    }
 
   }
 
@@ -38,9 +47,22 @@ class ProfileStoreImpl implements ProfileStore {
   listProfileNames(): string[] {
     return fs.readdirSync(this.profileDir).map(name => name.split('.')[0]);
   }
+
+  listProfiles(): Profile[] {
+    return this.listProfileNames().map(name => this.loadProfile(name));
+  }
+
+  deleteProfile(name: string): void {
+    fs.unlinkSync(this.getProfilePath(name));
+  }
 } 
 
+const newFileProfileStore = (): ProfileStore => {
+  return new ProfileStoreImpl();
+}
+
 export {
-  ProfileStore,
+  newFileProfileStore, ProfileStore,
   ProfileStoreImpl
 };
+

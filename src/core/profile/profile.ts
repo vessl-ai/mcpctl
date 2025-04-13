@@ -1,14 +1,20 @@
+import { ServerType } from "../client/types";
 
 type Profile = {
   name: string;
-  installedMcpServers: any[]; // TODO: define type
-  authentication: {[mcpServerKey: string]: any}; // TODO: define type
+  servers: {
+    [key: string]: {
+      type: ServerType;
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+    }
+  }
 }
 
 const defaultProfile: Profile = {
   name: "default",
-  installedMcpServers: [],
-  authentication: {},
+  servers: {},
 }
 
 export {

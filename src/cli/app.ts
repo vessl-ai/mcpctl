@@ -5,6 +5,8 @@ import { ConfigService, newConfigService } from '../core/config/config-service';
 import { ConfigStore, newFileConfigStore } from '../core/config/config-store';
 import { verboseLog } from '../core/lib/env';
 import { Logger, newConsoleLogger } from '../core/lib/logger';
+import { ProfileService, newProfileService } from '../core/profile/profile-service';
+import { ProfileStore, newFileProfileStore } from '../core/profile/profile-store';
 import { RegistryProviderFactory, newRegistryProviderFactory } from '../core/registry/providers';
 import { RegistryDefStore, newConfigRegistryDefStore } from '../core/registry/registry-def-store';
 import { RegistryService, newRegistryService } from '../core/registry/registry-service';
@@ -23,28 +25,28 @@ class App {
     this.container.register<Logger>("Logger", newConsoleLogger({showVerbose: verboseLog()}));
 
     // Register ConfigService
-    this.container.register<ConfigStore>("ConfigStore", newFileConfigStore());
+    this.container.register<ConfigStore>("configStore", newFileConfigStore());
     this.container.register<ConfigService>(
-      "ConfigService",
-      newConfigService(this.container.get<ConfigStore>("ConfigStore"))
+      "configService",
+      newConfigService(this.container.get<ConfigStore>("configStore"))
     );
 
     // Register RegistryService
     this.container.register<RegistryDefStore>(
-      "RegistryDefStore",
+      "registryDefStore",
       newConfigRegistryDefStore(
-        this.container.get<ConfigService>("ConfigService")
+        this.container.get<ConfigService>("configService")
       )
     );
     this.container.register<RegistryProviderFactory>(
-      "RegistryProviderFactory",
+      "registryProviderFactory",
       newRegistryProviderFactory()
     );
     this.container.register<RegistryService>(
       "registryService",
       newRegistryService(
-        this.container.get<RegistryDefStore>("RegistryDefStore"),
-        this.container.get<RegistryProviderFactory>("RegistryProviderFactory")
+        this.container.get<RegistryDefStore>("registryDefStore"),
+        this.container.get<RegistryProviderFactory>("registryProviderFactory")
       )
     );
 
@@ -58,6 +60,19 @@ class App {
     this.container.register<ClientService>(
       "clientService",
       newClientService()
+    );
+
+    // Register ProfileService
+    this.container.register<ProfileStore>(
+      "profileStore",
+      newFileProfileStore()
+    );
+    this.container.register<ProfileService>(
+      "profileService",
+      newProfileService(
+        this.container.get<ProfileStore>("profileStore"),
+        this.container.get<ConfigService>("configService")
+      )
     );
   }
 
@@ -74,6 +89,10 @@ class App {
 
   public getClientService(): ClientService {
     return this.container.get<ClientService>("clientService");
+  }
+
+  public getProfileService(): ProfileService {
+    return this.container.get<ProfileService>("profileService");
   }
 }
 
