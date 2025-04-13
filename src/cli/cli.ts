@@ -1,6 +1,5 @@
 import { Command } from "commander";
 import { newApp } from "./app";
-import { buildConnectCommand } from "./commands/connect";
 import { buildInstallCommand } from "./commands/install";
 import { buildProfileCommand } from "./commands/profile";
 import { buildRegistryCommand } from "./commands/registry";
@@ -19,7 +18,6 @@ program
   .option("-v, --verbose", "Verbose output")
   .addCommand(buildServerCommand(app))
   .addCommand(buildSessionCommand(app))
-  .addCommand(buildConnectCommand(app))
   .addCommand(buildInstallCommand(app))
   .addCommand(buildProfileCommand(app))
   .addCommand(buildRegistryCommand(app))

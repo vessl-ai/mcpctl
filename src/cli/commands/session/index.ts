@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { App } from "../../app";
+import { buildSessionConnectCommand } from "./connect";
 import { buildSessionListCommand } from "./list";
 import { buildSessionStopCommand } from "./stop";
 
@@ -12,7 +13,7 @@ const buildSessionCommand = (app: App): Command => {
 
   sessionCommand.addCommand(buildSessionListCommand(app));
   sessionCommand.addCommand(buildSessionStopCommand(app));
-
+  sessionCommand.addCommand(buildSessionConnectCommand(app));
   return sessionCommand;
 }
 

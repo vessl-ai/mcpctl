@@ -1,7 +1,7 @@
 import { Command } from "commander";
-import { App } from "../app";
+import { App } from "../../app";
 
-const buildConnectCommand = (app: App): Command => {
+const buildSessionConnectCommand = (app: App): Command => {
   const connectCommand = new Command("connect")
     .description("Connect to MCP server")
     .action(async () => {
@@ -11,4 +11,4 @@ const buildConnectCommand = (app: App): Command => {
   return connectCommand;
 }
 
-export { buildConnectCommand };
+export { buildSessionConnectCommand };

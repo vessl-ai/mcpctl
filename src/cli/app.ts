@@ -1,5 +1,6 @@
 
 
+import { ClientService, newClientService } from '../core/client/client-service';
 import { ConfigService, newConfigService } from '../core/config/config-service';
 import { ConfigStore, newFileConfigStore } from '../core/config/config-store';
 import { verboseLog } from '../core/lib/env';
@@ -9,7 +10,6 @@ import { RegistryDefStore, newConfigRegistryDefStore } from '../core/registry/re
 import { RegistryService, newRegistryService } from '../core/registry/registry-service';
 import { SearchService, newSearchService } from '../core/search/search-service';
 import { BaseContainer, Container } from '../lib/container/container';
-
 class App {
   private container: Container;
 
@@ -53,6 +53,12 @@ class App {
       "searchService",
       newSearchService(this.container.get<RegistryService>("registryService"))
     );
+
+    // Register ClientService
+    this.container.register<ClientService>(
+      "clientService",
+      newClientService()
+    );
   }
 
   public getConfigService(): ConfigService {
@@ -64,6 +70,10 @@ class App {
   }
   public getSearchService(): SearchService {
     return this.container.get<SearchService>("searchService");
+  }
+
+  public getClientService(): ClientService {
+    return this.container.get<ClientService>("clientService");
   }
 }
 
