@@ -1,0 +1,212 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { McpClient, McpClientType } from '../../lib/types/mcp-client';
+import { McpServerInstallConfig, McpServerType } from '../../lib/types/mcp-server';
+import { McpClientServiceImpl, newMcpClientService } from './mcp-client-service';
+
+jest.mock('fs');
+jest.mock('os');
+jest.mock('path');
+jest.mock('../../../../lib/logger/logger', () => ({
+  logger: {
+    verbose: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn()
+  }
+}));
+
+describe('McpClientService', () => {
+  let service: McpClientServiceImpl;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new McpClientServiceImpl();
+  });
+
+  describe('getClient', () => {
+    it('should return claude client', () => {
+      const client = service.getClient('claude');
+      expect(client).toEqual({
+        type: McpClientType.CLAUDE,
+        name: 'claude'
+      });
+    });
+
+    it('should return cursor client', () => {
+      const client = service.getClient('cursor');
+      expect(client).toEqual({
+        type: McpClientType.CURSOR,
+        name: 'cursor'
+      });
+    });
+
+    it('should throw error for unsupported client', () => {
+      expect(() => service.getClient('unknown')).toThrow('Unsupported client: unknown');
+    });
+  });
+
+  describe('generateMcpServerConfig', () => {
+    const baseConfig: McpServerInstallConfig = {
+      type: 'stdio',
+      command: 'test-command',
+      profile: 'test-profile',
+      env: { TEST: 'value' }
+    };
+
+    it('should generate config with provided server name', () => {
+      const config = service.generateMcpServerConfig({
+        ...baseConfig,
+        serverName: 'custom-server'
+      });
+
+      expect(config).toEqual({
+        'custom-server': {
+          type: McpServerType.STDIO,
+          command: 'mcpctl',
+          args: [
+            'session',
+            'connect',
+            '--command',
+            'test-command',
+            '--env',
+            'TEST=value',
+            '--profile',
+            'test-profile'
+          ],
+          profile: 'test-profile'
+        }
+      });
+    });
+
+    it('should generate config with auto-generated server name', () => {
+      const config = service.generateMcpServerConfig(baseConfig);
+
+      expect(config).toEqual({
+        'server-test-command-test-profile': {
+          type: McpServerType.STDIO,
+          command: 'mcpctl',
+          args: [
+            'session',
+            'connect',
+            '--command',
+            'test-command',
+            '--env',
+            'TEST=value',
+            '--profile',
+            'test-profile'
+          ],
+          profile: 'test-profile'
+        }
+      });
+    });
+
+    it('should throw error for unsupported type', () => {
+      expect(() => service.generateMcpServerConfig({
+        ...baseConfig,
+        type: 'sse' as any
+      })).toThrow('SSE is not supported yet');
+    });
+  });
+
+  describe('installMcpServerToClient', () => {
+    const mockConfig = {
+      mcpServers: {}
+    };
+
+    const baseInstallConfig: McpServerInstallConfig = {
+      type: 'stdio',
+      command: 'test-command',
+      profile: 'test-profile'
+    };
+
+    beforeEach(() => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockConfig));
+      (os.platform as jest.Mock).mockReturnValue('darwin');
+      (os.homedir as jest.Mock).mockReturnValue('/Users/test');
+      (path.join as jest.Mock).mockImplementation((...args) => args.join('/'));
+    });
+
+    describe('Claude installation', () => {
+      const claudeClient: McpClient = {
+        type: McpClientType.CLAUDE,
+        name: 'claude'
+      };
+
+      it('should install server to Claude config', async () => {
+        await service.installMcpServerToClient(claudeClient, baseInstallConfig);
+
+        expect(fs.writeFileSync).toHaveBeenCalledWith(
+          '/Users/test/Library/Application Support/Claude/claude_desktop_config.json',
+          expect.any(String)
+        );
+
+        const writtenConfig = JSON.parse((fs.writeFileSync as jest.Mock).mock.calls[0][1]);
+        expect(writtenConfig.mcpServers).toBeDefined();
+        expect(Object.keys(writtenConfig.mcpServers)).toHaveLength(1);
+      });
+
+      it('should throw error if Claude config file not found', async () => {
+        (fs.existsSync as jest.Mock).mockReturnValue(false);
+
+        await expect(service.installMcpServerToClient(claudeClient, baseInstallConfig))
+          .rejects.toThrow('Claude config file not found');
+      });
+
+      it('should handle Windows platform', async () => {
+        (os.platform as jest.Mock).mockReturnValue('win32');
+
+        await service.installMcpServerToClient(claudeClient, baseInstallConfig);
+
+        expect(fs.writeFileSync).toHaveBeenCalledWith(
+          '/Users/test/AppData/Claude/claude_desktop_config.json',
+          expect.any(String)
+        );
+      });
+
+      it('should throw error for unsupported platform', async () => {
+        (os.platform as jest.Mock).mockReturnValue('linux');
+
+        await expect(service.installMcpServerToClient(claudeClient, baseInstallConfig))
+          .rejects.toThrow('Unsupported platform');
+      });
+    });
+
+    describe('Cursor installation', () => {
+      const cursorClient: McpClient = {
+        type: McpClientType.CURSOR,
+        name: 'cursor'
+      };
+
+      it('should install server to Cursor config', async () => {
+        await service.installMcpServerToClient(cursorClient, baseInstallConfig);
+
+        expect(fs.writeFileSync).toHaveBeenCalledWith(
+          '/Users/test/.cursor/mcp.json',
+          expect.any(String)
+        );
+
+        const writtenConfig = JSON.parse((fs.writeFileSync as jest.Mock).mock.calls[0][1]);
+        expect(writtenConfig.mcpServers).toBeDefined();
+        expect(Object.keys(writtenConfig.mcpServers)).toHaveLength(1);
+      });
+
+      it('should throw error if Cursor config file not found', async () => {
+        (fs.existsSync as jest.Mock).mockReturnValue(false);
+
+        await expect(service.installMcpServerToClient(cursorClient, baseInstallConfig))
+          .rejects.toThrow('Cursor config file not found');
+      });
+    });
+  });
+
+  describe('newMcpClientService', () => {
+    it('should create new instance', () => {
+      const service = newMcpClientService();
+      expect(service).toBeInstanceOf(McpClientServiceImpl);
+    });
+  });
+}); 

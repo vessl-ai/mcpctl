@@ -3,9 +3,9 @@
 import { BaseContainer, Container } from '../../lib/container/container';
 import { Logger, newConsoleLogger } from '../../lib/logger/logger';
 import { verboseLog } from '../core/lib/env';
-import { ClientService, newClientService } from '../core/services/client/client-service';
 import { ConfigService, newConfigService } from '../core/services/config/config-service';
 import { ConfigStore, newFileConfigStore } from '../core/services/config/config-store';
+import { McpClientService, newMcpClientService } from '../core/services/mcp-client/mcp-client-service';
 import { ProfileService, newProfileService } from '../core/services/profile/profile-service';
 import { ProfileStore, newFileProfileStore } from '../core/services/profile/profile-store';
 import { RegistryProviderFactory, newRegistryProviderFactory } from '../core/services/registry/providers';
@@ -57,9 +57,9 @@ class App {
     );
 
     // Register ClientService
-    this.container.register<ClientService>(
+    this.container.register<McpClientService>(
       "clientService",
-      newClientService()
+      newMcpClientService()
     );
 
     // Register ProfileService
@@ -87,8 +87,8 @@ class App {
     return this.container.get<SearchService>("searchService");
   }
 
-  public getClientService(): ClientService {
-    return this.container.get<ClientService>("clientService");
+  public getClientService(): McpClientService {
+    return this.container.get<McpClientService>("clientService");
   }
 
   public getProfileService(): ProfileService {

@@ -4,13 +4,14 @@ import path from "path";
 import { logger } from "../../../../lib/logger/logger";
 import { McpClient, McpClientType, } from "../../lib/types/mcp-client";
 import { McpServerConfig, McpServerInstallConfig, McpServerType } from "../../lib/types/mcp-server";
-interface ClientService {
+
+export interface McpClientService {
   getClient(client: string): McpClient;
   generateMcpServerConfig(serverInstallConfig: McpServerInstallConfig): McpServerConfig;
   installMcpServerToClient(client: McpClient, serverInstallConfig: McpServerInstallConfig): Promise<void>;
 }
 
-class ClientServiceImpl implements ClientService {
+export class McpClientServiceImpl implements McpClientService {
 
   getClient(client: string): McpClient {
     logger.verbose(`Getting client: ${client}`);
@@ -143,8 +144,6 @@ class ClientServiceImpl implements ClientService {
   }
 }
 
-const newClientService = (): ClientService => {
-  return new ClientServiceImpl();
-}
-
-export { ClientService, newClientService };
+export const newMcpClientService = (): McpClientService => {
+  return new McpClientServiceImpl();
+};

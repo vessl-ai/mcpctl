@@ -51,6 +51,19 @@ export namespace Config {
         export const type = new RequestType<{}, RunConfig[], void>('config/list');
     }
 
+    export namespace CreateRequest {
+        export const type = new RequestType<{
+            config: RunConfig;
+        }, RunConfig, void>('config/create');
+    }
+
+    export namespace UpdateRequest {
+        export const type = new RequestType<{
+            configId: string;
+            config: Partial<RunConfig>;
+        }, RunConfig, void>('config/update');
+    }
+
     export namespace DeleteRequest {
         export const type = new RequestType<{
             configId: string;

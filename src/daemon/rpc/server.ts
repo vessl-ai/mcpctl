@@ -20,13 +20,12 @@ export class RPCServer {
       transport.reader,
       transport.writer
     );
-    this.setupHandlers();
   }
 
   private setupHandlers() {
     // Instance management handlers
     this.connection.onRequest(
-      Instance.StartRequest.type.method,
+      Instance.StartRequest.type,
       async ({ configId, env }) => {
         this.logger.debug("Received start instance request", { configId });
         return await this.instanceManager.startInstance(configId, env);
@@ -42,14 +41,14 @@ export class RPCServer {
     );
 
     this.connection.onRequest(
-      Instance.GetRequest.type.method,
+      Instance.GetRequest.type,
       async ({ instanceId }) => {
         this.logger.debug("Received get instance request", { instanceId });
         return await this.instanceManager.getInstance(instanceId);
       }
     );
 
-    this.connection.onRequest(Instance.ListRequest.type.method, async () => {
+    this.connection.onRequest(Instance.ListRequest.type, async () => {
       this.logger.debug("Received list instances request");
       return await this.instanceManager.listInstances();
     });
@@ -60,15 +59,43 @@ export class RPCServer {
       await this.configStore.saveConfig(config);
     });
 
-    this.connection.onRequest(Config.GetRequest.type, async ({ configId }) => {
-      this.logger.debug("Received get config request", { configId });
-      return await this.configStore.getConfig(configId);
-    });
-
     this.connection.onRequest(Config.ListRequest.type, async () => {
       this.logger.debug("Received list configs request");
       return await this.configStore.listConfigs();
     });
+
+    this.connection.onRequest(
+      Config.GetRequest.type,
+      async ({ configId }) => {
+        this.logger.debug("Received get config request", { configId });
+        return await this.configStore.getConfig(configId);
+      }
+    );
+
+    this.connection.onRequest(
+      Config.CreateRequest.type,
+      async ({ config }) => {
+        this.logger.debug("Received create config request", { config });
+        const configId = await this.configStore.saveConfig(config);
+        return {
+          ...config,
+          id: configId
+        };
+      }
+    );
+
+    this.connection.onRequest(
+      Config.UpdateRequest.type,
+      async ({ configId, config }) => {
+        this.logger.debug("Received update config request", { configId, config });
+        await this.configStore.updateConfig(configId, config);
+        const updated = await this.configStore.getConfig(configId);
+        if (!updated) {
+          throw new Error(`Config not found after update: ${configId}`);
+        }
+        return updated;
+      }
+    );
 
     this.connection.onRequest(
       Config.DeleteRequest.type,
@@ -92,6 +119,7 @@ export class RPCServer {
   }
 
   public listen(): void {
+    this.setupHandlers();
     this.connection.listen();
     this.logger.info("RPC server started listening");
   }
