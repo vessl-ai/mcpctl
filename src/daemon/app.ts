@@ -1,10 +1,10 @@
 import { verboseLog } from '../client/core/lib/env';
 import { BaseContainer, Container } from '../lib/container/container';
 import { Logger, newConsoleLogger } from '../lib/logger/logger';
+import { Orchestrator } from './lib/types/orchestrator';
 import { newServerInstanceManager, ServerInstanceManager } from './managers/server-instance/server-instance-manager';
-import { newRunConfigStore, RunConfigStore } from './services/config/factory';
+import { newRunConfigStore, RunConfigStore } from './services/config/run-config-store';
 import { newOrchestrator } from './services/orchestrator/orchestrator';
-import { Orchestrator } from './services/orchestrator/types';
 
 export class DaemonApp {
   private container: Container;

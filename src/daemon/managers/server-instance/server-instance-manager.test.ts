@@ -1,7 +1,6 @@
 import { Logger } from '../../../lib/logger/logger';
-import { RunConfig } from '../../../lib/types/run-config';
-import { RunConfigStore } from '../../services/config/factory';
-import { Orchestrator, Worker } from '../../services/orchestrator/types';
+import { McpServerInstance, McpServerInstanceStatus } from '../../../lib/types/instance';
+import { newRunConfig, RunConfig } from '../../../lib/types/run-config';
 import { newServerInstanceManager, ServerInstanceManager } from './server-instance-manager';
 
 class MockLogger implements Logger {
@@ -16,28 +15,23 @@ class MockLogger implements Logger {
 
 describe('ServerInstanceManager', () => {
   let manager: ServerInstanceManager;
-  let orchestrator: jest.Mocked<Orchestrator>;
-  let runConfigStore: jest.Mocked<RunConfigStore>;
   let logger: Logger;
 
   const mockConfig: RunConfig = {
     id: 'config-1',
     serverName: 'test-server',
     profileName: 'test-profile',
-    command: 'test-command',
-    args: ['--test'],
+    command: 'test-command --arg1 --arg2s',
     env: { TEST: 'value' },
     created: new Date().toISOString()
   };
 
-  const mockWorker: Worker = {
-    id: 'worker-1',
-    config: {
-      command: 'test-command',
-      args: ['--test'],
-      env: { TEST: 'value' }
-    },
-    status: 'running',
+  const mockServerInstance: McpServerInstance = {
+    id: 'server-instance-1',
+    config: mockConfig,
+    status: McpServerInstanceStatus.RUNNING,
+    startedAt: new Date().toISOString(),
+    lastUsedAt: new Date().toISOString(),
     connectionInfo: {
       transport: 'sse',
       endpoint: 'test-endpoint'
@@ -45,84 +39,61 @@ describe('ServerInstanceManager', () => {
   };
 
   beforeEach(() => {
-    orchestrator = {
-      getOrCreateWorker: jest.fn(),
-      getWorker: jest.fn(),
-      listWorkers: jest.fn(),
-      removeWorker: jest.fn(),
-      stopAll: jest.fn(),
-      getOrCreateWorkerLegacy: jest.fn()
-    } as jest.Mocked<Orchestrator>;
-
-    runConfigStore = {
-      getConfig: jest.fn(),
-      updateConfig: jest.fn(),
-      saveConfig: jest.fn(),
-      findConfig: jest.fn(),
-      deleteConfig: jest.fn(),
-      listConfigs: jest.fn()
-    } as jest.Mocked<RunConfigStore>;
-
     logger = new MockLogger();
 
-    manager = newServerInstanceManager(orchestrator, runConfigStore, logger);
+    manager = newServerInstanceManager(logger);
   });
 
   describe('startInstance', () => {
     it('should start a new instance successfully', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
 
-      const result = await manager.startInstance('config-1');
+      const result = await manager.startInstance(mockConfig);
 
-      expect(result).toMatchObject({
-        workerId: mockWorker.id,
+      const list = await manager.listInstances(); 
+      expect(list).toHaveLength(1);
+      expect(list[0]).toMatchObject({
+        id: result.id,
         config: mockConfig,
-        status: mockWorker.status,
-        connectionInfo: mockWorker.connectionInfo,
+        status: result.status,
+        connectionInfo: result.connectionInfo,
         startedAt: expect.any(String),
-        lastUsedAt: expect.any(String)
-      });
-      expect(runConfigStore.getConfig).toHaveBeenCalledWith('config-1');
-      expect(orchestrator.getOrCreateWorker).toHaveBeenCalledWith({
-        command: mockConfig.command,
-        args: mockConfig.args,
-        env: mockConfig.env
+        lastUsedAt: expect.any(String),
       });
     });
+    
+    it('should throw error when config is wrong', async () => {
 
-    it('should throw error when config not found', async () => {
-      runConfigStore.getConfig.mockRejectedValue(new Error('Config not found'));
+      const spy = jest.spyOn(manager, 'validateConfig');
+      spy.mockResolvedValue(false);
 
-      await expect(manager.startInstance('non-existent')).rejects.toThrow('Config not found');
+      await expect(manager.startInstance(mockConfig)).rejects.toThrow(
+        "Invalid config"
+      );
     });
 
-    it('should merge environment overrides', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
+    it('should create a new instance if env is updated', async () => {
 
-      await manager.startInstance('config-1', { OVERRIDE: 'test' });
-
-      expect(orchestrator.getOrCreateWorker).toHaveBeenCalledWith({
-        command: mockConfig.command,
-        args: mockConfig.args,
+      const instance = await manager.startInstance(mockConfig);
+      const updatedInstance = await manager.startInstance(newRunConfig({
+        ...mockConfig,
         env: {
           ...mockConfig.env,
           OVERRIDE: 'test'
         }
-      });
+      }));
+
+      expect(updatedInstance.id).not.toBe(instance.id);
     });
   });
 
   describe('stopInstance', () => {
     it('should stop an instance successfully', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
-      const instance = await manager.startInstance('config-1');
+      const instance = await manager.startInstance(mockConfig);
 
       await manager.stopInstance(instance.id);
 
-      expect(orchestrator.removeWorker).toHaveBeenCalledWith(instance.workerId);
+      const list = await manager.listInstances();
+      expect(list).toHaveLength(0);
     });
 
     it('should throw error for non-existent instance', async () => {
@@ -133,19 +104,16 @@ describe('ServerInstanceManager', () => {
 
   describe('getInstance', () => {
     it('should get instance details successfully', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
-      const instance = await manager.startInstance('config-1');
+      const instance = await manager.startInstance(mockConfig);
 
       const result = await manager.getInstance(instance.id);
 
       expect(result).toMatchObject({
-        workerId: mockWorker.id,
+        id: instance.id,
         config: mockConfig,
-        status: mockWorker.status,
-        connectionInfo: mockWorker.connectionInfo,
+        status: instance.status,
+        connectionInfo: instance.connectionInfo,
         startedAt: expect.any(String),
-        lastUsedAt: expect.any(String)
       });
     });
 
@@ -157,18 +125,16 @@ describe('ServerInstanceManager', () => {
 
   describe('listInstances', () => {
     it('should list all instances', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
-      const instance = await manager.startInstance('config-1');
+      const instance = await manager.startInstance(mockConfig);
 
       const result = await manager.listInstances();
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
-        workerId: mockWorker.id,
+        id: instance.id,
         config: mockConfig,
-        status: mockWorker.status,
-        connectionInfo: mockWorker.connectionInfo,
+        status: instance.status,
+        connectionInfo: instance.connectionInfo,
         startedAt: expect.any(String),
         lastUsedAt: expect.any(String)
       });
@@ -179,12 +145,25 @@ describe('ServerInstanceManager', () => {
       expect(instances).toEqual([]);
     });
 
-    it('should return all running instances', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
+    it('should run only one if same config', async () => {
 
-      await manager.startInstance('config-1');
-      await manager.startInstance('config-1');
+      await manager.startInstance(mockConfig);
+      await manager.startInstance(mockConfig);
+
+      const instances = await manager.listInstances();
+      expect(instances).toHaveLength(1);
+    });
+
+    it('should run multiple if different command', async () => {
+      const config2 = {
+        ...mockConfig,
+        id: 'config-2',
+        command: 'different-command'
+
+      };
+
+      await manager.startInstance(mockConfig);
+      await manager.startInstance(config2);
 
       const instances = await manager.listInstances();
       expect(instances).toHaveLength(2);
@@ -193,31 +172,27 @@ describe('ServerInstanceManager', () => {
 
   describe('updateInstanceStatus', () => {
     it('should update instance status', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
 
-      const instance = await manager.startInstance('config-1');
-      await manager.updateInstanceStatus(instance.id, { status: 'failed' });
+      const instance = await manager.startInstance(mockConfig);
+      await manager.updateInstanceStatus(instance.id, { status: McpServerInstanceStatus.FAILED });
 
       const updated = await manager.getInstance(instance.id);
-      expect(updated?.status).toBe('failed');
+      expect(updated?.status).toBe(McpServerInstanceStatus.FAILED);
     });
 
     it('should throw error for non-existent instance', async () => {
       await expect(
-        manager.updateInstanceStatus('non-existent', { status: 'failed' })
+        manager.updateInstanceStatus('non-existent', { status: McpServerInstanceStatus.FAILED })
       ).rejects.toThrow('Instance not found');
     });
 
     it('should update lastUsedAt automatically', async () => {
-      runConfigStore.getConfig.mockResolvedValue(mockConfig);
-      orchestrator.getOrCreateWorker.mockResolvedValue(mockWorker);
 
-      const instance = await manager.startInstance('config-1');
+      const instance = await manager.startInstance(mockConfig);
       const oldLastUsed = instance.lastUsedAt;
 
       await new Promise(resolve => setTimeout(resolve, 100));
-      await manager.updateInstanceStatus(instance.id, { status: 'failed' });
+      await manager.updateInstanceStatus(instance.id, { status: McpServerInstanceStatus.FAILED });
 
       const updated = await manager.getInstance(instance.id);
       expect(updated?.lastUsedAt).not.toBe(oldLastUsed);

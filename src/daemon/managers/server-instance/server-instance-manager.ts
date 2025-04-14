@@ -1,14 +1,14 @@
-import { v4 as uuidv4 } from 'uuid';
 import { Logger } from '../../../lib/logger/logger';
-import { McpServerInstance } from '../../../lib/types/instance';
-import { RunConfigStore } from '../../services/config/factory';
-import { Orchestrator } from '../../services/orchestrator/types';
-
+import { McpServerInstance, McpServerInstanceStatus } from '../../../lib/types/instance';
+import { RunConfig } from '../../../lib/types/run-config';
+import { BaseServerInstance, LocalServerInstance } from './server-instance-impl';
 export interface ServerInstanceManager {
+
+  validateConfig(config: RunConfig): Promise<boolean>;
+
   // 서버 인스턴스 생성/시작
   startInstance(
-    configId: string,
-    env?: Record<string, string>
+    config: RunConfig,
   ): Promise<McpServerInstance>;
 
   // 서버 인스턴스 종료
@@ -28,54 +28,56 @@ export interface ServerInstanceManager {
 } 
 
 class DefaultServerInstanceManager implements ServerInstanceManager {
+  // TODO: save to file as daemon can be restarted
+  private configInstanceMap: Map<string, McpServerInstance>;
   private instances: Map<string, McpServerInstance>;
 
   constructor(
-    private orchestrator: Orchestrator,
-    private runConfigStore: RunConfigStore,
     private logger: Logger
   ) {
+    this.configInstanceMap = new Map();
     this.instances = new Map();
   }
 
-  async startInstance(configId: string, envOverrides?: Record<string, string>): Promise<McpServerInstance> {
-    // 실행 설정 로드
-    const config = await this.runConfigStore.getConfig(configId);
-    if (!config) {
-      throw new Error(`Run configuration not found: ${configId}`);
-    }
+  async validateConfig(config: RunConfig): Promise<boolean> {
+    // TODO: add validation logic
+    return true;
+  }
 
+  async startInstance(config: RunConfig): Promise<McpServerInstance> {
     try {
-      // Worker 생성 또는 조회
-      const worker = await this.orchestrator.getOrCreateWorker({
-        command: config.command,
-        args: config.args,
-        env: {
-          ...config.env,
-          ...envOverrides
+      if (!(await this.validateConfig(config))) {
+        throw new Error("Invalid config");
+      }
+
+      if (this.configInstanceMap.has(config.id)) {
+        // 만약 env가 업데이트 되었다면, 지우고 새로 생성
+        const existingEnv = this.configInstanceMap.get(config.id)?.config.env || {};
+        const newEnv = config.env || {};
+        const isEnvEqual = Object.keys(existingEnv).length === Object.keys(newEnv).length &&
+          Object.keys(existingEnv).every(key => existingEnv[key] === newEnv[key]);
+
+        if (!isEnvEqual) {
+          // 기존 인스턴스 정지는 백그라운드로 처리
+          this.stopInstance(config.id).catch(err => {
+            this.logger.error('Failed to stop instance in background:', err);
+          });
+          this.configInstanceMap.delete(config.id);
+        } else {
+          return this.configInstanceMap.get(config.id)!;
         }
-      });
+      }
 
-      // 인스턴스 정보 생성
-      const instance: McpServerInstance = {
-        id: uuidv4(),
-        workerId: worker.id,
-        config,
-        status: 'running',
-        startedAt: new Date().toISOString(),
-        lastUsedAt: new Date().toISOString(),
-        connectionInfo: worker.connectionInfo
-      };
+      // 새 워커 생성
+      const serverInstance = new LocalServerInstance(config);
 
-      // 인스턴스 저장
-      this.instances.set(instance.id, instance);
+      // TODO: Support containered ones
 
-      // 설정 사용 시간 업데이트
-      await this.runConfigStore.updateConfig(config.id, {
-        lastUsed: instance.startedAt
-      });
+      await serverInstance.start();
+      this.configInstanceMap.set(config.id, serverInstance);
+      this.instances.set(serverInstance.id, serverInstance);
 
-      return instance;
+      return serverInstance;
     } catch (error) {
       this.logger.error('Failed to start instance:', error);
       throw error;
@@ -90,17 +92,25 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
 
     try {
       // Worker 종료
-      await this.orchestrator.removeWorker(instance.workerId);
-      
-      // 인스턴스 상태 업데이트
-      instance.status = 'stopped';
+      const serverInstance = this.instances.get(instanceId);
+      if (!serverInstance) {
+        throw new Error(`Server instance not found: ${instanceId}`);
+      }
+
+      if (serverInstance instanceof BaseServerInstance) {
+        await serverInstance.stop();
+      }
+
+      // 인스턴스 상태 업데이트 - 과연 무슨 의미가 있나 어차피 지울건데
+      instance.status = McpServerInstanceStatus.STOPPED;
       instance.lastUsedAt = new Date().toISOString();
       
       // 인스턴스 제거
+      this.configInstanceMap.delete(instanceId);
       this.instances.delete(instanceId);
     } catch (error) {
       this.logger.error('Failed to stop instance:', error);
-      instance.status = 'failed';
+      instance.status = McpServerInstanceStatus.FAILED;
       instance.error = error as Error;
       throw error;
     }
@@ -129,9 +139,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
 }
 
 export const newServerInstanceManager = (
-  orchestrator: Orchestrator,
-  runConfigStore: RunConfigStore,
   logger: Logger
 ): ServerInstanceManager => {
-  return new DefaultServerInstanceManager(orchestrator, runConfigStore, logger);
+  return new DefaultServerInstanceManager(logger);
 }; 

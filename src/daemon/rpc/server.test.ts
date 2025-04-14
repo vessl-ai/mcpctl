@@ -3,10 +3,9 @@ import { createMessageConnection, DataCallback, Disposable, MessageConnection, M
 import { Logger } from '../../lib/logger/logger';
 import { Instance } from '../../lib/rpc/protocol';
 import { RPCTransport } from '../../lib/rpc/transport';
-import { McpServerInstance } from '../../lib/types/instance';
+import { McpServerInstance, McpServerInstanceStatus } from '../../lib/types/instance';
 import { RunConfig } from '../../lib/types/run-config';
 import { ServerInstanceManager } from '../managers/server-instance/server-instance-manager';
-import { RunConfigStore } from '../services/config/factory';
 import { RPCServer } from './server';
 
 // Increase Jest timeout
@@ -97,7 +96,6 @@ describe('RPCServer', () => {
   let server: RPCServer;
   let transport: MockTransport;
   let instanceManager: jest.Mocked<ServerInstanceManager>;
-  let configStore: RunConfigStore;
   let clientConnection: MessageConnection;
 
   beforeEach(async () => {
@@ -108,21 +106,12 @@ describe('RPCServer', () => {
       getInstance: jest.fn(),
       listInstances: jest.fn(),
       updateInstanceStatus: jest.fn(),
-    } as jest.Mocked<ServerInstanceManager>;
-
-    configStore = {
-      saveConfig: jest.fn(),
-      getConfig: jest.fn(),
-      listConfigs: jest.fn(),
-      deleteConfig: jest.fn(),
-      findConfig: jest.fn(),
-      updateConfig: jest.fn()
-    } as unknown as RunConfigStore;
+      validateConfig: jest.fn()
+    } as unknown as jest.Mocked<ServerInstanceManager>;
 
     server = new RPCServer(
       transport,
       instanceManager,
-      configStore,
       new MockLogger()
     );
 
@@ -155,8 +144,7 @@ describe('RPCServer', () => {
 
       const mockInstance: McpServerInstance = {
         id: 'test-id',
-        workerId: 'worker-1',
-        status: 'running',
+        status: McpServerInstanceStatus.RUNNING,
         config: mockConfig,
         startedAt: new Date().toISOString(),
         lastUsedAt: new Date().toISOString(),
@@ -169,11 +157,10 @@ describe('RPCServer', () => {
       instanceManager.startInstance.mockResolvedValue(mockInstance);
 
       const result = await clientConnection.sendRequest(Instance.StartRequest.type, {
-        configId: 'config-1',
-        env: { TEST: 'value' }
+        config: mockConfig,
       });
 
-      expect(instanceManager.startInstance).toHaveBeenCalledWith('config-1', { TEST: 'value' });
+      expect(instanceManager.startInstance).toHaveBeenCalledWith(mockConfig);
       expect(result).toEqual(mockInstance);
     });
 
@@ -197,8 +184,7 @@ describe('RPCServer', () => {
 
       const mockInstance: McpServerInstance = {
         id: 'test-id',
-        workerId: 'worker-1',
-        status: 'running',
+        status: McpServerInstanceStatus.RUNNING,
         config: mockConfig,
         startedAt: new Date().toISOString(),
         lastUsedAt: new Date().toISOString(),
@@ -231,8 +217,7 @@ describe('RPCServer', () => {
       const mockInstances: McpServerInstance[] = [
         {
           id: 'test-1',
-          workerId: 'worker-1',
-          status: 'running',
+          status: McpServerInstanceStatus.RUNNING,
           config: mockConfig,
           startedAt: new Date().toISOString(),
           lastUsedAt: new Date().toISOString(),
@@ -243,8 +228,7 @@ describe('RPCServer', () => {
         },
         {
           id: 'test-2',
-          workerId: 'worker-2',
-          status: 'stopped',
+          status: McpServerInstanceStatus.STOPPED,
           config: mockConfig,
           startedAt: new Date().toISOString(),
           lastUsedAt: new Date().toISOString(),
@@ -266,12 +250,20 @@ describe('RPCServer', () => {
 
   describe('Error Handling', () => {
     it('should handle errors in start instance request', async () => {
+      const mockConfig: RunConfig = {
+        id: "config-1",
+        serverName: "test-server",
+        profileName: "test-profile",
+        command: "test",
+        env: {},
+        created: new Date().toISOString(),
+      };
       const error = new Error('Failed to start instance');
       instanceManager.startInstance.mockRejectedValue(error);
 
       await expect(
         clientConnection.sendRequest(Instance.StartRequest.type, {
-          configId: 'config-1'
+          config: mockConfig
         })
       ).rejects.toThrow('Failed to start instance');
     });

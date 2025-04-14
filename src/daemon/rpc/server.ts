@@ -1,9 +1,8 @@
 import { createMessageConnection, MessageConnection } from 'vscode-jsonrpc/node';
 import { Logger } from '../../lib/logger/logger';
-import { Config, Instance } from "../../lib/rpc/protocol";
+import { Instance } from "../../lib/rpc/protocol";
 import { RPCTransport } from '../../lib/rpc/transport';
 import { ServerInstanceManager } from "../managers/server-instance/server-instance-manager";
-import { RunConfigStore } from '../services/config/factory';
 
 export class RPCServer {
   private connection: MessageConnection;
@@ -12,7 +11,6 @@ export class RPCServer {
   constructor(
     transport: RPCTransport,
     private instanceManager: ServerInstanceManager,
-    private configStore: RunConfigStore,
     logger: Logger
   ) {
     this.logger = logger.withContext("RPCServer");
@@ -26,9 +24,9 @@ export class RPCServer {
     // Instance management handlers
     this.connection.onRequest(
       Instance.StartRequest.type,
-      async ({ configId, env }) => {
-        this.logger.debug("Received start instance request", { configId });
-        return await this.instanceManager.startInstance(configId, env);
+      async ({ config, }) => {
+        this.logger.debug("Received start instance request", { config });
+        return await this.instanceManager.startInstance(config);
       }
     );
 
@@ -52,58 +50,6 @@ export class RPCServer {
       this.logger.debug("Received list instances request");
       return await this.instanceManager.listInstances();
     });
-
-    // Config management handlers
-    this.connection.onRequest(Config.SaveRequest.type, async ({ config }) => {
-      this.logger.debug("Received save config request", { config });
-      await this.configStore.saveConfig(config);
-    });
-
-    this.connection.onRequest(Config.ListRequest.type, async () => {
-      this.logger.debug("Received list configs request");
-      return await this.configStore.listConfigs();
-    });
-
-    this.connection.onRequest(
-      Config.GetRequest.type,
-      async ({ configId }) => {
-        this.logger.debug("Received get config request", { configId });
-        return await this.configStore.getConfig(configId);
-      }
-    );
-
-    this.connection.onRequest(
-      Config.CreateRequest.type,
-      async ({ config }) => {
-        this.logger.debug("Received create config request", { config });
-        const configId = await this.configStore.saveConfig(config);
-        return {
-          ...config,
-          id: configId
-        };
-      }
-    );
-
-    this.connection.onRequest(
-      Config.UpdateRequest.type,
-      async ({ configId, config }) => {
-        this.logger.debug("Received update config request", { configId, config });
-        await this.configStore.updateConfig(configId, config);
-        const updated = await this.configStore.getConfig(configId);
-        if (!updated) {
-          throw new Error(`Config not found after update: ${configId}`);
-        }
-        return updated;
-      }
-    );
-
-    this.connection.onRequest(
-      Config.DeleteRequest.type,
-      async ({ configId }) => {
-        this.logger.debug("Received delete config request", { configId });
-        await this.configStore.deleteConfig(configId);
-      }
-    );
 
     // Instance status notifications
     this.connection.onNotification(

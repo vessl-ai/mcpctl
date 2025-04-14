@@ -5,8 +5,7 @@ import { RunConfig } from '../types/run-config';
 export namespace Instance {
     export namespace StartRequest {
         export const type = new RequestType<{
-            configId: string;
-            env?: Record<string, string>;
+            config: RunConfig;
         }, McpServerInstance, void>('instance/start');
     }
 
@@ -33,40 +32,3 @@ export namespace Instance {
         }>('instance/status');
     }
 }
-
-export namespace Config {
-    export namespace SaveRequest {
-        export const type = new RequestType<{
-            config: RunConfig;
-        }, void, void>('config/save');
-    }
-
-    export namespace GetRequest {
-        export const type = new RequestType<{
-            configId: string;
-        }, RunConfig | null, void>('config/get');
-    }
-
-    export namespace ListRequest {
-        export const type = new RequestType<{}, RunConfig[], void>('config/list');
-    }
-
-    export namespace CreateRequest {
-        export const type = new RequestType<{
-            config: RunConfig;
-        }, RunConfig, void>('config/create');
-    }
-
-    export namespace UpdateRequest {
-        export const type = new RequestType<{
-            configId: string;
-            config: Partial<RunConfig>;
-        }, RunConfig, void>('config/update');
-    }
-
-    export namespace DeleteRequest {
-        export const type = new RequestType<{
-            configId: string;
-        }, void, void>('config/delete');
-    }
-} 
