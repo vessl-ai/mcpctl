@@ -1,7 +1,7 @@
 import { verboseLog } from '../client/core/lib/env';
 import { BaseContainer, Container } from '../lib/container/container';
 import { Logger, newConsoleLogger } from '../lib/logger/logger';
-import { newServerInstanceManager, ServerInstanceManager } from './managers/server-instance/factory';
+import { newServerInstanceManager, ServerInstanceManager } from './managers/server-instance/server-instance-manager';
 import { newRunConfigStore, RunConfigStore } from './services/config/factory';
 import { newOrchestrator } from './services/orchestrator/orchestrator';
 import { Orchestrator } from './services/orchestrator/types';

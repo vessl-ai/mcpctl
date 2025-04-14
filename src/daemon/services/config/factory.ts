@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { RunConfig } from '../../lib/types/run-config';
 
+import { RunConfig } from '../../../lib/types/run-config';
 export interface RunConfigStore {
   // 설정 저장
   saveConfig(config: Omit<RunConfig, "id">): Promise<string>;

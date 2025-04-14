@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from '../../../lib/logger/logger';
-import { ServerInstance } from '../../lib/types/server-instance';
+import { McpServerInstance } from '../../../lib/types/instance';
 import { RunConfigStore } from '../../services/config/factory';
 import { Orchestrator } from '../../services/orchestrator/types';
 
@@ -9,26 +9,26 @@ export interface ServerInstanceManager {
   startInstance(
     configId: string,
     env?: Record<string, string>
-  ): Promise<ServerInstance>;
+  ): Promise<McpServerInstance>;
 
   // 서버 인스턴스 종료
   stopInstance(instanceId: string): Promise<void>;
 
   // 실행 중인 인스턴스 조회
-  getInstance(instanceId: string): Promise<ServerInstance | null>;
+  getInstance(instanceId: string): Promise<McpServerInstance | null>;
 
   // 모든 실행 중인 인스턴스 목록
-  listInstances(): Promise<ServerInstance[]>;
+  listInstances(): Promise<McpServerInstance[]>;
 
   // 인스턴스 상태 업데이트
   updateInstanceStatus(
     instanceId: string,
-    status: Partial<ServerInstance>
+    status: Partial<McpServerInstance>
   ): Promise<void>;
 } 
 
 class DefaultServerInstanceManager implements ServerInstanceManager {
-  private instances: Map<string, ServerInstance>;
+  private instances: Map<string, McpServerInstance>;
 
   constructor(
     private orchestrator: Orchestrator,
@@ -38,7 +38,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
     this.instances = new Map();
   }
 
-  async startInstance(configId: string, envOverrides?: Record<string, string>): Promise<ServerInstance> {
+  async startInstance(configId: string, envOverrides?: Record<string, string>): Promise<McpServerInstance> {
     // 실행 설정 로드
     const config = await this.runConfigStore.getConfig(configId);
     if (!config) {
@@ -57,12 +57,13 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       });
 
       // 인스턴스 정보 생성
-      const instance: ServerInstance = {
+      const instance: McpServerInstance = {
         id: uuidv4(),
         workerId: worker.id,
         config,
         status: 'running',
         startedAt: new Date().toISOString(),
+        lastUsedAt: new Date().toISOString(),
         connectionInfo: worker.connectionInfo
       };
 
@@ -105,15 +106,15 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
     }
   }
 
-  async getInstance(instanceId: string): Promise<ServerInstance | null> {
+  async getInstance(instanceId: string): Promise<McpServerInstance | null> {
     return this.instances.get(instanceId) || null;
   }
 
-  async listInstances(): Promise<ServerInstance[]> {
+  async listInstances(): Promise<McpServerInstance[]> {
     return Array.from(this.instances.values());
   }
 
-  async updateInstanceStatus(instanceId: string, status: Partial<ServerInstance>): Promise<void> {
+  async updateInstanceStatus(instanceId: string, status: Partial<McpServerInstance>): Promise<void> {
     const instance = this.instances.get(instanceId);
     if (!instance) {
       throw new Error(`Instance not found: ${instanceId}`);

@@ -1,9 +1,11 @@
-
-interface Logger {
+export interface Logger {
   verbose(message: string): void;
   log(message: string): void;
   error(message: string, error?: any): void;
   warn(message: string): void;
+  debug(message: string, context?: Record<string, any>): void;
+  info(message: string, context?: Record<string, any>): void;
+  withContext(context: string): Logger;
 }
 
 // Basic logger implementation
@@ -37,6 +39,31 @@ class ConsoleLoggerImpl implements Logger {
   warn(message: string): void {
     console.warn(`[WARN]: ${this.prefix} ${message}`);
   }
+
+  debug(message: string, context?: Record<string, any>): void {
+    if (this.showVerbose) {
+      if (context) {
+        console.debug(`[DEBUG]: ${this.prefix} ${message}`, context);
+      } else {
+        console.debug(`[DEBUG]: ${this.prefix} ${message}`);
+      }
+    }
+  }
+
+  info(message: string, context?: Record<string, any>): void {
+    if (context) {
+      console.info(`[INFO]: ${this.prefix} ${message}`, context);
+    } else {
+      console.info(`[INFO]: ${this.prefix} ${message}`);
+    }
+  }
+
+  withContext(context: string): Logger {
+    return new ConsoleLoggerImpl({
+      prefix: this.prefix ? `${this.prefix}:${context}` : context,
+      showVerbose: this.showVerbose
+    });
+  }
 }
 
 let logger: Logger;
@@ -48,7 +75,5 @@ const newConsoleLogger = (config?: {prefix?: string, showVerbose?: boolean}): Lo
   return logger;
 };
 
-export {
-  Logger, logger, newConsoleLogger
-};
+export { logger, newConsoleLogger };
 
