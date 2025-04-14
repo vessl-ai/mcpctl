@@ -32,6 +32,22 @@ const getConfigPath = (): string => {
   return path.join(configDir, 'config.json');
 }
 
+const getSocketPath = (): string => {
+  const socketPath = process.env.MCPCTL_SOCKET_PATH;
+  if (socketPath) {
+    return socketPath;
+  }
+  return "/tmp/mcp-daemon.sock";
+}
+
+const getSessionDir = (): string => {
+  const sessionDir = process.env.MCPCTL_SESSION_DIR;
+  if (sessionDir) {
+    return sessionDir;
+  }
+  return path.join(os.homedir(), '.mcpctl', 'sessions');
+}
+
 const verboseLog = (): boolean => {
   const verbose = process.env.MCPCTL_VERBOSE;
   if (verbose) {
@@ -41,5 +57,5 @@ const verboseLog = (): boolean => {
 }
 
 
-export { getConfigDir, getConfigPath, getProfileDir, getProfileName, verboseLog };
+export { getConfigDir, getConfigPath, getProfileDir, getProfileName, getSessionDir, getSocketPath, verboseLog };
 

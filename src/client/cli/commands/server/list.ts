@@ -6,6 +6,9 @@ const buildServerListCommand = (app: App): Command => {
     .description("List MCP server")
     .action(async () => {
       console.log("Server list command");
+      const serverService = app.getServerService();
+      const servers = await serverService.listServers();
+      console.log(servers);
     });
 
   return serverListCommand;

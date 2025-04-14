@@ -1,3 +1,4 @@
+import { McpServerHostingType } from '../../../../lib/types/hosting';
 import { RegistryDef, RegistryEntry, RegistryType } from '../../lib/types/registry';
 import { SearchResultEntry } from '../../lib/types/search-result';
 import { RegistryService } from '../registry/registry-service';
@@ -12,7 +13,7 @@ describe('SearchService', () => {
     description: 'Test entry description',
     url: 'https://test.entry',
     sourceUrl: 'https://source.test.entry',
-    hosting: 'local',
+    hosting: McpServerHostingType.LOCAL,
     attributes: ['test-attribute']
   };
 

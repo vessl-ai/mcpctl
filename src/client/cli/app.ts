@@ -12,15 +12,22 @@ import { RegistryProviderFactory, newRegistryProviderFactory } from '../core/ser
 import { RegistryDefStore, newConfigRegistryDefStore } from '../core/services/registry/registry-def-store';
 import { RegistryService, newRegistryService } from '../core/services/registry/registry-service';
 import { SearchService, newSearchService } from '../core/services/search/search-service';
+import { ServerService, newServerService } from '../core/services/server/server-service';
+import { SessionManager, newSessionManager } from '../core/services/session/session-manager';
 class App {
   private container: Container;
+  private initPromise: Promise<void>;
 
   constructor() {
     this.container = new BaseContainer();
-    this.initializeDependencies();
+    this.initPromise = this.initializeDependencies();
   }
 
-  private initializeDependencies(): void {
+  public async init(): Promise<void> {
+    await this.initPromise;
+  }
+
+  private async initializeDependencies(): Promise<void> {
     // Register core dependencies
     this.container.register<Logger>("Logger", newConsoleLogger({showVerbose: verboseLog()}));
 
@@ -74,6 +81,20 @@ class App {
         this.container.get<ConfigService>("configService")
       )
     );
+
+    // Register SessionManager
+    this.container.register<SessionManager>(
+      "sessionManager",
+      newSessionManager(
+        this.container.get<Logger>("Logger"),
+      )
+    );
+
+    // Register ServerService
+    this.container.register<ServerService>(
+      "serverService",
+      newServerService()
+    );
   }
 
   public getConfigService(): ConfigService {
@@ -93,6 +114,14 @@ class App {
 
   public getProfileService(): ProfileService {
     return this.container.get<ProfileService>("profileService");
+  }
+
+  public getSessionManager(): SessionManager {
+    return this.container.get<SessionManager>("sessionManager");
+  }
+
+  public getServerService(): ServerService {
+    return this.container.get<ServerService>("serverService");
   }
 }
 

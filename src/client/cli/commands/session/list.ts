@@ -6,6 +6,9 @@ const buildSessionListCommand = (app: App): Command => {
     .description("List MCP server sessions")
     .action(async () => {
       console.log("Session list command");
+      const sessionManager = app.getSessionManager();
+      const sessions = await sessionManager.listSessions();
+      console.log(sessions);
     });
 
   return sessionListCommand;

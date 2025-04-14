@@ -1,8 +1,4 @@
-
-enum McpClientType {
-  CLAUDE = "claude",
-  CURSOR = "cursor",
-}
+import { McpClientType } from "../../../../lib/types/mcp-client-type";
 
 type McpClient = {
   type: McpClientType;

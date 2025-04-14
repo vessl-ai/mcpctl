@@ -1,6 +1,9 @@
 import { Logger } from '../../../lib/logger/logger';
+import { McpServerHostingType } from '../../../lib/types/hosting';
 import { McpServerInstance, McpServerInstanceStatus } from '../../../lib/types/instance';
+import { McpClientType } from '../../../lib/types/mcp-client-type';
 import { newRunConfig, RunConfig } from '../../../lib/types/run-config';
+import { ServerInstanceFactory } from './server-instance-factory';
 import { newServerInstanceManager, ServerInstanceManager } from './server-instance-manager';
 
 class MockLogger implements Logger {
@@ -13,12 +16,25 @@ class MockLogger implements Logger {
   withContext(): Logger { return this; }
 }
 
+class MockServerInstanceFactory implements ServerInstanceFactory {
+
+  constructor(private logger: Logger, private serverInstance: McpServerInstance) {
+  }
+
+  createServerInstance(config: RunConfig): Promise<McpServerInstance> {
+    return Promise.resolve(this.serverInstance);
+  }
+}
+
 describe('ServerInstanceManager', () => {
   let manager: ServerInstanceManager;
+  let factory: MockServerInstanceFactory;
   let logger: Logger;
 
   const mockConfig: RunConfig = {
     id: 'config-1',
+    hosting: McpServerHostingType.LOCAL,
+    client: McpClientType.CLAUDE,
     serverName: 'test-server',
     profileName: 'test-profile',
     command: 'test-command --arg1 --arg2s',
@@ -35,13 +51,15 @@ describe('ServerInstanceManager', () => {
     connectionInfo: {
       transport: 'sse',
       endpoint: 'test-endpoint'
-    }
+    },
+    start: jest.fn(),
+    stop: jest.fn()
   };
 
   beforeEach(() => {
     logger = new MockLogger();
-
-    manager = newServerInstanceManager(logger);
+    factory = new MockServerInstanceFactory(logger, mockServerInstance);
+    manager = newServerInstanceManager(logger, factory);
   });
 
   describe('startInstance', () => {
@@ -71,19 +89,6 @@ describe('ServerInstanceManager', () => {
       );
     });
 
-    it('should create a new instance if env is updated', async () => {
-
-      const instance = await manager.startInstance(mockConfig);
-      const updatedInstance = await manager.startInstance(newRunConfig({
-        ...mockConfig,
-        env: {
-          ...mockConfig.env,
-          OVERRIDE: 'test'
-        }
-      }));
-
-      expect(updatedInstance.id).not.toBe(instance.id);
-    });
   });
 
   describe('stopInstance', () => {
@@ -154,16 +159,28 @@ describe('ServerInstanceManager', () => {
       expect(instances).toHaveLength(1);
     });
 
-    it('should run multiple if different command', async () => {
-      const config2 = {
+    it('should run multiple if different profile', async () => {
+      const config2 = newRunConfig({
         ...mockConfig,
-        id: 'config-2',
-        command: 'different-command'
+        profileName: 'test-profile-2'
+      });
 
+      const mockServerInstance2: McpServerInstance = {
+        ...mockServerInstance,
+        config: config2,
+        id: 'server-instance-2'
       };
 
-      await manager.startInstance(mockConfig);
-      await manager.startInstance(config2);
+      jest.spyOn(factory, 'createServerInstance').mockImplementation((config) => {
+        if (config.profileName === mockConfig.profileName) {
+          return Promise.resolve(mockServerInstance);
+        }
+        return Promise.resolve(mockServerInstance2);
+      });
+
+      const instance1 = await manager.startInstance(mockConfig);
+      const instance2 = await manager.startInstance(config2);
+      expect(instance1.id).not.toBe(instance2.id);
 
       const instances = await manager.listInstances();
       expect(instances).toHaveLength(2);

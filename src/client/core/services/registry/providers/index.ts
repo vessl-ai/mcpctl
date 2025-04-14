@@ -1,7 +1,7 @@
 export { GlamaRegistryEntry, GlamaRegistryProvider } from "./glama";
 export { SmitheryRegistryEntry, SmitheryRegistryProvider } from "./smithery";
 
-import { RegistryDef, RegistryEntry, RegistryType } from "../../lib/types/registry";
+import { RegistryDef, RegistryEntry, RegistryType } from "../../../lib/types/registry";
 import { GlamaRegistryProvider } from "./glama";
 import { SmitheryRegistryProvider } from "./smithery";
 

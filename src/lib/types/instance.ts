@@ -1,3 +1,4 @@
+import { ChildProcess } from "child_process";
 import { RunConfig } from "./run-config";
 
 export enum McpServerInstanceStatus {
@@ -21,4 +22,9 @@ export interface McpServerInstance {
     lastUsedAt: string;
     connectionInfo: McpServerInstanceConnectionInfo;
     error?: Error;
+    process?: ChildProcess;
+    containerId?: string;
+
+    start(): Promise<void>;
+    stop(): Promise<void>;
 }

@@ -24,12 +24,14 @@ export interface RPCTransportOptions {
     endpoint?: string;
 
     /**
+     * HTTP only
      * Port number for message communication
      * Primarily used when client sends messages to server
      */
     messagesPort?: number;
 
     /**
+     * HTTP only
      * Port number for event reception
      * Primarily used for receiving server events
      */

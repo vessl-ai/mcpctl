@@ -1,7 +1,9 @@
 import { Logger } from '../../../lib/logger/logger';
 import { McpServerInstance, McpServerInstanceStatus } from '../../../lib/types/instance';
 import { RunConfig } from '../../../lib/types/run-config';
-import { BaseServerInstance, LocalServerInstance } from './server-instance-impl';
+import { ServerInstanceFactory } from './server-instance-factory';
+import { BaseServerInstance } from './server-instance-impl';
+
 export interface ServerInstanceManager {
 
   validateConfig(config: RunConfig): Promise<boolean>;
@@ -33,8 +35,10 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   private instances: Map<string, McpServerInstance>;
 
   constructor(
-    private logger: Logger
+    private logger: Logger,
+    private readonly serverInstanceFactory: ServerInstanceFactory
   ) {
+    this.logger = this.logger.withContext('ServerInstanceManager');
     this.configInstanceMap = new Map();
     this.instances = new Map();
   }
@@ -52,6 +56,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
 
       if (this.configInstanceMap.has(config.id)) {
         // 만약 env가 업데이트 되었다면, 지우고 새로 생성
+        this.logger.verbose(`Instance ${config.id} already exists, checking env`);
         const existingEnv = this.configInstanceMap.get(config.id)?.config.env || {};
         const newEnv = config.env || {};
         const isEnvEqual = Object.keys(existingEnv).length === Object.keys(newEnv).length &&
@@ -68,12 +73,17 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
         }
       }
 
-      // 새 워커 생성
-      const serverInstance = new LocalServerInstance(config);
-
-      // TODO: Support containered ones
+      // create server instance
+      const serverInstance = await this.serverInstanceFactory.createServerInstance(config, this.logger);
 
       await serverInstance.start();
+
+      this.logger.info(`Instance ${serverInstance.id} started`);
+      
+      serverInstance.status = McpServerInstanceStatus.RUNNING;
+      serverInstance.startedAt = new Date().toISOString();
+      serverInstance.lastUsedAt = new Date().toISOString();
+
       this.configInstanceMap.set(config.id, serverInstance);
       this.instances.set(serverInstance.id, serverInstance);
 
@@ -139,7 +149,8 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
 }
 
 export const newServerInstanceManager = (
-  logger: Logger
+  logger: Logger,
+  serverInstanceFactory: ServerInstanceFactory
 ): ServerInstanceManager => {
-  return new DefaultServerInstanceManager(logger);
+  return new DefaultServerInstanceManager(logger, serverInstanceFactory);
 }; 

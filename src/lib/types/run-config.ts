@@ -1,4 +1,9 @@
+import { McpServerHostingType } from "./hosting";
+import { McpClientType } from "./mcp-client-type";
+
 export class RunConfig {
+  hosting!: McpServerHostingType;
+  client!: McpClientType;
   serverName!: string;
   profileName!: string;
   command!: string;
@@ -6,18 +11,21 @@ export class RunConfig {
   created!: string;
 
   constructor({
+    hosting,
     serverName,
     profileName,
     command,
     env,
     created,
   }: {
+    hosting: McpServerHostingType;
     serverName: string;
     profileName: string;
     command: string;
     env?: Record<string, string>;
     created: string;
   }) {
+    this.hosting = hosting;
     this.serverName = serverName;
     this.profileName = profileName;
     this.command = command;
@@ -31,12 +39,14 @@ export class RunConfig {
 }
 
 export const newRunConfig = ({
+  hosting,
   serverName,
   profileName,
   command,
   env,
   created,
 }: {
+  hosting: McpServerHostingType;
   serverName: string;
   profileName: string;
   command: string;
@@ -44,6 +54,7 @@ export const newRunConfig = ({
   created: string;
 }): RunConfig => {
   return new RunConfig({
+    hosting,
     serverName,
     profileName,
     command,

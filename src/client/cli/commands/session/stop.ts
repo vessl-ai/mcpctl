@@ -4,8 +4,11 @@ import { App } from "../../app";
 const buildSessionStopCommand = (app: App): Command => {
   const sessionStopCommand = new Command("stop")
     .description("Stop MCP server session")
-    .action(async () => {
+    .option("-s, --session <session>", "Session ID")
+    .action(async (options) => {
       console.log("Session stop command");
+      const sessionManager = app.getSessionManager();
+      await sessionManager.disconnect(options.session, true);
     });
 
   return sessionStopCommand;

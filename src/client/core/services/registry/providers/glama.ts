@@ -1,5 +1,6 @@
 import axios from "axios";
-import { RegistryEntry } from "../../lib/types/registry";
+import { McpServerHostingType } from "../../../../../lib/types/hosting";
+import { RegistryEntry } from "../../../lib/types/registry";
 import { RegistryProvider } from "./index";
 
 interface GlamaMcpServer {
@@ -50,7 +51,7 @@ class GlamaRegistryProvider implements RegistryProvider {
         repository: server.repository?.url,
         license: server.spdxLicense?.name,
         attributes: server.attributes,
-        hosting: server.attributes.includes('hosting:remote-capable') ? 'remote' : 'local'
+        hosting: server.attributes.includes('hosting:remote-capable') ? McpServerHostingType.REMOTE : McpServerHostingType.LOCAL
       }));
     } catch (error) {
       if (axios.isAxiosError(error)) {

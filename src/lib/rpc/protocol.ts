@@ -1,4 +1,5 @@
 import { NotificationType, RequestType } from 'vscode-jsonrpc';
+import { DaemonStatus } from '../types/daemon';
 import { McpServerInstance } from '../types/instance';
 import { RunConfig } from '../types/run-config';
 
@@ -30,5 +31,15 @@ export namespace Instance {
             instanceId: string;
             status: Partial<McpServerInstance>;
         }>('instance/status');
+    }
+}
+
+export namespace Daemon {
+    export namespace StatusRequest {
+        export const type = new RequestType<{}, DaemonStatus, void>('daemon/status');
+    }
+
+    export namespace ShutdownRequest {
+        export const type = new RequestType<{}, void, void>('daemon/shutdown');
     }
 }

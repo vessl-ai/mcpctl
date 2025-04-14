@@ -1,4 +1,4 @@
-
+import { McpServerHostingType } from "../../../../lib/types/hosting";
 type RegistryDef = {
   name: string;
   url: string;
@@ -18,7 +18,7 @@ type RegistryEntry = {
   description: string;
   url: string;
   sourceUrl: string;
-  hosting: "local" | "remote";
+  hosting: McpServerHostingType;
   attributes: string[];
 }
 

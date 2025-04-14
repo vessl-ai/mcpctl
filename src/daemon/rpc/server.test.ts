@@ -3,7 +3,9 @@ import { createMessageConnection, DataCallback, Disposable, MessageConnection, M
 import { Logger } from '../../lib/logger/logger';
 import { Instance } from '../../lib/rpc/protocol';
 import { RPCTransport } from '../../lib/rpc/transport';
+import { McpServerHostingType } from '../../lib/types/hosting';
 import { McpServerInstance, McpServerInstanceStatus } from '../../lib/types/instance';
+import { McpClientType } from '../../lib/types/mcp-client-type';
 import { RunConfig } from '../../lib/types/run-config';
 import { ServerInstanceManager } from '../managers/server-instance/server-instance-manager';
 import { RPCServer } from './server';
@@ -139,7 +141,9 @@ describe('RPCServer', () => {
         profileName: 'test-profile',
         command: 'test',
         env: {},
-        created: new Date().toISOString()
+        created: new Date().toISOString(),
+        hosting: McpServerHostingType.LOCAL,
+        client: McpClientType.CLAUDE
       };
 
       const mockInstance: McpServerInstance = {
@@ -151,7 +155,9 @@ describe('RPCServer', () => {
         connectionInfo: {
           transport: 'test',
           endpoint: 'test'
-        }
+        },
+        start: jest.fn(),
+        stop: jest.fn()
       };
 
       instanceManager.startInstance.mockResolvedValue(mockInstance);
@@ -179,7 +185,9 @@ describe('RPCServer', () => {
         profileName: 'test-profile',
         command: 'test',
         env: {},
-        created: new Date().toISOString()
+        created: new Date().toISOString(),
+        hosting: McpServerHostingType.LOCAL,
+        client: McpClientType.CLAUDE
       };
 
       const mockInstance: McpServerInstance = {
@@ -191,7 +199,9 @@ describe('RPCServer', () => {
         connectionInfo: {
           transport: 'test',
           endpoint: 'test'
-        }
+        },
+        start: jest.fn(),
+        stop: jest.fn()
       };
 
       instanceManager.getInstance.mockResolvedValue(mockInstance);
@@ -211,7 +221,9 @@ describe('RPCServer', () => {
         profileName: 'test-profile',
         command: 'test',
         env: {},
-        created: new Date().toISOString()
+        created: new Date().toISOString(),
+        hosting: McpServerHostingType.LOCAL,
+        client: McpClientType.CLAUDE
       };
 
       const mockInstances: McpServerInstance[] = [
@@ -224,7 +236,9 @@ describe('RPCServer', () => {
           connectionInfo: {
             transport: 'test',
             endpoint: 'test'
-          }
+          },
+          start: jest.fn(),
+          stop: jest.fn()
         },
         {
           id: 'test-2',
@@ -235,7 +249,9 @@ describe('RPCServer', () => {
           connectionInfo: {
             transport: 'test',
             endpoint: 'test'
-          }
+          },
+          start: jest.fn(),
+          stop: jest.fn()
         }
       ];
 
@@ -257,6 +273,8 @@ describe('RPCServer', () => {
         command: "test",
         env: {},
         created: new Date().toISOString(),
+        hosting: McpServerHostingType.LOCAL,
+        client: McpClientType.CLAUDE
       };
       const error = new Error('Failed to start instance');
       instanceManager.startInstance.mockRejectedValue(error);
