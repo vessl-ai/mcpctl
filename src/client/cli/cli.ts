@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { Command } from "commander";
 import { newApp } from "./app";
 import { buildDaemonCommand } from "./commands/daemon";
@@ -13,17 +15,17 @@ const main = async () => {
   const program = new Command();
 
   program
-  .name("mcpctl")
-  .version("1.0.0")
-  .description("CLI to control MCP servers")
-  .option("-v, --verbose", "Verbose output")
-  .addCommand(buildServerCommand(app))
-  .addCommand(buildSessionCommand(app))
-  .addCommand(buildInstallCommand(app))
-  .addCommand(buildProfileCommand(app))
-  .addCommand(buildRegistryCommand(app))
-  .addCommand(buildSearchCommand(app))
-  .addCommand(buildDaemonCommand(app));
+    .name("mcpctl")
+    .version("1.0.0")
+    .description("CLI to control MCP servers")
+    .option("-v, --verbose", "Verbose output")
+    .addCommand(buildServerCommand(app))
+    .addCommand(buildSessionCommand(app))
+    .addCommand(buildInstallCommand(app))
+    .addCommand(buildProfileCommand(app))
+    .addCommand(buildRegistryCommand(app))
+    .addCommand(buildSearchCommand(app))
+    .addCommand(buildDaemonCommand(app));
 
   function errorColor(str: string) {
     // Add ANSI escape codes to display text in red.
@@ -31,19 +33,23 @@ const main = async () => {
   }
 
   program.exitOverride((error) => {
-    if (error.code === 'commander.unknownCommand') {
-      console.error(`\nError: '${error.message.split("'")[1]}' is an unknown command.`);
-      console.error('\nAvailable commands:');
-      program.commands.forEach(cmd => {
+    if (error.code === "commander.unknownCommand") {
+      console.error(
+        `\nError: '${error.message.split("'")[1]}' is an unknown command.`
+      );
+      console.error("\nAvailable commands:");
+      program.commands.forEach((cmd) => {
         console.error(`  ${cmd.name()}\t\t${cmd.description()}`);
       });
-      console.error('\nFor detailed help: mcpctl --help');
-    } 
+      console.error("\nFor detailed help: mcpctl --help");
+    }
     // @ts-ignore
     else if (error.code === "ENOENT") {
-      console.error('Daemon is not running, trying to start it by running `mcp daemon start`');
+      console.error(
+        "Daemon is not running, trying to start it by running `mcp daemon start`"
+      );
     } else {
-      console.error('\nAn error occurred. Use -v option for more details.');
+      console.error("\nAn error occurred. Use -v option for more details.");
       if (program.opts().verbose) {
         console.error(error);
       }
@@ -51,6 +57,6 @@ const main = async () => {
   });
 
   program.parse();
-}
+};
 
 main();
