@@ -1,11 +1,10 @@
 import { EventEmitter } from 'events';
-import { createMessageConnection, DataCallback, Disposable, MessageConnection, MessageReader, MessageWriter } from 'vscode-jsonrpc/node';
+import { DataCallback, Disposable, MessageConnection, MessageReader, MessageWriter } from 'vscode-jsonrpc/node';
 import { Logger } from '../../lib/logger/logger';
-import { Instance } from '../../lib/rpc/protocol';
 import { RPCTransport } from '../../lib/rpc/transport';
+import { DaemonStatus } from '../../lib/types/daemon';
 import { McpServerHostingType } from '../../lib/types/hosting';
 import { McpServerInstance, McpServerInstanceStatus } from '../../lib/types/instance';
-import { McpClientType } from '../../lib/types/mcp-client-type';
 import { RunConfig } from '../../lib/types/run-config';
 import { ServerInstanceManager } from '../managers/server-instance/server-instance-manager';
 import { RPCServer } from './server';
@@ -16,274 +15,343 @@ jest.setTimeout(30000);
 class MockTransport implements RPCTransport {
   reader: MessageReader;
   writer: MessageWriter;
-  dispose: () => void;
+  dispose = jest.fn();
   private serverEmitter = new EventEmitter();
   private clientEmitter = new EventEmitter();
 
   constructor() {
     this.reader = {
-      listen: (callback: DataCallback): Disposable => {
+      listen: jest.fn((callback: DataCallback): Disposable => {
         const listener = (msg: any) => callback(msg);
         this.serverEmitter.on('message', listener);
         return {
-          dispose: () => this.serverEmitter.removeListener('message', listener)
+          dispose: jest.fn(() => this.serverEmitter.removeListener('message', listener))
         };
-      },
-      onError: () => ({ dispose: () => {} }),
-      onClose: () => ({ dispose: () => {} }),
-      onPartialMessage: () => ({ dispose: () => {} }),
-      dispose: () => this.serverEmitter.removeAllListeners()
+      }),
+      onError: jest.fn(() => ({ dispose: jest.fn() })),
+      onClose: jest.fn(() => ({ dispose: jest.fn() })),
+      onPartialMessage: jest.fn(() => ({ dispose: jest.fn() })),
+      dispose: jest.fn(() => this.serverEmitter.removeAllListeners())
     };
 
     this.writer = {
-      write: (msg) => {
+      write: jest.fn((msg) => {
         this.clientEmitter.emit('message', msg);
         return Promise.resolve();
-      },
-      onError: () => ({ dispose: () => {} }),
-      onClose: () => ({ dispose: () => {} }),
-      dispose: () => {},
-      end: () => Promise.resolve()
-    };
-
-    this.dispose = () => {
-      this.reader.dispose();
-      this.writer.dispose();
-      this.serverEmitter.removeAllListeners();
-      this.clientEmitter.removeAllListeners();
+      }),
+      onError: jest.fn(() => ({ dispose: jest.fn() })),
+      onClose: jest.fn(() => ({ dispose: jest.fn() })),
+      dispose: jest.fn(),
+      end: jest.fn(() => Promise.resolve())
     };
   }
 
   createClientTransport(): RPCTransport {
     return {
       reader: {
-        listen: (callback: DataCallback): Disposable => {
+        listen: jest.fn((callback: DataCallback): Disposable => {
           const listener = (msg: any) => callback(msg);
           this.clientEmitter.on('message', listener);
           return {
-            dispose: () => this.clientEmitter.removeListener('message', listener)
+            dispose: jest.fn(() => this.clientEmitter.removeListener('message', listener))
           };
-        },
-        onError: () => ({ dispose: () => {} }),
-        onClose: () => ({ dispose: () => {} }),
-        onPartialMessage: () => ({ dispose: () => {} }),
-        dispose: () => this.clientEmitter.removeAllListeners()
+        }),
+        onError: jest.fn(() => ({ dispose: jest.fn() })),
+        onClose: jest.fn(() => ({ dispose: jest.fn() })),
+        onPartialMessage: jest.fn(() => ({ dispose: jest.fn() })),
+        dispose: jest.fn(() => this.clientEmitter.removeAllListeners())
       },
       writer: {
-        write: (msg) => {
+        write: jest.fn((msg) => {
           this.serverEmitter.emit('message', msg);
           return Promise.resolve();
-        },
-        onError: () => ({ dispose: () => {} }),
-        onClose: () => ({ dispose: () => {} }),
-        dispose: () => {},
-        end: () => Promise.resolve()
+        }),
+        onError: jest.fn(() => ({ dispose: jest.fn() })),
+        onClose: jest.fn(() => ({ dispose: jest.fn() })),
+        dispose: jest.fn(),
+        end: jest.fn(() => Promise.resolve())
       },
-      dispose: () => {}
+      dispose: jest.fn()
     };
   }
 }
 
 class MockLogger implements Logger {
-  debug() {}
-  info() {}
-  warn() {}
-  error() {}
-  verbose() {}
-  log() {}
-  withContext(context: string): Logger { return this; }
+  debug = jest.fn();
+  info = jest.fn();
+  warn = jest.fn();
+  error = jest.fn();
+  verbose = jest.fn();
+  log = jest.fn();
+  withContext = jest.fn().mockReturnThis();
 }
+
+type MockRequestHandler<T = any, U = any> = jest.Mock<Promise<U>, [T]>;
+type MockNotificationHandler<T = any> = jest.Mock<Promise<void>, [T]>;
+
+interface MockRequestType {
+  method: string;
+}
+
+interface MockNotificationType {
+  method: string;
+}
+
+type MockRequestCall = [MockRequestType, MockRequestHandler];
+type MockNotificationCall = [MockNotificationType, MockNotificationHandler];
 
 describe('RPCServer', () => {
   let server: RPCServer;
   let transport: MockTransport;
   let instanceManager: jest.Mocked<ServerInstanceManager>;
-  let clientConnection: MessageConnection;
+  let logger: Logger;
+  let mockConnection: jest.Mocked<MessageConnection>;
+  let mockConfig: RunConfig;
+  let mockInstance: McpServerInstance;
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    mockConfig = new RunConfig({
+      hosting: McpServerHostingType.LOCAL,
+      serverName: 'test-server',
+      profileName: 'test-profile',
+      command: 'test-command',
+      created: new Date().toISOString(),
+    });
+
+    mockInstance = {
+      id: 'test-id',
+      config: mockConfig,
+      status: McpServerInstanceStatus.RUNNING,
+      connectionInfo: {
+        transport: 'sse',
+        endpoint: '/test',
+      },
+      startedAt: new Date().toISOString(),
+      lastUsedAt: new Date().toISOString(),
+      start: jest.fn(),
+      stop: jest.fn(),
+    };
+
     transport = new MockTransport();
+
     instanceManager = {
-      startInstance: jest.fn(),
+      startInstance: jest.fn().mockResolvedValue(mockInstance),
       stopInstance: jest.fn(),
-      getInstance: jest.fn(),
-      listInstances: jest.fn(),
+      getInstance: jest.fn().mockResolvedValue(mockInstance),
+      listInstances: jest.fn().mockResolvedValue([mockInstance]),
       updateInstanceStatus: jest.fn(),
-      validateConfig: jest.fn()
-    } as unknown as jest.Mocked<ServerInstanceManager>;
+    } as any;
 
-    server = new RPCServer(
-      transport,
-      instanceManager,
-      new MockLogger()
-    );
+    logger = new MockLogger();
 
-    const clientTransport = transport.createClientTransport();
-    clientConnection = createMessageConnection(
-      clientTransport.reader,
-      clientTransport.writer
-    );
+    mockConnection = {
+      onRequest: jest.fn(),
+      onNotification: jest.fn(),
+      listen: jest.fn(),
+      dispose: jest.fn(),
+    } as any;
 
-    server.listen();
-    await new Promise(resolve => setTimeout(resolve, 100));
-    clientConnection.listen();
-  });
-
-  afterEach(() => {
-    server.dispose();
-    clientConnection.dispose();
+    (require('vscode-jsonrpc/node') as any).createMessageConnection = jest.fn().mockReturnValue(mockConnection);
   });
 
   describe('Instance Management', () => {
     it('should handle start instance request', async () => {
-      const mockConfig: RunConfig = {
-        id: 'config-1',
-        serverName: 'test-server',
-        profileName: 'test-profile',
-        command: 'test',
-        env: {},
-        created: new Date().toISOString(),
-        hosting: McpServerHostingType.LOCAL,
-        client: McpClientType.CLAUDE
-      };
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
 
-      const mockInstance: McpServerInstance = {
-        id: 'test-id',
-        status: McpServerInstanceStatus.RUNNING,
-        config: mockConfig,
-        startedAt: new Date().toISOString(),
-        lastUsedAt: new Date().toISOString(),
-        connectionInfo: {
-          transport: 'test',
-          endpoint: 'test'
-        },
-        start: jest.fn(),
-        stop: jest.fn()
-      };
+      const onRequestCalls = mockConnection.onRequest.mock.calls as unknown as MockRequestCall[];
+      const startHandler = onRequestCalls.find(
+        (call) => call[0].method === 'instance/start'
+      )?.[1] as MockRequestHandler<{ config: RunConfig }, McpServerInstance>;
 
-      instanceManager.startInstance.mockResolvedValue(mockInstance);
-
-      const result = await clientConnection.sendRequest(Instance.StartRequest.type, {
-        config: mockConfig,
-      });
-
-      expect(instanceManager.startInstance).toHaveBeenCalledWith(mockConfig);
-      expect(result).toEqual(mockInstance);
+      expect(startHandler).toBeDefined();
+      if (startHandler) {
+        const result = await startHandler({ config: mockConfig });
+        expect(result).toEqual(mockInstance);
+        expect(instanceManager.startInstance).toHaveBeenCalledWith(mockConfig);
+      }
     });
 
     it('should handle stop instance request', async () => {
-      await clientConnection.sendRequest(Instance.StopRequest.type, {
-        instanceId: 'test-id'
-      });
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
 
-      expect(instanceManager.stopInstance).toHaveBeenCalledWith('test-id');
+      const onRequestCalls = mockConnection.onRequest.mock.calls as unknown as MockRequestCall[];
+      const stopHandler = onRequestCalls.find(
+        (call) => call[0].method === 'instance/stop'
+      )?.[1] as MockRequestHandler<{ instanceId: string }, void>;
+
+      expect(stopHandler).toBeDefined();
+      if (stopHandler) {
+        await stopHandler({ instanceId: 'test-id' });
+        expect(instanceManager.stopInstance).toHaveBeenCalledWith('test-id');
+      }
     });
 
     it('should handle get instance request', async () => {
-      const mockConfig: RunConfig = {
-        id: 'config-1',
-        serverName: 'test-server',
-        profileName: 'test-profile',
-        command: 'test',
-        env: {},
-        created: new Date().toISOString(),
-        hosting: McpServerHostingType.LOCAL,
-        client: McpClientType.CLAUDE
-      };
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
 
-      const mockInstance: McpServerInstance = {
-        id: 'test-id',
-        status: McpServerInstanceStatus.RUNNING,
-        config: mockConfig,
-        startedAt: new Date().toISOString(),
-        lastUsedAt: new Date().toISOString(),
-        connectionInfo: {
-          transport: 'test',
-          endpoint: 'test'
-        },
-        start: jest.fn(),
-        stop: jest.fn()
-      };
+      const onRequestCalls = mockConnection.onRequest.mock.calls as unknown as MockRequestCall[];
+      const getHandler = onRequestCalls.find(
+        (call) => call[0].method === 'instance/get'
+      )?.[1] as MockRequestHandler<{ instanceId: string }, McpServerInstance>;
 
-      instanceManager.getInstance.mockResolvedValue(mockInstance);
-
-      const result = await clientConnection.sendRequest(Instance.GetRequest.type, {
-        instanceId: 'test-id'
-      });
-
-      expect(instanceManager.getInstance).toHaveBeenCalledWith('test-id');
-      expect(result).toEqual(mockInstance);
+      expect(getHandler).toBeDefined();
+      if (getHandler) {
+        const result = await getHandler({ instanceId: 'test-id' });
+        expect(result).toEqual(mockInstance);
+        expect(instanceManager.getInstance).toHaveBeenCalledWith('test-id');
+      }
     });
 
     it('should handle list instances request', async () => {
-      const mockConfig: RunConfig = {
-        id: 'config-1',
-        serverName: 'test-server',
-        profileName: 'test-profile',
-        command: 'test',
-        env: {},
-        created: new Date().toISOString(),
-        hosting: McpServerHostingType.LOCAL,
-        client: McpClientType.CLAUDE
-      };
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
 
-      const mockInstances: McpServerInstance[] = [
-        {
-          id: 'test-1',
-          status: McpServerInstanceStatus.RUNNING,
-          config: mockConfig,
-          startedAt: new Date().toISOString(),
-          lastUsedAt: new Date().toISOString(),
-          connectionInfo: {
-            transport: 'test',
-            endpoint: 'test'
-          },
-          start: jest.fn(),
-          stop: jest.fn()
-        },
-        {
-          id: 'test-2',
-          status: McpServerInstanceStatus.STOPPED,
-          config: mockConfig,
-          startedAt: new Date().toISOString(),
-          lastUsedAt: new Date().toISOString(),
-          connectionInfo: {
-            transport: 'test',
-            endpoint: 'test'
-          },
-          start: jest.fn(),
-          stop: jest.fn()
-        }
-      ];
+      const onRequestCalls = mockConnection.onRequest.mock.calls as unknown as MockRequestCall[];
+      const listHandler = onRequestCalls.find(
+        (call) => call[0].method === 'instance/list'
+      )?.[1] as MockRequestHandler<{}, McpServerInstance[]>;
 
-      instanceManager.listInstances.mockResolvedValue(mockInstances);
+      expect(listHandler).toBeDefined();
+      if (listHandler) {
+        const result = await listHandler({});
+        expect(result).toEqual([mockInstance]);
+        expect(instanceManager.listInstances).toHaveBeenCalled();
+      }
+    });
 
-      const result = await clientConnection.sendRequest(Instance.ListRequest.type, {});
+    it('should handle instance status notifications', async () => {
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
 
-      expect(instanceManager.listInstances).toHaveBeenCalled();
-      expect(result).toEqual(mockInstances);
+      type StatusParams = { instanceId: string; status: { status: McpServerInstanceStatus } };
+      const onNotificationCalls = mockConnection.onNotification.mock.calls as unknown as MockNotificationCall[];
+      const statusHandler = onNotificationCalls.find(
+        (call) => call[0].method === 'instance/status'
+      )?.[1] as MockNotificationHandler<StatusParams>;
+
+      expect(statusHandler).toBeDefined();
+      if (statusHandler) {
+        await statusHandler({ 
+          instanceId: 'test-id', 
+          status: { status: McpServerInstanceStatus.RUNNING }
+        });
+
+        expect(instanceManager.updateInstanceStatus).toHaveBeenCalledWith(
+          'test-id',
+          { status: McpServerInstanceStatus.RUNNING }
+        );
+      }
     });
   });
 
   describe('Error Handling', () => {
     it('should handle errors in start instance request', async () => {
-      const mockConfig: RunConfig = {
-        id: "config-1",
-        serverName: "test-server",
-        profileName: "test-profile",
-        command: "test",
-        env: {},
-        created: new Date().toISOString(),
-        hosting: McpServerHostingType.LOCAL,
-        client: McpClientType.CLAUDE
-      };
       const error = new Error('Failed to start instance');
       instanceManager.startInstance.mockRejectedValue(error);
 
-      await expect(
-        clientConnection.sendRequest(Instance.StartRequest.type, {
-          config: mockConfig
-        })
-      ).rejects.toThrow('Failed to start instance');
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
+
+      const onRequestCalls = mockConnection.onRequest.mock.calls as unknown as MockRequestCall[];
+      const startHandler = onRequestCalls.find(
+        (call) => call[0].method === 'instance/start'
+      )?.[1] as MockRequestHandler<{ config: RunConfig }, McpServerInstance>;
+
+      expect(startHandler).toBeDefined();
+      if (startHandler) {
+        await expect(startHandler({ config: mockConfig })).rejects.toThrow(error);
+      }
+    });
+
+    it('should handle connection setup errors', () => {
+      const error = new Error('Connection setup failed');
+      (require('vscode-jsonrpc/node') as any).createMessageConnection.mockImplementation(() => {
+        throw error;
+      });
+
+      expect(() => {
+        server = new RPCServer(transport, instanceManager, logger);
+        server.listen();
+      }).toThrow(error);
+
+      expect(logger.error).toHaveBeenCalledWith('Failed to setup RPC connection', error);
+    });
+  });
+
+  describe('Status Management', () => {
+    it('should handle daemon status request', async () => {
+      const originalVersion = '1.0.0';
+      jest.mock('../../../package.json', () => ({ version: originalVersion }), { virtual: true });
+
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
+
+      const onRequestCalls = mockConnection.onRequest.mock.calls as unknown as MockRequestCall[];
+      const statusHandler = onRequestCalls.find(
+        call => call[0].method === 'daemon/status'
+      )?.[1] as MockRequestHandler<{}, DaemonStatus>;
+
+      expect(statusHandler).toBeDefined();
+      if (statusHandler) {
+        const status = await statusHandler({});
+        expect(status).toEqual({
+          isRunning: true,
+          version: originalVersion,
+          uptime: expect.any(Number),
+        } as DaemonStatus);
+      }
+    });
+
+    it('should handle daemon shutdown request', async () => {
+      const mockKill = jest.spyOn(process, 'kill').mockImplementation();
+
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
+
+      const onRequestCalls = mockConnection.onRequest.mock.calls as unknown as MockRequestCall[];
+      const shutdownHandler = onRequestCalls.find(
+        call => call[0].method === 'daemon/shutdown'
+      )?.[1] as MockRequestHandler<{}, void>;
+
+      expect(shutdownHandler).toBeDefined();
+      if (shutdownHandler) {
+        await shutdownHandler({});
+        expect(mockKill).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+      }
+      mockKill.mockRestore();
+    });
+  });
+
+  describe('Server Lifecycle', () => {
+    it('should handle server transport connections', () => {
+      const serverTransport = {
+        ...transport,
+        _server: {
+          on: jest.fn(),
+        },
+      };
+
+      server = new RPCServer(serverTransport, instanceManager, logger);
+      server.listen();
+
+      expect(serverTransport._server.on).toHaveBeenCalledWith(
+        'connection',
+        expect.any(Function)
+      );
+      expect(logger.info).toHaveBeenCalledWith('Waiting for RPC connections...');
+    });
+
+    it('should dispose server and transport', () => {
+      server = new RPCServer(transport, instanceManager, logger);
+      server.listen();
+      server.dispose();
+
+      expect(mockConnection.dispose).toHaveBeenCalled();
+      expect(transport.dispose).toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalledWith('RPC server disposed');
     });
   });
 }); 
