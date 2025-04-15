@@ -11,13 +11,34 @@ class DefaultServerService implements ServerService {
   ) {}
 
   async listServers(): Promise<McpServerInstance[]> {
-    const daemonClient = await DaemonRPCClient.getInstance();
-    return daemonClient.listInstances();
+    let daemonClient: DaemonRPCClient | undefined;
+    try {
+      daemonClient = await DaemonRPCClient.getInstance();
+      const instances = await daemonClient.listInstances();
+      return instances;
+    } catch (error) {
+      console.error('Error listing servers:', error);
+      throw error;
+    } finally {
+      if (daemonClient) {
+        daemonClient.dispose();
+      }
+    }
   }
 
-  async stopServer(instanceId: string): Promise<void> {
-    const daemonClient = await DaemonRPCClient.getInstance();
-    return daemonClient.stopInstance(instanceId);
+  async stopServer(instanceId: string): Promise<void> { 
+    let daemonClient: DaemonRPCClient | undefined;
+    try {
+      daemonClient = await DaemonRPCClient.getInstance();
+      await daemonClient.stopInstance(instanceId);
+    } catch (error) {
+      console.error('Error stopping server:', error);
+      throw error;
+    } finally {
+      if (daemonClient) {
+        daemonClient.dispose();
+      }
+    }
   }
 }
 

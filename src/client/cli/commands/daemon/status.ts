@@ -19,7 +19,6 @@ export const buildStatusCommand = (app: App): Command => {
         if (daemonClient) {
           daemonClient.dispose();
         }
-        process.exit(0);
       }
     });
 } 

@@ -18,12 +18,11 @@ export const buildStopCommand = (app: App): Command => {
         } else {
           console.error('Failed to stop daemon:', error instanceof Error ? error.message : 'Unknown error');
         }
-        process.exit(1);
+        throw error;
       } finally {
         if (daemonClient) {
           daemonClient.dispose();
         }
-        process.exit(0);
       }
     });
 } 

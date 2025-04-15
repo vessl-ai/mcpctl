@@ -11,7 +11,7 @@ export class DaemonRPCClient {
     private connection: MessageConnection;
     private logger: Logger;
 
-    private static instance: DaemonRPCClient;
+    private static instance?: DaemonRPCClient;
 
     private constructor(connection: MessageConnection, logger: Logger) {
         this.connection = connection;
@@ -28,7 +28,7 @@ export class DaemonRPCClient {
 
     static async getInstance(): Promise<DaemonRPCClient> {
         if (!this.instance) {
-            this.instance = await this.create(new SocketTransportFactory(), {
+            this.instance = await this.create(new SocketTransportFactory(logger), {
                 type: "socket",
                 endpoint: "/tmp/mcp-daemon.sock",
             }, logger);
@@ -86,7 +86,9 @@ export class DaemonRPCClient {
     }
 
     dispose(): void {
+        this.connection.end();
         this.connection.dispose();
-        this.logger.info('RPC client disposed');
+        DaemonRPCClient.instance = undefined;
+        this.logger.verbose('RPC client disposed');
     }
 } 

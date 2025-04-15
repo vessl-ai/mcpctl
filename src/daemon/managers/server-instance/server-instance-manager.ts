@@ -1,17 +1,17 @@
-import { Logger } from '../../../lib/logger/logger';
-import { McpServerInstance, McpServerInstanceStatus } from '../../../lib/types/instance';
-import { RunConfig } from '../../../lib/types/run-config';
-import { ServerInstanceFactory } from './server-instance-factory';
-import { BaseServerInstance } from './server-instance-impl';
+import { Logger } from "../../../lib/logger/logger";
+import {
+  McpServerInstance,
+  McpServerInstanceStatus,
+} from "../../../lib/types/instance";
+import { getRunConfigId, RunConfig } from "../../../lib/types/run-config";
+import { ServerInstanceFactory } from "./server-instance-factory";
+import { BaseServerInstance } from "./server-instance-impl";
 
 export interface ServerInstanceManager {
-
   validateConfig(config: RunConfig): Promise<boolean>;
 
   // 서버 인스턴스 생성/시작
-  startInstance(
-    config: RunConfig,
-  ): Promise<McpServerInstance>;
+  startInstance(config: RunConfig): Promise<McpServerInstance>;
 
   // 서버 인스턴스 종료
   stopInstance(instanceId: string): Promise<void>;
@@ -27,7 +27,7 @@ export interface ServerInstanceManager {
     instanceId: string,
     status: Partial<McpServerInstance>
   ): Promise<void>;
-} 
+}
 
 class DefaultServerInstanceManager implements ServerInstanceManager {
   // TODO: save to file as daemon can be restarted
@@ -38,88 +38,160 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
     private logger: Logger,
     private readonly serverInstanceFactory: ServerInstanceFactory
   ) {
-    this.logger = this.logger.withContext('ServerInstanceManager');
+    this.logger = this.logger.withContext("ServerInstanceManager");
     this.configInstanceMap = new Map();
     this.instances = new Map();
   }
 
   async validateConfig(config: RunConfig): Promise<boolean> {
-    // TODO: add validation logic
+    this.logger.debug("Validating server instance config", { config });
+
+    if (!config.profileName || config.profileName.length === 0) {
+      this.logger.error("Invalid Config Profile Name", { config });
+      return false;
+    }
+
+    if (
+      !config.serverName ||
+      config.serverName.length === 0 ||
+      config.serverName.includes(" ")
+    ) {
+      this.logger.error("Invalid Config Server Name", { config });
+      return false;
+    }
+
+    if (!config.command || config.command.length === 0) {
+      this.logger.error("Invalid Config Command", { config });
+      return false;
+    }
+
+    if (!getRunConfigId(config)) {
+      this.logger.error("Invalid Config Id", { config });
+      return false;
+    }
+
     return true;
   }
 
   async startInstance(config: RunConfig): Promise<McpServerInstance> {
-    try {
-      if (!(await this.validateConfig(config))) {
-        throw new Error("Invalid config");
-      }
+    this.logger.info("Starting server instance", { config });
+    if (!(await this.validateConfig(config))) {
+      const error = new Error("Invalid config");
+      this.logger.error("Config validation failed", { config });
+      throw error;
+    }
 
-      if (this.configInstanceMap.has(config.id)) {
-        // 만약 env가 업데이트 되었다면, 지우고 새로 생성
-        this.logger.verbose(`Instance ${config.id} already exists, checking env`);
-        const existingEnv = this.configInstanceMap.get(config.id)?.config.env || {};
+    const configId = getRunConfigId(config);
+
+    try {
+      if (this.configInstanceMap.has(configId)) {
+        this.logger.info(
+          `Instance ${configId} already exists, checking env configuration`
+        );
+        const existingEnv =
+          this.configInstanceMap.get(configId)?.config.env || {};
         const newEnv = config.env || {};
-        const isEnvEqual = Object.keys(existingEnv).length === Object.keys(newEnv).length &&
-          Object.keys(existingEnv).every(key => existingEnv[key] === newEnv[key]);
+        const isEnvEqual =
+          Object.keys(existingEnv).length === Object.keys(newEnv).length &&
+          Object.keys(existingEnv).every(
+            (key) => existingEnv[key] === newEnv[key]
+          );
 
         if (!isEnvEqual) {
+          this.logger.info(
+            "Environment configuration changed, recreating instance",
+            { configId }
+          );
           // 기존 인스턴스 정지는 백그라운드로 처리
-          this.stopInstance(config.id).catch(err => {
-            this.logger.error('Failed to stop instance in background:', err);
+          this.stopInstance(configId).catch((err) => {
+            this.logger.error("Failed to stop instance in background:", {
+              error: err,
+              configId,
+            });
           });
-          this.configInstanceMap.delete(config.id);
+          this.configInstanceMap.delete(configId);
         } else {
-          return this.configInstanceMap.get(config.id)!;
+          this.logger.info("Reusing existing instance", {
+            configId,
+          });
+          return this.configInstanceMap.get(configId)!;
         }
       }
 
+      this.logger.debug("Creating new server instance", {
+        configId,
+      });
       // create server instance
-      const serverInstance = await this.serverInstanceFactory.createServerInstance(config, this.logger);
+      const serverInstance =
+        await this.serverInstanceFactory.createServerInstance(
+          config,
+          this.logger
+        );
 
+      this.logger.debug("Starting server instance process", {
+        instanceId: serverInstance.id,
+      });
       await serverInstance.start();
 
-      this.logger.info(`Instance ${serverInstance.id} started`);
-      
+      this.logger.info(`Instance ${serverInstance.id} started successfully`);
+
       serverInstance.status = McpServerInstanceStatus.RUNNING;
       serverInstance.startedAt = new Date().toISOString();
       serverInstance.lastUsedAt = new Date().toISOString();
 
-      this.configInstanceMap.set(config.id, serverInstance);
+      this.configInstanceMap.set(configId, serverInstance);
       this.instances.set(serverInstance.id, serverInstance);
+
+      this.logger.debug("Instance registered in manager", {
+        instanceId: serverInstance.id,
+        configId,
+        status: serverInstance.status,
+      });
 
       return serverInstance;
     } catch (error) {
-      this.logger.error('Failed to start instance:', error);
+      this.logger.error("Failed to start instance:", { error, configId });
       throw error;
     }
   }
 
   async stopInstance(instanceId: string): Promise<void> {
+    this.logger.info("Stopping server instance", { instanceId });
+
     const instance = this.instances.get(instanceId);
     if (!instance) {
-      throw new Error(`Instance not found: ${instanceId}`);
+      const error = new Error(`Instance not found: ${instanceId}`);
+      this.logger.error(error.message);
+      throw error;
     }
 
     try {
       // Worker 종료
       const serverInstance = this.instances.get(instanceId);
       if (!serverInstance) {
-        throw new Error(`Server instance not found: ${instanceId}`);
+        const error = new Error(`Server instance not found: ${instanceId}`);
+        this.logger.error(error.message);
+        throw error;
       }
 
+      this.logger.debug("Stopping server instance process", { instanceId });
       if (serverInstance instanceof BaseServerInstance) {
         await serverInstance.stop();
       }
 
-      // 인스턴스 상태 업데이트 - 과연 무슨 의미가 있나 어차피 지울건데
+      // 인스턴스 상태 업데이트
       instance.status = McpServerInstanceStatus.STOPPED;
       instance.lastUsedAt = new Date().toISOString();
-      
+
       // 인스턴스 제거
       this.configInstanceMap.delete(instanceId);
       this.instances.delete(instanceId);
+
+      this.logger.info("Instance stopped and removed successfully", {
+        instanceId,
+      });
     } catch (error) {
-      this.logger.error('Failed to stop instance:', error);
+      this.logger.error("Failed to stop instance:", { error, instanceId });
       instance.status = McpServerInstanceStatus.FAILED;
       instance.error = error as Error;
       throw error;
@@ -127,24 +199,49 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async getInstance(instanceId: string): Promise<McpServerInstance | null> {
-    return this.instances.get(instanceId) || null;
+    this.logger.debug("Retrieving instance information", { instanceId });
+    const instance = this.instances.get(instanceId) || null;
+    this.logger.debug("Instance retrieval result", {
+      instanceId,
+      found: !!instance,
+      status: instance?.status,
+    });
+    return instance;
   }
 
   async listInstances(): Promise<McpServerInstance[]> {
-    return Array.from(this.instances.values());
+    this.logger.debug("Listing all instances");
+    const instances = Array.from(this.instances.values());
+    this.logger.debug("Instance list retrieved", { count: instances.length });
+    return instances;
   }
 
-  async updateInstanceStatus(instanceId: string, status: Partial<McpServerInstance>): Promise<void> {
+  async updateInstanceStatus(
+    instanceId: string,
+    status: Partial<McpServerInstance>
+  ): Promise<void> {
+    this.logger.debug("Updating instance status", {
+      instanceId,
+      newStatus: status.status,
+    });
+
     const instance = this.instances.get(instanceId);
     if (!instance) {
-      throw new Error(`Instance not found: ${instanceId}`);
+      const error = new Error(`Instance not found: ${instanceId}`);
+      this.logger.error(error.message);
+      throw error;
     }
 
     // 인스턴스 상태 업데이트
     Object.assign(instance, status);
-    
+
     // lastUsedAt 자동 업데이트
     instance.lastUsedAt = new Date().toISOString();
+
+    this.logger.debug("Instance status updated successfully", {
+      instanceId,
+      currentStatus: instance.status,
+    });
   }
 }
 
@@ -153,4 +250,4 @@ export const newServerInstanceManager = (
   serverInstanceFactory: ServerInstanceFactory
 ): ServerInstanceManager => {
   return new DefaultServerInstanceManager(logger, serverInstanceFactory);
-}; 
+};

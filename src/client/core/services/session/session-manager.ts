@@ -1,17 +1,17 @@
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import { Logger } from '../../../../lib/logger/logger';
-import { McpServerInstanceStatus } from '../../../../lib/types/instance';
-import { RunConfig } from '../../../../lib/types/run-config';
-import { getSessionDir } from '../../lib/env';
-import { DaemonRPCClient } from '../../lib/rpc/client';
-import { McpClientType } from '../../lib/types/mcp-client';
-import { Session, SessionStatus } from '../../lib/types/session';
+import fs from "fs";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import { Logger } from "../../../../lib/logger/logger";
+import { McpServerInstanceStatus } from "../../../../lib/types/instance";
+import { RunConfig } from "../../../../lib/types/run-config";
+import { getSessionDir } from "../../lib/env";
+import { DaemonRPCClient } from "../../lib/rpc/client";
+import { McpClientType } from "../../lib/types/mcp-client";
+import { Session, SessionStatus } from "../../lib/types/session";
 
 export interface SessionManager {
   // instance 연결
-  connect(config: RunConfig): Promise<Session>;
+  connect(config: RunConfig, client?: McpClientType): Promise<Session>;
 
   // 연결 해제
   disconnect(sessionId: string, killInstance: boolean): Promise<void>;
@@ -24,14 +24,12 @@ export interface SessionManager {
 
   // 특정 클라이언트의 세션 목록
   listClientSessions(clientId: string): Promise<Session[]>;
-} 
+}
 
 class DefaultSessionManager implements SessionManager {
   private sessions: Map<string, Session>; // TODO: store in sqlite? or file
 
-  constructor(
-    private logger: Logger,
-  ) {
+  constructor(private logger: Logger) {
     this.sessions = new Map();
   }
 
@@ -40,27 +38,36 @@ class DefaultSessionManager implements SessionManager {
   }
 
   writeSessions(): void {
+    if (!fs.existsSync(getSessionDir())) {
+      fs.mkdirSync(getSessionDir(), { recursive: true });
+    }
     for (const session of this.sessions.values()) {
-      fs.writeFileSync(path.join(getSessionDir(), `${session.id}.json`), JSON.stringify(session, null, 2));
+      fs.writeFileSync(
+        path.join(getSessionDir(), `${session.id}.json`),
+        JSON.stringify(session, null, 2)
+      );
     }
   }
 
   readSessions(): void {
     const sessions = fs.readdirSync(getSessionDir());
     for (const session of sessions) {
-      const sessionData = fs.readFileSync(path.join(getSessionDir(), session), 'utf8');
-      this.sessions.set(session.split('.')[0], JSON.parse(sessionData));
+      const sessionData = fs.readFileSync(
+        path.join(getSessionDir(), session),
+        "utf8"
+      );
+      this.sessions.set(session.split(".")[0], JSON.parse(sessionData));
     }
   }
 
-  async connect(config: RunConfig): Promise<Session> {
+  async connect(config: RunConfig, client?: McpClientType): Promise<Session> {
     let daemonClient: DaemonRPCClient | undefined;
     try {
       daemonClient = await this.getDaemonClient();
       // start instance
       const instance = await daemonClient.startInstance(config);
       if (!instance) {
-        throw new Error(`Failed to start instance: ${config.id}`);
+        throw new Error(`Failed to start instance: ${config}`);
       }
 
       // 세션 생성
@@ -68,39 +75,42 @@ class DefaultSessionManager implements SessionManager {
         id: uuidv4(),
         instanceId: instance.id,
         startedAt: new Date().toISOString(),
-        client: config.client,
         status: SessionStatus.PENDING,
         instanceStatus: instance.status,
         connectionInfo: instance.connectionInfo,
+        client,
       };
 
       this.sessions.set(session.id, session);
       this.writeSessions();
       if (instance.status === McpServerInstanceStatus.STARTING) {
         return new Promise((resolve, reject) => {
-          setTimeout(() => reject(new Error("Timeout waiting for instance status")), 10000);
+          setTimeout(
+            () => reject(new Error("Timeout waiting for instance status")),
+            10000
+          );
           daemonClient!.onInstanceStatusChange(async (instanceId, status) => {
-          if (instanceId === instance.id) {
-            const updatedSession: Session = {
-              ...session,
-            };
-            if (status.status) {
-              updatedSession.instanceStatus = status.status;
+            if (instanceId === instance.id) {
+              const updatedSession: Session = {
+                ...session,
+              };
+              if (status.status) {
+                updatedSession.instanceStatus = status.status;
+              }
+              if (status.error) {
+                updatedSession.error = status.error;
+              }
+              if (status.connectionInfo) {
+                updatedSession.connectionInfo = status.connectionInfo;
+              }
+              if (status.status === McpServerInstanceStatus.RUNNING) {
+                updatedSession.status = SessionStatus.CONNECTED;
+              }
+              this.sessions.set(session.id, updatedSession);
+              this.writeSessions();
+              resolve(updatedSession);
             }
-            if (status.error) {
-              updatedSession.error = status.error;
-            }
-            if (status.connectionInfo) {
-              updatedSession.connectionInfo = status.connectionInfo;
-            }
-            if (status.status === McpServerInstanceStatus.RUNNING) {
-              updatedSession.status = SessionStatus.CONNECTED;
-            }
-            this.sessions.set(session.id, updatedSession);
-            this.writeSessions();
-            resolve(updatedSession);
-          }
-        });
+          });
         });
       }
       if (instance.status === McpServerInstanceStatus.RUNNING) {
@@ -108,10 +118,11 @@ class DefaultSessionManager implements SessionManager {
         return session;
       }
 
-      throw new Error(`Failed to start instance: ${config.id}, status: ${instance.status}`);
-
+      throw new Error(
+        `Failed to start instance: ${config}, status: ${instance.status}`
+      );
     } catch (error) {
-      this.logger.error('Failed to connect to instance:', error);
+      this.logger.error("Failed to connect to instance:", error);
       throw error;
     } finally {
       if (daemonClient) {
@@ -120,7 +131,11 @@ class DefaultSessionManager implements SessionManager {
     }
   }
 
-  async disconnect(sessionId: string, killInstance: boolean = false): Promise<void> {
+  async disconnect(
+    sessionId: string,
+    killInstance: boolean = false
+  ): Promise<void> {
+    this.readSessions();
     const session = this.sessions.get(sessionId);
     if (!session) {
       throw new Error(`Session not found: ${sessionId}`);
@@ -131,15 +146,16 @@ class DefaultSessionManager implements SessionManager {
 
       // 세션 상태 업데이트
       session.status = SessionStatus.DISCONNECTED;
-      
+
       if (killInstance) {
         await daemonClient.stopInstance(session.instanceId);
       }
-      
+
       // 세션 제거
       this.sessions.delete(sessionId);
+      this.writeSessions();
     } catch (error) {
-      this.logger.error('Failed to disconnect session:', error);
+      this.logger.error("Failed to disconnect session:", error);
       throw error;
     } finally {
       if (daemonClient) {
@@ -164,28 +180,28 @@ class DefaultSessionManager implements SessionManager {
         throw new Error(`Instance not found: ${session.instanceId}`);
       }
 
-    const updatedSession: Session = {
-      ...session,
-      instanceStatus: instance.status,
-      error: instance.error,
-      connectionInfo: instance.connectionInfo,
-    };
+      const updatedSession: Session = {
+        ...session,
+        instanceStatus: instance.status,
+        error: instance.error,
+        connectionInfo: instance.connectionInfo,
+      };
 
-    if (instance.status === McpServerInstanceStatus.RUNNING) {
-      updatedSession.status = SessionStatus.CONNECTED;
-    } else if (
-      instance.status === McpServerInstanceStatus.STOPPED 
-      || instance.status === McpServerInstanceStatus.FAILED
-    ) {
-      updatedSession.status = SessionStatus.DISCONNECTED;
-    }
+      if (instance.status === McpServerInstanceStatus.RUNNING) {
+        updatedSession.status = SessionStatus.CONNECTED;
+      } else if (
+        instance.status === McpServerInstanceStatus.STOPPED ||
+        instance.status === McpServerInstanceStatus.FAILED
+      ) {
+        updatedSession.status = SessionStatus.DISCONNECTED;
+      }
 
-    this.sessions.set(sessionId, updatedSession);
-    this.writeSessions();
+      this.sessions.set(sessionId, updatedSession);
+      this.writeSessions();
 
       return updatedSession;
     } catch (error) {
-      this.logger.error('Failed to get status:', error);
+      this.logger.error("Failed to get status:", error);
       throw error;
     } finally {
       if (daemonClient) {
@@ -194,17 +210,17 @@ class DefaultSessionManager implements SessionManager {
     }
   }
   async listSessions(): Promise<Session[]> {
+    this.readSessions();
     return Array.from(this.sessions.values());
   }
 
   async listClientSessions(client: McpClientType): Promise<Session[]> {
-    return Array.from(this.sessions.values())
-      .filter(session => session.client === client);
+    return Array.from(this.sessions.values()).filter(
+      (session) => session.client === client
+    );
   }
 }
 
-export const newSessionManager = (
-  logger: Logger,
-): SessionManager => {
+export const newSessionManager = (logger: Logger): SessionManager => {
   return new DefaultSessionManager(logger);
-}; 
+};

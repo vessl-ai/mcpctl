@@ -1,4 +1,7 @@
-import { McpServerInstanceConnectionInfo, McpServerInstanceStatus } from "../../../../lib/types/instance";
+import {
+  McpServerInstanceConnectionInfo,
+  McpServerInstanceStatus,
+} from "../../../../lib/types/instance";
 import { McpClientType } from "./mcp-client";
 
 export enum SessionStatus {
@@ -9,7 +12,7 @@ export enum SessionStatus {
 
 export interface Session {
   id: string;
-  client: McpClientType,
+  client?: McpClientType;
   instanceId: string;
   startedAt: string;
   status: SessionStatus;
