@@ -2,28 +2,17 @@
   "name": "mcpctl",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/client/cli/cli.js",
+  "main": "dist/mcpctl.js",
   "bin": {
-    "mcpctl": "./dist/client/cli/cli.js"
+    "mcpctl": "./dist/mcpctl.js"
   },
   "scripts": {
     "test": "jest",
-    "cli": "ts-node src/cli/cli.ts",
-    "build": "tsc && pkg .",
-    "prepare": "npm run build",
-    "install-cli:macos": "cp -f ./bin/mcpctl-macos /usr/local/bin/mcpctl",
-    "install-cli:linux": "cp -f ./bin/mcpctl-linux /usr/local/bin/mcpctl"
-  },
-  "pkg": {
-    "targets": [
-      "node18-macos-x64",
-      "node18-linux-x64",
-      "node18-win-x64"
-    ],
-    "outputPath": "bin",
-    "assets": [
-      "node_modules/**/*"
-    ]
+    "cli": "ts-node src/client/cli/cli.ts",
+    "build:clean": "rm -rf dist && rm -rf bin && pnpm build",
+    "build": "tsc && node build.js",
+    "install-cli:macos": "cp -f ./dist/mcpctl.js /usr/local/bin/mcpctl",
+    "install-cli:linux": "cp -f ./dist/mcpctl.js /usr/local/bin/mcpctl"
   },
   "keywords": [],
   "author": "",
@@ -32,13 +21,14 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.14.0",
     "@types/uuid": "^10.0.0",
+    "esbuild": "^0.20.2",
     "jest": "^29.7.0",
-    "pkg": "^5.8.1",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0",
     "@types/eventsource": "^3.0.0",
     "@types/node-fetch": "^2.6.12",
     "axios": "^1.8.4",
@@ -48,6 +38,7 @@
     "node-fetch": "^3.3.2",
     "portfinder": "^1.0.35",
     "uuid": "^11.1.0",
-    "vscode-jsonrpc": "^8.2.1"
+    "vscode-jsonrpc": "^8.2.1",
+    "zod": "^3.24.2"
   }
 }
