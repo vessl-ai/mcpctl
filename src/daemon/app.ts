@@ -1,14 +1,17 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { verboseLog } from '../client/core/lib/env';
-import { BaseContainer, Container } from '../lib/container/container';
-import { newFileLogger } from '../lib/logger/file-logger';
-import { Logger } from '../lib/logger/logger';
-import { SocketTransportFactory } from '../lib/rpc/transport/socket';
-import { newServerInstanceFactory } from './managers/server-instance/server-instance-factory';
-import { newServerInstanceManager, ServerInstanceManager } from './managers/server-instance/server-instance-manager';
-import { RPCServer } from './rpc/server';
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { verboseLog } from "../client/core/lib/env";
+import { BaseContainer, Container } from "../lib/container/container";
+import { newFileLogger } from "../lib/logger/file-logger";
+import { Logger } from "../lib/logger/logger";
+import { SocketTransportFactory } from "../lib/rpc/transport/socket";
+import { newServerInstanceFactory } from "./managers/server-instance/server-instance-factory";
+import {
+  newServerInstanceManager,
+  ServerInstanceManager,
+} from "./managers/server-instance/server-instance-manager";
+import { RPCServer } from "./rpc/server";
 export class DaemonApp {
   private container: Container;
   private rpcServer!: RPCServer;
@@ -21,9 +24,9 @@ export class DaemonApp {
 
   public async init(): Promise<void> {
     const logger = this.container.get<Logger>("logger");
-    logger.info('Initializing daemon application...');
+    logger.info("Initializing daemon application...");
     await this.initPromise;
-    logger.info('Daemon application initialized successfully');
+    logger.info("Daemon application initialized successfully");
   }
 
   private initializeDependencies(): void {
@@ -42,42 +45,39 @@ export class DaemonApp {
     );
 
     const logger = this.container.get<Logger>("logger");
-    logger.info('Initializing dependencies...');
-    logger.debug('Log directory created/verified at:', { logDir });
+    logger.info("Initializing dependencies...");
+    logger.debug("Log directory created/verified at:", { logDir });
 
     // 서버 인스턴스 매니저
     this.container.register<ServerInstanceManager>(
       "instanceManager",
-      newServerInstanceManager(
-        logger,
-        newServerInstanceFactory(logger)
-      )
+      newServerInstanceManager(logger, newServerInstanceFactory(logger))
     );
-    logger.info('Server instance manager initialized');
-    logger.info('All dependencies initialized successfully');
+    logger.info("Server instance manager initialized");
+    logger.info("All dependencies initialized successfully");
   }
 
   private async createRpcServer(): Promise<void> {
     const logger = this.container.get<Logger>("logger");
-    logger.info('Creating RPC server...');
+    logger.info("Creating RPC server...");
 
     // create uds socket file
     const socketFile = "/tmp/mcp-daemon.sock";
     if (fs.existsSync(socketFile)) {
-      logger.debug('Removing existing socket file:', { socketFile });
+      logger.debug("Removing existing socket file:", { socketFile });
       fs.unlinkSync(socketFile);
     }
 
     const transportFactory = new SocketTransportFactory(logger);
-    logger.debug('Creating socket transport...');
+    logger.debug("Creating socket transport...");
     const transport = await transportFactory.create({
       type: "socket",
       endpoint: socketFile,
       params: {
-        isServer: true  // Enable server mode
-      }
+        isServer: true, // Enable server mode
+      },
     });
-    logger.debug('Socket transport created successfully');
+    logger.debug("Socket transport created successfully");
 
     this.rpcServer = new RPCServer(
       transport,
@@ -85,18 +85,19 @@ export class DaemonApp {
       logger
     );
     this.rpcServer.listen();
-    logger.info('RPC server started and listening on socket:', { socketFile });
+    logger.info("RPC server started and listening on socket:", { socketFile });
   }
 
   public getInstanceManager(): ServerInstanceManager {
     return this.container.get<ServerInstanceManager>("instanceManager");
   }
 
-  public dispose(): void {
+  public async dispose(): Promise<void> {
     const logger = this.container.get<Logger>("logger");
-    logger.info('Disposing daemon application...');
+    logger.info("Disposing daemon application...");
+    await this.getInstanceManager().dispose();
     this.rpcServer.dispose();
-    logger.info('Daemon application disposed successfully');
+    logger.info("Daemon application disposed successfully");
   }
 }
 

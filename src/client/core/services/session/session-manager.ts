@@ -83,12 +83,14 @@ class DefaultSessionManager implements SessionManager {
 
       this.sessions.set(session.id, session);
       this.writeSessions();
+
       if (instance.status === McpServerInstanceStatus.STARTING) {
         return new Promise((resolve, reject) => {
-          setTimeout(
-            () => reject(new Error("Timeout waiting for instance status")),
-            10000
-          );
+          const timeout = setTimeout(() => {
+            daemonClient?.dispose();
+            reject(new Error("Timeout waiting for instance status"));
+          }, 10000);
+
           daemonClient!.onInstanceStatusChange(async (instanceId, status) => {
             if (instanceId === instance.id) {
               const updatedSession: Session = {
@@ -105,29 +107,27 @@ class DefaultSessionManager implements SessionManager {
               }
               if (status.status === McpServerInstanceStatus.RUNNING) {
                 updatedSession.status = SessionStatus.CONNECTED;
+                clearTimeout(timeout);
+                resolve(updatedSession);
               }
               this.sessions.set(session.id, updatedSession);
               this.writeSessions();
-              resolve(updatedSession);
             }
           });
         });
       }
+
       if (instance.status === McpServerInstanceStatus.RUNNING) {
         session.status = SessionStatus.CONNECTED;
         return session;
       }
 
-      throw new Error(
-        `Failed to start instance: ${config}, status: ${instance.status}`
-      );
+      throw new Error(`Unexpected instance status: ${instance.status}`);
     } catch (error) {
-      this.logger.error("Failed to connect to instance:", error);
-      throw error;
-    } finally {
       if (daemonClient) {
         daemonClient.dispose();
       }
+      throw error;
     }
   }
 

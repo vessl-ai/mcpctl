@@ -1,11 +1,9 @@
 import chalk from "chalk";
-import { Command } from "commander";
 import { App } from "../../app";
 
-const buildServerListCommand = (app: App): Command => {
-  const serverListCommand = new Command("list")
-    .description("List MCP server")
-    .action(async () => {
+const buildServerListCommand = (app: App) => {
+  return {
+    action: async (options: any) => {
       try {
         console.log(chalk.blue.bold("\n🖥  MCP Server List\n"));
         const serverService = app.getServerService();
@@ -27,9 +25,8 @@ const buildServerListCommand = (app: App): Command => {
       } catch (error: any) {
         console.error(chalk.red("Error fetching server list:"), error.message);
       }
-    });
-
-  return serverListCommand;
+    },
+  };
 };
 
 export { buildServerListCommand };

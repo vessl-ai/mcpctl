@@ -16,6 +16,9 @@ export interface ServerInstanceManager {
   // 서버 인스턴스 종료
   stopInstance(instanceId: string): Promise<void>;
 
+  // 모든 인스턴스 종료
+  stopAllInstances(): Promise<void>;
+
   // 실행 중인 인스턴스 조회
   getInstance(instanceId: string): Promise<McpServerInstance | null>;
 
@@ -27,6 +30,8 @@ export interface ServerInstanceManager {
     instanceId: string,
     status: Partial<McpServerInstance>
   ): Promise<void>;
+
+  dispose(): Promise<void>;
 }
 
 class DefaultServerInstanceManager implements ServerInstanceManager {
@@ -242,6 +247,20 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       instanceId,
       currentStatus: instance.status,
     });
+  }
+
+  async stopAllInstances(): Promise<void> {
+    this.logger.info("Stopping all instances");
+    const instances = Array.from(this.instances.values());
+    for (const instance of instances) {
+      await this.stopInstance(instance.id);
+    }
+  }
+  async dispose(): Promise<void> {
+    this.logger.info("Disposing server instance manager");
+    await this.stopAllInstances();
+    this.instances.clear();
+    this.configInstanceMap.clear();
   }
 }
 

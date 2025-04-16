@@ -1,17 +1,22 @@
-import { Command } from "commander";
 import { App } from "../../app";
 
-const buildSessionStopCommand = (app: App): Command => {
-  const sessionStopCommand = new Command("stop")
-    .description("Stop MCP server session")
-    .option("-s, --session <session>", "Session ID")
-    .action(async (options) => {
+const buildSessionStopCommand = (app: App) => {
+  return {
+    action: async (options: any) => {
+      const sessionId = options.s || options.session;
+
+      if (!sessionId) {
+        console.error(
+          "Error: Session ID is required. Use -s or --session option."
+        );
+        process.exit(1);
+      }
+
       console.log("Session stop command");
       const sessionManager = app.getSessionManager();
-      await sessionManager.disconnect(options.session, true);
-    });
-
-  return sessionStopCommand;
-}
+      await sessionManager.disconnect(sessionId, true);
+    },
+  };
+};
 
 export { buildSessionStopCommand };

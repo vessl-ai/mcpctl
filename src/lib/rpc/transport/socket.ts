@@ -162,6 +162,8 @@ export class SocketTransportFactory implements RPCTransportFactory {
 
         server.listen(endpoint, () => {
           this.logger.debug("Server listening", { endpoint });
+          // 소켓 파일의 권한을 666으로 설정 (모든 사용자가 읽기/쓰기 가능)
+          fs.chmodSync(endpoint, 0o666);
           resolve(new SocketServerTransport(server, this.logger));
         });
       });

@@ -1,14 +1,11 @@
-import { Command } from "commander";
 import { App } from "../../app";
 
-const buildServerLogsCommand = (app: App): Command => {
-  const serverLogsCommand = new Command("logs")
-    .description("Get MCP server logs")
-    .action(async () => {
+const buildServerLogsCommand = (app: App) => {
+  return {
+    action: async (options: any) => {
       console.log("Server logs command");
-    });
-
-  return serverLogsCommand;
-}
+    },
+  };
+};
 
 export { buildServerLogsCommand };
