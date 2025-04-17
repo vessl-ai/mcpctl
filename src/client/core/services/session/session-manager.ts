@@ -178,7 +178,7 @@ class DefaultSessionManager implements SessionManager {
       this.sessions.delete(sessionId);
       this.writeSessions();
     } catch (error) {
-      this.logger.error("Failed to disconnect session:", error);
+      this.logger.error("Failed to disconnect session:", { error });
       throw error;
     } finally {
       if (daemonClient) {
@@ -224,7 +224,7 @@ class DefaultSessionManager implements SessionManager {
 
       return updatedSession;
     } catch (error) {
-      this.logger.error("Failed to get status:", error);
+      this.logger.error("Failed to get status:", { error });
       throw error;
     } finally {
       if (daemonClient) {

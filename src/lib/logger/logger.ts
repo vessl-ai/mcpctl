@@ -1,94 +1,75 @@
 export interface Logger {
-  verbose(message: string): void;
-  log(message: string): void;
-  error(message: string, error?: any): void;
-  warn(message: string): void;
+  verbose(message: string, context?: Record<string, any>): void;
+  error(message: string, context?: Record<string, any>): void;
+  warn(message: string, context?: Record<string, any>): void;
   debug(message: string, context?: Record<string, any>): void;
   info(message: string, context?: Record<string, any>): void;
   withContext(context: string): Logger;
 }
 
-// Basic logger implementation
-class ConsoleLoggerImpl implements Logger {
-  private readonly prefix: string;
-  private readonly showVerbose: boolean;
-
-  constructor(config?: { prefix?: string; showVerbose?: boolean }) {
-    this.prefix = config?.prefix ?? "";
-    this.showVerbose = config?.showVerbose ?? false;
-  }
-
-  now(): string {
-    return new Date().toISOString();
-  }
-
-  verbose(message: string): void {
-    if (this.showVerbose) {
-      console.log(`[VERBOSE]: [${this.now()}] [${this.prefix}] ${message}`);
-    }
-  }
-
-  log(message: string): void {
-    console.log(`[LOG]: [${this.now()}] [${this.prefix}] ${message}`);
-  }
-
-  error(message: string, error?: any): void {
-    if (error) {
-      console.error(
-        `[ERROR]: [${this.now()}] [${this.prefix}] ${message}`,
-        error
-      );
-    } else {
-      console.error(`[ERROR]: [${this.now()}] [${this.prefix}] ${message}`);
-    }
-  }
-
-  warn(message: string): void {
-    console.warn(`[WARN]: [${this.now()}] [${this.prefix}] ${message}`);
-  }
-
-  debug(message: string, context?: Record<string, any>): void {
-    if (this.showVerbose) {
-      if (context) {
-        console.debug(
-          `[DEBUG]: [${this.now()}] [${this.prefix}] ${message}`,
-          context
-        );
-      } else {
-        console.debug(`[DEBUG]: [${this.now()}] [${this.prefix}] ${message}`);
-      }
-    }
-  }
-
-  info(message: string, context?: Record<string, any>): void {
-    if (context) {
-      console.info(
-        `[INFO]: [${this.now()}] [${this.prefix}] ${message}`,
-        context
-      );
-    } else {
-      console.info(`[INFO]: [${this.now()}] [${this.prefix}] ${message}`);
-    }
-  }
-
-  withContext(context: string): Logger {
-    return new ConsoleLoggerImpl({
-      prefix: this.prefix ? `${this.prefix}:${context}` : context,
-      showVerbose: this.showVerbose,
-    });
-  }
+export enum LogLevel {
+  VERBOSE = "VERBOSE",
+  DEBUG = "DEBUG",
+  INFO = "INFO",
+  WARN = "WARN",
+  ERROR = "ERROR",
 }
 
-let logger: Logger;
+const logLevelOrder = [
+  LogLevel.VERBOSE,
+  LogLevel.DEBUG,
+  LogLevel.INFO,
+  LogLevel.WARN,
+  LogLevel.ERROR,
+];
 
-const newConsoleLogger = (config?: {
-  prefix?: string;
-  showVerbose?: boolean;
-}): Logger => {
-  if (!logger) {
-    logger = new ConsoleLoggerImpl(config);
+export const verboseToLogLevel = (number: number | undefined): LogLevel => {
+  if (!number) {
+    return LogLevel.INFO;
   }
-  return logger;
+  if (number === 0) {
+    return LogLevel.INFO;
+  }
+  if (number === 1) {
+    return LogLevel.DEBUG;
+  }
+  if (number >= 2) {
+    return LogLevel.VERBOSE;
+  }
+  return LogLevel.INFO;
 };
 
-export { logger, newConsoleLogger };
+export type LoggerConfig = {
+  prefix?: string;
+  logLevel?: LogLevel;
+};
+
+export abstract class LoggerBase implements Logger {
+  protected readonly prefix: string;
+  protected readonly logLevel: LogLevel;
+
+  constructor(config?: LoggerConfig) {
+    this.prefix = config?.prefix ?? "";
+    this.logLevel = config?.logLevel ?? LogLevel.INFO;
+  }
+
+  abstract verbose(message: string, context?: Record<string, any>): void;
+  abstract info(message: string, context?: Record<string, any>): void;
+  abstract error(message: string, context?: Record<string, any>): void;
+  abstract warn(message: string, context?: Record<string, any>): void;
+  abstract debug(message: string, context?: Record<string, any>): void;
+  abstract withContext(context: string): Logger;
+
+  protected appendPrefix(originalPrefix: string, newPrefix: string): string {
+    return `${originalPrefix}:${newPrefix}`;
+  }
+
+  protected isLogLevelEnabled = (
+    logLevel: LogLevel,
+    currentLogLevel: LogLevel
+  ): boolean => {
+    const index = logLevelOrder.indexOf(logLevel);
+    const currentIndex = logLevelOrder.indexOf(currentLogLevel);
+    return index >= currentIndex;
+  };
+}

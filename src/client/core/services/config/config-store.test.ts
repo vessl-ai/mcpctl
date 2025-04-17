@@ -1,5 +1,4 @@
 import fs from "fs";
-import { logger } from "../../../../lib/logger/logger";
 import { Config } from "../../lib/types/config";
 import { RegistryType } from "../../lib/types/registry";
 import { FileConfigStoreImpl } from "./config-store";
@@ -10,16 +9,14 @@ jest.mock("../../lib/env", () => ({
   getConfigDir: jest.fn().mockReturnValue("/test"),
   getConfigPath: jest.fn().mockReturnValue("/test/config.json"),
 }));
-jest.mock("../../../../lib/logger/logger", () => ({
-  logger: {
-    verbose: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    withContext: jest.fn().mockReturnThis(),
-  },
-}));
+const logger = {
+  verbose: jest.fn(),
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  withContext: jest.fn().mockReturnThis(),
+};
 
 describe("FileConfigStore", () => {
   let configStore: FileConfigStoreImpl;

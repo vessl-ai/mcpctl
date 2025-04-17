@@ -1,9 +1,10 @@
 type McpServerInstallConfig = {
   type: "stdio" | "sse";
-  serverName?: string;
+  serverName: string;
   command: string;
   env?: Record<string, string>;
   profile?: string;
+  mcpctlEnv?: Record<string, string>;
 };
 
 type McpServerConfig = {
@@ -28,4 +29,9 @@ type McpServerConfigBody = {
   headers?: Record<string, string>;
 };
 
-export { McpServerConfig, McpServerConfigBody, McpServerInstallConfig, McpServerType };
+export {
+  McpServerConfig,
+  McpServerConfigBody,
+  McpServerInstallConfig,
+  McpServerType,
+};

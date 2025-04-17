@@ -1,5 +1,6 @@
 import { BaseContainer, Container } from "../../lib/container/container";
-import { Logger, newConsoleLogger } from "../../lib/logger/logger";
+import { newConsoleLogger } from "../../lib/logger/console-logger";
+import { LogLevel, Logger } from "../../lib/logger/logger";
 import {
   ConfigService,
   newConfigService,
@@ -46,7 +47,7 @@ import {
 } from "../core/services/session/session-manager";
 
 type AppOptions = {
-  verbose?: boolean;
+  logLevel?: LogLevel;
   logger?: Logger;
 };
 
@@ -54,9 +55,9 @@ class App {
   private container: Container;
   private initPromise: Promise<void>;
 
-  constructor({ verbose = false, logger }: AppOptions) {
+  constructor({ logLevel = LogLevel.INFO, logger }: AppOptions) {
     this.container = new BaseContainer();
-    this.initPromise = this.initializeDependencies({ verbose, logger });
+    this.initPromise = this.initializeDependencies({ logLevel, logger });
   }
 
   public async init(): Promise<void> {
@@ -64,7 +65,7 @@ class App {
   }
 
   private async initializeDependencies({
-    verbose = false,
+    logLevel = LogLevel.INFO,
     logger,
   }: AppOptions): Promise<void> {
     // Register core dependencies
@@ -72,7 +73,7 @@ class App {
       console.log("No logger provided, using console logger");
     } else {
     }
-    logger = logger || newConsoleLogger({ showVerbose: verbose });
+    logger = logger || newConsoleLogger({ logLevel });
     this.container.register<Logger>("Logger", logger);
 
     // Register ConfigService
@@ -119,7 +120,7 @@ class App {
     // Register ClientService
     this.container.register<McpClientService>(
       "clientService",
-      newMcpClientService()
+      newMcpClientService(this.container.get<Logger>("Logger"))
     );
     logger.debug("ClientService registered");
     // Register ProfileService
@@ -186,8 +187,8 @@ class App {
   }
 }
 
-const newApp = ({ verbose = false, logger }: AppOptions): App => {
-  return new App({ verbose, logger });
+const newApp = ({ logLevel = LogLevel.INFO, logger }: AppOptions): App => {
+  return new App({ logLevel, logger });
 };
 
 export { App, newApp };

@@ -1,8 +1,9 @@
 import arg from "arg";
 import fs from "fs";
 import path from "path";
+import { newConsoleLogger } from "../../lib/logger/console-logger";
 import { newFileLogger } from "../../lib/logger/file-logger";
-import { Logger, newConsoleLogger } from "../../lib/logger/logger";
+import { Logger, LogLevel, verboseToLogLevel } from "../../lib/logger/logger";
 import { newApp } from "./app";
 import { daemonCommand } from "./commands/daemon";
 import { installCommand } from "./commands/install";
@@ -12,15 +13,15 @@ import { searchCommand } from "./commands/search";
 import { serverCommand } from "./commands/server";
 import { sessionCommand } from "./commands/session";
 const mainCommandOptions = {
-  "--verbose": Boolean,
+  "--verbose": arg.COUNT,
   "-v": "--verbose",
   "--log-file": String,
 };
 
 const verboseConsoleLogger =
-  (verbose: boolean | undefined) =>
+  (verbose: number | undefined) =>
   (message: string, ...args: any[]) => {
-    if (verbose) {
+    if (verbose && verbose >= 0) {
       console.log(message, ...args);
     }
   };
@@ -45,12 +46,14 @@ const main = async () => {
     }
     logger = newFileLogger({
       filePath: logFilePath,
-      showVerbose: verbose,
+      logLevel: verbose ? LogLevel.VERBOSE : LogLevel.INFO,
     });
   } else {
-    logger = newConsoleLogger({ showVerbose: verbose });
+    logger = newConsoleLogger({
+      logLevel: verboseToLogLevel(verbose),
+    });
   }
-  const app = newApp({ verbose, logger });
+  const app = newApp({ logLevel: verboseToLogLevel(verbose), logger });
   await app.init();
   logger.debug("App initialized");
   logger.debug("SubArgv", subArgv);

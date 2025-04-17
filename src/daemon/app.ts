@@ -1,9 +1,10 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { verboseLog } from "../client/core/lib/env";
+import { logLevel } from "../client/core/lib/env";
 import { BaseContainer, Container } from "../lib/container/container";
-import { Logger, newConsoleLogger } from "../lib/logger/logger";
+import { newConsoleLogger } from "../lib/logger/console-logger";
+import { Logger } from "../lib/logger/logger";
 import { SocketTransportFactory } from "../lib/rpc/transport/socket";
 import { newServerInstanceFactory } from "./managers/server-instance/server-instance-factory";
 import {
@@ -44,7 +45,8 @@ export class DaemonApp {
       // })
       newConsoleLogger({
         prefix: "Daemon",
-        showVerbose: verboseLog(),
+        logLevel: logLevel(),
+        useStderr: false,
       })
     );
 

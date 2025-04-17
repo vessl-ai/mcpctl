@@ -27,7 +27,6 @@ describe("BaseServerInstance", () => {
     };
     logger = {
       verbose: jest.fn(),
-      log: jest.fn(),
       debug: jest.fn(),
       error: jest.fn(),
       info: jest.fn(),
@@ -75,7 +74,6 @@ describe("LocalServerInstance", () => {
     };
     logger = {
       verbose: jest.fn(),
-      log: jest.fn(),
       debug: jest.fn(),
       error: jest.fn(),
       info: jest.fn(),

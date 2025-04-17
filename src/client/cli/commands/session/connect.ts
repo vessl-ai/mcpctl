@@ -6,26 +6,16 @@ import { App } from "../../app";
 const sessionConnectCommandOptions = {
   "--server": String,
   "--command": String,
+  "--command-base64": String,
   "--profile": String,
   "-s": "--server",
   "-c": "--command",
+  "-c64": "--command-base64",
   "-p": "--profile",
 };
 
 export const sessionConnectCommand = async (app: App, argv: string[]) => {
-  const options = arg(
-    {
-      "--server": String,
-      "--command": String,
-      "--command-base64": String,
-      "--profile": String,
-      "-s": "--server",
-      "-c": "--command",
-      "-c64": "--command-base64",
-      "-p": "--profile",
-    },
-    { argv }
-  );
+  const options = arg(sessionConnectCommandOptions, { argv });
 
   const logger = app.getLogger();
   logger.info("Session connect command", { options });

@@ -1,14 +1,13 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { logger } from "../../../../lib/logger/logger";
+import { Logger } from "../../../../lib/logger/logger";
 import { McpClient, McpClientType } from "../../lib/types/mcp-client";
 import {
   McpServerConfig,
   McpServerInstallConfig,
   McpServerType,
 } from "../../lib/types/mcp-server";
-
 export interface McpClientService {
   getClient(client: string): McpClient;
   generateMcpServerConfig(
@@ -21,8 +20,12 @@ export interface McpClientService {
 }
 
 export class McpClientServiceImpl implements McpClientService {
+  private logger: Logger;
+  constructor(logger: Logger) {
+    this.logger = logger;
+  }
   getClient(client: string): McpClient {
-    logger.verbose(`Getting client: ${client}`);
+    this.logger.verbose(`Getting client: ${client}`);
     switch (client) {
       case "claude":
         return { type: McpClientType.CLAUDE, name: "claude" };
@@ -48,6 +51,7 @@ export class McpClientServiceImpl implements McpClientService {
             args,
             // env: serverInstallConfig.env,
             profile: serverInstallConfig.profile,
+            env: serverInstallConfig.mcpctlEnv,
           },
         };
       case "sse":
@@ -172,7 +176,7 @@ export class McpClientServiceImpl implements McpClientService {
       /[^a-zA-Z0-9]/g,
       "-"
     );
-    let name = `server-${sanitizedCommand}`;
+    let name = `mcpctl-server-${sanitizedCommand}`;
     if (serverInstallConfig.profile) {
       name = `${name}-${serverInstallConfig.profile}`;
     }
@@ -186,7 +190,14 @@ export class McpClientServiceImpl implements McpClientService {
   ): [string, string[]] {
     const originalCommand = serverInstallConfig.command;
     const command = "mcpctl";
-    const args = ["session", "connect", "--command", originalCommand];
+    const args = [
+      "session",
+      "connect",
+      "--server",
+      serverInstallConfig.serverName,
+      "--command",
+      originalCommand,
+    ];
     if (serverInstallConfig.env) {
       Object.entries(serverInstallConfig.env).forEach(([key, value]) => {
         args.push("--env", `${key}=${value}`);
@@ -199,6 +210,6 @@ export class McpClientServiceImpl implements McpClientService {
   }
 }
 
-export const newMcpClientService = (): McpClientService => {
-  return new McpClientServiceImpl();
+export const newMcpClientService = (logger: Logger): McpClientService => {
+  return new McpClientServiceImpl(logger);
 };
