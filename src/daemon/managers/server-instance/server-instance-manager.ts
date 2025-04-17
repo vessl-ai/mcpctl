@@ -90,36 +90,45 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
 
     try {
       if (this.configInstanceMap.has(configId)) {
-        this.logger.info(
-          `Instance ${configId} already exists, checking env configuration`
-        );
-        const existingEnv =
-          this.configInstanceMap.get(configId)?.config.env || {};
-        const newEnv = config.env || {};
-        const isEnvEqual =
-          Object.keys(existingEnv).length === Object.keys(newEnv).length &&
-          Object.keys(existingEnv).every(
-            (key) => existingEnv[key] === newEnv[key]
-          );
+        this.logger.info(`Instance ${configId} already exists`);
 
-        if (!isEnvEqual) {
-          this.logger.info(
-            "Environment configuration changed, recreating instance",
-            { configId }
-          );
-          // 기존 인스턴스 정지는 백그라운드로 처리
-          this.stopInstance(configId).catch((err) => {
-            this.logger.error("Failed to stop instance in background:", {
-              error: err,
+        const existingInstance = this.configInstanceMap.get(configId);
+        if (!existingInstance) {
+          this.logger.error("Existing instance not found", { configId });
+          throw new Error(`Existing instance not found: ${configId}`);
+        }
+        if (existingInstance.status !== McpServerInstanceStatus.RUNNING) {
+          this.logger.info("Instance is not running, recreating instance");
+          await this.stopInstance(configId);
+        } else {
+          this.logger.info("Instance is running, checking env configuration");
+          const existingEnv = existingInstance.config.env || {};
+          const newEnv = config.env || {};
+          const isEnvEqual =
+            Object.keys(existingEnv).length === Object.keys(newEnv).length &&
+            Object.keys(existingEnv).every(
+              (key) => existingEnv[key] === newEnv[key]
+            );
+
+          if (!isEnvEqual) {
+            this.logger.info(
+              "Environment configuration changed, recreating instance",
+              { configId }
+            );
+            // 기존 인스턴스 정지는 백그라운드로 처리
+            this.stopInstance(configId).catch((err) => {
+              this.logger.error("Failed to stop instance in background:", {
+                error: err,
+                configId,
+              });
+            });
+            this.configInstanceMap.delete(configId);
+          } else {
+            this.logger.info("Reusing existing instance", {
               configId,
             });
-          });
-          this.configInstanceMap.delete(configId);
-        } else {
-          this.logger.info("Reusing existing instance", {
-            configId,
-          });
-          return this.configInstanceMap.get(configId)!;
+            return this.configInstanceMap.get(configId)!;
+          }
         }
       }
 

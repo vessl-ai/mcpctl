@@ -1,16 +1,18 @@
-import { Argument, Command } from "commander";
+import arg from "arg";
 import { App } from "../../app";
 
-const buildProfileDeleteCommand = (app: App): Command => {
-  const profileDeleteCommand = new Command("delete")
-    .description("Delete a profile")
-    .addArgument(new Argument("name", "The name of the profile to delete"))
-    .action(async (name) => {
-      app.getProfileService().deleteProfile(name);
-      console.log(`✨ Profile '${name}' deleted successfully!`);
-    });
+const profileDeleteCommandOptions = {};
 
-  return profileDeleteCommand;
-}
+export const profileDeleteCommand = async (app: App, argv: string[]) => {
+  const options = arg(profileDeleteCommandOptions, { argv });
 
-export { buildProfileDeleteCommand };
+  const name = options["_"]?.[0];
+
+  if (!name) {
+    console.error("Error: Name is required.");
+    process.exit(1);
+  }
+
+  app.getProfileService().deleteProfile(name);
+  console.log(`✨ Profile '${name}' deleted successfully!`);
+};

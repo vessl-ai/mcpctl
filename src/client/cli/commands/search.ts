@@ -1,3 +1,4 @@
+import arg from "arg";
 import chalk from "chalk";
 import { SearchResult } from "../../core/lib/types/search-result";
 import { App } from "../app";
@@ -71,94 +72,91 @@ const printSearchResults = (results: RegistryResultFormat[]): void => {
   });
 };
 
-const buildSearchCommand = (app: App) => {
-  const searchService = app.getSearchService();
-
-  return {
-    action: async (options: any) => {
-      const registry = options.r || options.registry;
-      const query = options.q || options.query;
-      const name = options.n || options.name;
-      const semantic = options.s || options.semantic;
-
-      if (!name && !query) {
-        console.error(
-          chalk.red("Error: Either name or query must be provided")
-        );
-        process.exit(1);
-      }
-
-      if (name && query) {
-        console.error(
-          chalk.red("Error: Only one of name or query can be provided")
-        );
-        process.exit(1);
-      }
-
-      try {
-        let searchResult: SearchResult | null = null;
-
-        if (registry) {
-          if (semantic) {
-            console.error(
-              chalk.red("Error: Semantic search is not supported yet")
-            );
-            process.exit(1);
-          } else {
-            if (query) {
-              searchResult = await searchService.searchByQueryForRegistry(
-                registry,
-                query
-              );
-            }
-            if (name) {
-              searchResult = await searchService.searchByRegistryAndName(
-                registry,
-                name
-              );
-            }
-          }
-        } else {
-          if (semantic) {
-            console.error(
-              chalk.red("Error: Semantic search is not supported yet")
-            );
-            process.exit(1);
-          } else {
-            if (name) {
-              console.error(
-                chalk.red(
-                  "Error: Name search is not supported for all registries"
-                )
-              );
-              process.exit(1);
-            }
-            if (query) {
-              searchResult = await searchService.searchByQuery(query);
-            }
-          }
-        }
-
-        if (searchResult) {
-          const formattedResults = formatSearchResult(searchResult);
-          printSearchResults(formattedResults);
-        } else {
-          console.log(chalk.yellow("\nNo results found."));
-        }
-      } catch (error) {
-        console.error(
-          chalk.red(
-            `\nError: ${
-              error instanceof Error
-                ? error.message
-                : "An unknown error occurred"
-            }`
-          )
-        );
-        process.exit(1);
-      }
-    },
-  };
+const searchCommandOptions = {
+  "--registry": String,
+  "--query": String,
+  "--name": String,
+  "--semantic": Boolean,
+  "-r": "--registry",
+  "-q": "--query",
+  "-n": "--name",
+  "-s": "--semantic",
 };
 
-export { buildSearchCommand };
+export const searchCommand = async (app: App, argv: string[]) => {
+  const options = arg(searchCommandOptions, { argv });
+
+  const registry = options["--registry"];
+  const query = options["--query"];
+  const name = options["--name"];
+  const semantic = options["--semantic"];
+
+  const searchService = app.getSearchService();
+
+  if (!name && !query) {
+    console.error(chalk.red("Error: Either name or query must be provided"));
+    process.exit(1);
+  }
+
+  if (name && query) {
+    console.error(
+      chalk.red("Error: Only one of name or query can be provided")
+    );
+    process.exit(1);
+  }
+
+  try {
+    let searchResult: SearchResult | null = null;
+
+    if (registry) {
+      if (semantic) {
+        console.error(chalk.red("Error: Semantic search is not supported yet"));
+        process.exit(1);
+      } else {
+        if (query) {
+          searchResult = await searchService.searchByQueryForRegistry(
+            registry,
+            query
+          );
+        }
+        if (name) {
+          searchResult = await searchService.searchByRegistryAndName(
+            registry,
+            name
+          );
+        }
+      }
+    } else {
+      if (semantic) {
+        console.error(chalk.red("Error: Semantic search is not supported yet"));
+        process.exit(1);
+      } else {
+        if (name) {
+          console.error(
+            chalk.red("Error: Name search is not supported for all registries")
+          );
+          process.exit(1);
+        }
+        if (query) {
+          searchResult = await searchService.searchByQuery(query);
+        }
+      }
+    }
+
+    if (searchResult) {
+      const formattedResults = formatSearchResult(searchResult);
+      printSearchResults(formattedResults);
+    } else {
+      console.log(chalk.yellow("\nNo results found."));
+    }
+  } catch (error) {
+    console.error(
+      chalk.red(
+        `\nError: ${
+          error instanceof Error ? error.message : "An unknown error occurred"
+        }`
+      )
+    );
+    process.exit(1);
+  }
+};

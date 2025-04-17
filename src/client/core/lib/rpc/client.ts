@@ -2,7 +2,7 @@ import {
   createMessageConnection,
   MessageConnection,
 } from "vscode-jsonrpc/node";
-import { logger, Logger } from "../../../../lib/logger/logger";
+import { Logger } from "../../../../lib/logger/logger";
 import { Daemon, Instance } from "../../../../lib/rpc/protocol";
 import {
   RPCTransportFactory,
@@ -15,13 +15,10 @@ import { RunConfig } from "../../../../lib/types/run-config";
 
 export class DaemonRPCClient {
   private connection: MessageConnection;
-  private logger: Logger;
-
   private static instance?: DaemonRPCClient;
 
-  private constructor(connection: MessageConnection, logger: Logger) {
+  private constructor(connection: MessageConnection, private logger: Logger) {
     this.connection = connection;
-    this.logger = logger.withContext("DaemonRPCClient");
     this.connection.listen();
     this.connection.onError((error) => {
       // @ts-ignore
@@ -34,7 +31,7 @@ export class DaemonRPCClient {
     });
   }
 
-  static async getInstance(): Promise<DaemonRPCClient> {
+  static async getInstance(logger: Logger): Promise<DaemonRPCClient> {
     if (!this.instance) {
       this.instance = await this.create(
         new SocketTransportFactory(logger),

@@ -31,7 +31,4 @@ class BaseContainer implements Container {
   }
 }
 
-export {
-  BaseContainer, Container
-};
-
+export { BaseContainer, Container };

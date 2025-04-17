@@ -1,31 +1,72 @@
-import { Argument, Command } from "commander";
+import arg from "arg";
 import { App } from "../../app";
 
-const buildProfileEnvCommand = (app: App): Command => {
-  const profileEnvCommand = new Command("env")
-    .description("Set the environment variables for a profile")
-    
-    profileEnvCommand.command("set")
-    .description("Set the environment variables for a profile")
-    .addArgument(new Argument("name", "The name of the profile"))
-    .requiredOption("-s, --server", "The server to set the environment variables for")
-    .requiredOption("-e, --env <env...>", "The environment variables to set")
-    .action(async ({ name, server, env }: { name: string, server: string, env: string[] }) => {
-      const envPairs = env.map(e => e.split("="));
-      const envRecord = Object.fromEntries(envPairs);
-      app.getProfileService().setServerEnvForProfile(name, server, envRecord);
-    });
+const profileSetEnvCommandOptions = {
+  "--server": String,
+  "--env": [String],
+  "-s": "--server",
+  "-e": "--env",
+};
 
-    profileEnvCommand.command("get")
-    .description("Get the environment variables for a profile")
-    .addArgument(new Argument("name", "The name of the profile"))
-    .requiredOption("-s, --server", "The server to get the environment variables for")
-    .action(async ({ name, server }: { name: string, server: string }) => {
-      const env = app.getProfileService().getProfile(name).servers[server].env;
-      console.log(env);
-    });
-    
-  return profileEnvCommand;
-}
+export const profileSetEnvCommand = async (app: App, argv: string[]) => {
+  // @ts-ignore
+  const options = arg(profileSetEnvCommandOptions, { argv });
 
-export { buildProfileEnvCommand };
+  const subArgv = options["_"];
+  const subCommand = subArgv?.[0];
+
+  if (!subCommand) {
+    console.error("Error: No command specified.");
+    console.error("Available commands: set, get");
+    process.exit(1);
+  }
+
+  const name = options["_"]?.[0];
+  const server = options["--server"];
+  const env: string[] = options["--env"] || [];
+
+  if (!name) {
+    console.error("Error: Name is required.");
+    process.exit(1);
+  }
+
+  if (!server) {
+    console.error("Error: Server is required.");
+    process.exit(1);
+  }
+
+  if (!env) {
+    console.error("Error: Environment variables are required.");
+    process.exit(1);
+  }
+
+  const envPairs = env.map((e) => e.split("="));
+  const envRecord = Object.fromEntries(envPairs);
+  app.getProfileService().setServerEnvForProfile(name, server, envRecord);
+};
+
+const profileGetEnvCommandOptions = {
+  "--server": String,
+  "-s": "--server",
+};
+
+export const profileGetEnvCommand = async (app: App, argv: string[]) => {
+  // @ts-ignore
+  const options = arg(profileGetEnvCommandOptions, { argv });
+
+  const name = options["_"]?.[0];
+  const server = options["--server"];
+
+  if (!name) {
+    console.error("Error: Name is required.");
+    process.exit(1);
+  }
+
+  if (!server) {
+    console.error("Error: Server is required.");
+    process.exit(1);
+  }
+
+  const env = app.getProfileService().getProfile(name).servers[server].env;
+  console.log(env);
+};

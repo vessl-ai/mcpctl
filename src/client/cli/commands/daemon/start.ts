@@ -72,69 +72,61 @@ const createLaunchdPlist = () => {
   fs.chmodSync(plistPath, "644");
 };
 
-export const buildStartCommand = (app: App) => {
-  return {
-    action: async () => {
-      try {
-        // sudo 권한 체크
-        checkSudoPrivileges();
+const startCommandOptions = {};
 
-        const platform = os.platform();
-        let command: string;
-        let args: string[];
+export const startCommand = async (app: App) => {
+  try {
+    // sudo 권한 체크
+    checkSudoPrivileges();
 
-        // 모든 OS에서 로그 디렉토리 생성
-        createLogDirectories();
+    const platform = os.platform();
+    let command: string;
+    let args: string[];
 
-        switch (platform) {
-          case "darwin": // macOS
-            // plist 파일 생성 및 권한 설정
-            createLaunchdPlist();
-            command = "launchctl";
-            args = [
-              "load",
-              "-w",
-              "/Library/LaunchDaemons/com.mcpctl.daemon.plist",
-            ];
-            break;
-          case "linux":
-            command = "sudo";
-            args = ["systemctl", "start", "mcpctld"];
-            break;
-          case "win32":
-            command = "net";
-            args = ["start", "mcpctld"];
-            break;
-          default:
-            throw new Error(`Unsupported platform: ${platform}`);
+    // 모든 OS에서 로그 디렉토리 생성
+    createLogDirectories();
+
+    switch (platform) {
+      case "darwin": // macOS
+        // plist 파일 생성 및 권한 설정
+        createLaunchdPlist();
+        command = "launchctl";
+        args = ["load", "-w", "/Library/LaunchDaemons/com.mcpctl.daemon.plist"];
+        break;
+      case "linux":
+        command = "sudo";
+        args = ["systemctl", "start", "mcpctld"];
+        break;
+      case "win32":
+        command = "net";
+        args = ["start", "mcpctld"];
+        break;
+      default:
+        throw new Error(`Unsupported platform: ${platform}`);
+    }
+
+    console.log(`Starting MCP daemon service on ${platform}...`);
+    const child = spawn(command, args, {
+      stdio: "inherit",
+    });
+
+    await new Promise((resolve, reject) => {
+      child.on("close", (code) => {
+        if (code === 0) {
+          console.log("MCP daemon service started successfully");
+          resolve(undefined);
+        } else {
+          reject(
+            new Error(`Failed to start MCP daemon service with code ${code}`)
+          );
         }
-
-        console.log(`Starting MCP daemon service on ${platform}...`);
-        const child = spawn(command, args, {
-          stdio: "inherit",
-        });
-
-        await new Promise((resolve, reject) => {
-          child.on("close", (code) => {
-            if (code === 0) {
-              console.log("MCP daemon service started successfully");
-              resolve(undefined);
-            } else {
-              reject(
-                new Error(
-                  `Failed to start MCP daemon service with code ${code}`
-                )
-              );
-            }
-          });
-        });
-      } catch (error) {
-        console.error(
-          "Failed to start MCP daemon service:",
-          error instanceof Error ? error.message : "Unknown error"
-        );
-        process.exit(1);
-      }
-    },
-  };
+      });
+    });
+  } catch (error) {
+    console.error(
+      "Failed to start MCP daemon service:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    process.exit(1);
+  }
 };

@@ -1,43 +1,37 @@
+import arg from "arg";
 import { App } from "../../app";
-import { buildServerListCommand } from "./list";
-import { buildServerLogsCommand } from "./logs";
-import { buildServerStopCommand } from "./stop";
+import { serverListCommand } from "./list";
+import { serverLogsCommand } from "./logs";
+import { serverStopCommand } from "./stop";
 
-// Commander.js의 Command 객체 대신 함수를 반환하도록 변경
-const buildServerCommand = (app: App) => {
-  return {
-    action: async (options: any) => {
-      const subCommand = options.args?.[0];
+const serverCommandOptions = {};
 
-      if (!subCommand) {
-        console.log("Server command");
-        console.log("Available subcommands:");
-        console.log("  list\t\tList MCP servers");
-        console.log("  logs\t\tView MCP server logs");
-        console.log("  stop\t\tStop MCP server");
-        return;
-      }
+export const serverCommand = async (app: App, argv: string[]) => {
+  const options = arg(serverCommandOptions, { argv, stopAtPositional: true });
 
-      switch (subCommand) {
-        case "list":
-          await buildServerListCommand(app).action(options);
-          break;
-        case "logs":
-          await buildServerLogsCommand(app).action(options);
-          break;
-        case "stop":
-          await buildServerStopCommand(app).action(options);
-          break;
-        default:
-          console.error(`Error: '${subCommand}' is an unknown subcommand.`);
-          console.log("Available subcommands:");
-          console.log("  list\t\tList MCP servers");
-          console.log("  logs\t\tView MCP server logs");
-          console.log("  stop\t\tStop MCP server");
-          process.exit(1);
-      }
-    },
-  };
+  const subArgv = options["_"];
+
+  if (!subArgv || subArgv.length === 0) {
+    console.error("Error: No command specified.");
+    console.error("Available commands: list, logs, stop");
+    process.exit(1);
+  }
+
+  const subCommand = subArgv[0];
+
+  switch (subCommand) {
+    case "list":
+      await serverListCommand(app, subArgv.slice(1));
+      break;
+    case "logs":
+      await serverLogsCommand(app, subArgv.slice(1));
+      break;
+    case "stop":
+      await serverStopCommand(app, subArgv.slice(1));
+      break;
+    default:
+      console.error("Unknown server command:", subCommand);
+      console.log("Available commands: list, logs, stop");
+      process.exit(1);
+  }
 };
-
-export { buildServerCommand };

@@ -1,23 +1,23 @@
+import { Logger } from "../../../../lib/logger/logger";
 import { McpServerInstance } from "../../../../lib/types/instance";
 import { DaemonRPCClient } from "../../lib/rpc/client";
 
 export interface ServerService {
   listServers(): Promise<McpServerInstance[]>;
-  stopServer(instanceId: string): Promise<void>;  
+  stopServer(instanceId: string): Promise<void>;
 }
 
 class DefaultServerService implements ServerService {
-  constructor(
-  ) {}
+  constructor(private readonly logger: Logger) {}
 
   async listServers(): Promise<McpServerInstance[]> {
     let daemonClient: DaemonRPCClient | undefined;
     try {
-      daemonClient = await DaemonRPCClient.getInstance();
+      daemonClient = await DaemonRPCClient.getInstance(this.logger);
       const instances = await daemonClient.listInstances();
       return instances;
     } catch (error) {
-      console.error('Error listing servers:', error);
+      console.error("Error listing servers:", error);
       throw error;
     } finally {
       if (daemonClient) {
@@ -26,13 +26,13 @@ class DefaultServerService implements ServerService {
     }
   }
 
-  async stopServer(instanceId: string): Promise<void> { 
+  async stopServer(instanceId: string): Promise<void> {
     let daemonClient: DaemonRPCClient | undefined;
     try {
-      daemonClient = await DaemonRPCClient.getInstance();
+      daemonClient = await DaemonRPCClient.getInstance(this.logger);
       await daemonClient.stopInstance(instanceId);
     } catch (error) {
-      console.error('Error stopping server:', error);
+      console.error("Error stopping server:", error);
       throw error;
     } finally {
       if (daemonClient) {
@@ -42,6 +42,6 @@ class DefaultServerService implements ServerService {
   }
 }
 
-export const newServerService = (): ServerService => {
-  return new DefaultServerService();
-}
+export const newServerService = (logger: Logger): ServerService => {
+  return new DefaultServerService(logger);
+};

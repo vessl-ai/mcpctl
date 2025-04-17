@@ -1,11 +1,10 @@
+import arg from "arg";
 import { App } from "../../app";
 
-const buildServerLogsCommand = (app: App) => {
-  return {
-    action: async (options: any) => {
-      console.log("Server logs command");
-    },
-  };
-};
+const serverLogsCommandOptions = {};
 
-export { buildServerLogsCommand };
+export const serverLogsCommand = async (app: App, argv: string[]) => {
+  const options = arg(serverLogsCommandOptions, { argv });
+
+  console.log("Server logs command");
+};

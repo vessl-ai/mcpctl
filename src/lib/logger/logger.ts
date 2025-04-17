@@ -13,62 +13,78 @@ class ConsoleLoggerImpl implements Logger {
   private readonly prefix: string;
   private readonly showVerbose: boolean;
 
-  constructor(config?: {prefix?: string, showVerbose?: boolean}) {
+  constructor(config?: { prefix?: string; showVerbose?: boolean }) {
     this.prefix = config?.prefix ?? "";
     this.showVerbose = config?.showVerbose ?? false;
   }
 
+  now(): string {
+    return new Date().toISOString();
+  }
+
   verbose(message: string): void {
     if (this.showVerbose) {
-      console.log(`[VERBOSE]: ${this.prefix} ${message}`);
+      console.log(`[VERBOSE]: [${this.now()}] [${this.prefix}] ${message}`);
     }
   }
 
   log(message: string): void {
-    console.log(`[LOG]: ${this.prefix} ${message}`);
+    console.log(`[LOG]: [${this.now()}] [${this.prefix}] ${message}`);
   }
 
   error(message: string, error?: any): void {
     if (error) {
-      console.error(`[ERROR]: ${this.prefix} ${message}`, error);
+      console.error(
+        `[ERROR]: [${this.now()}] [${this.prefix}] ${message}`,
+        error
+      );
     } else {
-      console.error(`[ERROR]: ${this.prefix} ${message}`);
+      console.error(`[ERROR]: [${this.now()}] [${this.prefix}] ${message}`);
     }
   }
 
   warn(message: string): void {
-    console.warn(`[WARN]: ${this.prefix} ${message}`);
+    console.warn(`[WARN]: [${this.now()}] [${this.prefix}] ${message}`);
   }
 
   debug(message: string, context?: Record<string, any>): void {
     if (this.showVerbose) {
       if (context) {
-        console.debug(`[DEBUG]: ${this.prefix} ${message}`, context);
+        console.debug(
+          `[DEBUG]: [${this.now()}] [${this.prefix}] ${message}`,
+          context
+        );
       } else {
-        console.debug(`[DEBUG]: ${this.prefix} ${message}`);
+        console.debug(`[DEBUG]: [${this.now()}] [${this.prefix}] ${message}`);
       }
     }
   }
 
   info(message: string, context?: Record<string, any>): void {
     if (context) {
-      console.info(`[INFO]: ${this.prefix} ${message}`, context);
+      console.info(
+        `[INFO]: [${this.now()}] [${this.prefix}] ${message}`,
+        context
+      );
     } else {
-      console.info(`[INFO]: ${this.prefix} ${message}`);
+      console.info(`[INFO]: [${this.now()}] [${this.prefix}] ${message}`);
     }
   }
 
   withContext(context: string): Logger {
     return new ConsoleLoggerImpl({
       prefix: this.prefix ? `${this.prefix}:${context}` : context,
-      showVerbose: this.showVerbose
+      showVerbose: this.showVerbose,
     });
   }
 }
 
 let logger: Logger;
 
-const newConsoleLogger = (config?: {prefix?: string, showVerbose?: boolean}): Logger => {
+const newConsoleLogger = (config?: {
+  prefix?: string;
+  showVerbose?: boolean;
+}): Logger => {
   if (!logger) {
     logger = new ConsoleLoggerImpl(config);
   }
@@ -76,4 +92,3 @@ const newConsoleLogger = (config?: {prefix?: string, showVerbose?: boolean}): Lo
 };
 
 export { logger, newConsoleLogger };
-

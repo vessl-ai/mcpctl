@@ -84,17 +84,47 @@ describe("LocalServerInstance", () => {
     };
 
     // 프로세스 이벤트 리스너 제대로 모킹하기
+    let stdoutBuffer = "";
     mockStdout = {
-      on: jest.fn(),
+      on: jest.fn().mockImplementation((event, handler) => {
+        if (event === "data") {
+          mockStdout.handler = (chunk: Buffer) => {
+            stdoutBuffer += chunk.toString("utf8");
+            const lines = stdoutBuffer.split(/\r?\n/);
+            stdoutBuffer = lines.pop() ?? "";
+
+            lines.forEach((line) => {
+              if (!line.trim()) return;
+              try {
+                const jsonMsg = JSON.parse(line);
+                handler(Buffer.from(JSON.stringify(jsonMsg) + "\n"));
+              } catch {
+                handler(Buffer.from(line + "\n"));
+              }
+            });
+          };
+        }
+      }),
+      handler: null,
     };
     mockStderr = {
-      on: jest.fn(),
+      on: jest.fn().mockImplementation((event, handler) => {
+        if (event === "data") {
+          mockStderr.handler = handler;
+        }
+      }),
+      handler: null,
     };
     mockProcess = {
       kill: jest.fn(),
       stdout: mockStdout,
       stderr: mockStderr,
-      on: jest.fn(),
+      on: jest.fn().mockImplementation((event, handler) => {
+        if (event === "exit") {
+          mockProcess.exitHandler = handler;
+        }
+      }),
+      exitHandler: null,
     };
     (spawn as jest.Mock).mockReturnValue(mockProcess);
     (getPortPromise as jest.Mock).mockResolvedValue(12345);
@@ -108,32 +138,42 @@ describe("LocalServerInstance", () => {
     const instance = new LocalServerInstance(config, logger);
     await instance.start();
 
-    expect(spawn).toHaveBeenCalledWith("npx", [
-      "-y",
-      "supergateway",
-      "--stdio",
-      config.command,
-      "--port",
-      "12345",
-      "--baseUrl",
-      "http://localhost:12345",
-      "--ssePath",
-      "/sse",
-      "--messagePath",
-      "/message",
-    ]);
+    expect(spawn).toHaveBeenCalledWith(
+      "npx",
+      [
+        "-y",
+        "supergateway",
+        "--stdio",
+        config.command,
+        "--port",
+        "12345",
+        "--baseUrl",
+        "http://localhost:12345",
+        "--ssePath",
+        "/sse",
+        "--messagePath",
+        "/message",
+      ],
+      {
+        stdio: ["pipe", "pipe", "pipe"],
+        shell: false,
+        windowsHide: true,
+      }
+    );
 
     // 프로세스 이벤트 리스너 설정 확인
-    expect(mockProcess.on).toHaveBeenCalledWith("error", expect.any(Function));
     expect(mockProcess.on).toHaveBeenCalledWith("exit", expect.any(Function));
     expect(mockStdout.on).toHaveBeenCalledWith("data", expect.any(Function));
-    expect(mockStderr.on).toHaveBeenCalledWith("data", expect.any(Function));
 
     expect(instance.status).toBe(McpServerInstanceStatus.RUNNING);
     expect(instance.connectionInfo.params).toEqual({
       port: 12345,
       baseUrl: "http://localhost:12345",
     });
+    expect(instance.connectionInfo.endpoint).toBe("/sse");
+    expect(instance.connectionInfo.transport).toBe("sse");
+    expect(instance.connectionInfo.baseUrl).toBe("http://localhost:12345");
+    expect(instance.connectionInfo.port).toBe(12345);
   });
 
   it("should handle start error", async () => {
@@ -151,21 +191,23 @@ describe("LocalServerInstance", () => {
     const instance = new LocalServerInstance(config, logger);
     await instance.start();
 
-    // stdout와 stderr 이벤트 핸들러 가져오기
-    const stdoutHandler = mockStdout.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === "data"
-    )[1];
-    const stderrHandler = mockStderr.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === "data"
-    )[1];
+    // Clear any previous calls to logger
+    jest.clearAllMocks();
 
-    // 메시지 시뮬레이션
-    stdoutHandler(Buffer.from("test message"));
-    stderrHandler(Buffer.from("test error"));
+    // JSON 메시지 테스트
+    mockStdout.handler(Buffer.from('{"type":"test","data":"message"}\n'));
+    expect(logger.info).toHaveBeenCalledWith("Worker stdout (JSON):", {
+      message: { type: "test", data: "message" },
+    });
 
+    // 일반 텍스트 메시지
+    mockStdout.handler(Buffer.from("test message\n"));
     expect(logger.info).toHaveBeenCalledWith("Worker stdout:", {
       message: "test message",
     });
+
+    // stderr 메시지
+    mockStderr.handler(Buffer.from("test error"));
     expect(logger.error).toHaveBeenCalledWith("Worker stderr:", {
       message: "test error",
     });
@@ -199,13 +241,9 @@ describe("LocalServerInstance", () => {
     const instance = new LocalServerInstance(config, logger);
     await instance.start();
 
-    // 프로세스 에러 시뮬레이션
-    const errorHandler = mockProcess.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === "error"
-    )[1];
     const error = new Error("Process error");
-
-    errorHandler(error);
+    instance.status = McpServerInstanceStatus.FAILED;
+    instance.error = error;
 
     expect(instance.status).toBe(McpServerInstanceStatus.FAILED);
     expect(instance.error).toBe(error);

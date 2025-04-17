@@ -1,13 +1,12 @@
 import fs from "fs";
 import path from "path";
-import { v4 as uuidv4 } from "uuid";
 import { Logger } from "../../../../lib/logger/logger";
 import { McpServerInstanceStatus } from "../../../../lib/types/instance";
 import { RunConfig } from "../../../../lib/types/run-config";
 import { getSessionDir } from "../../lib/env";
 import { DaemonRPCClient } from "../../lib/rpc/client";
 import { McpClientType } from "../../lib/types/mcp-client";
-import { Session, SessionStatus } from "../../lib/types/session";
+import { newSession, Session, SessionStatus } from "../../lib/types/session";
 
 export interface SessionManager {
   // instance 연결
@@ -34,7 +33,7 @@ class DefaultSessionManager implements SessionManager {
   }
 
   async getDaemonClient(): Promise<DaemonRPCClient> {
-    return await DaemonRPCClient.getInstance();
+    return await DaemonRPCClient.getInstance(this.logger);
   }
 
   writeSessions(): void {
@@ -46,6 +45,15 @@ class DefaultSessionManager implements SessionManager {
         path.join(getSessionDir(), `${session.id}.json`),
         JSON.stringify(session, null, 2)
       );
+    }
+    // Delete session files that are not in memory
+    const sessionFiles = fs.readdirSync(getSessionDir());
+    for (const sessionFile of sessionFiles) {
+      const sessionId = sessionFile.split(".")[0];
+      if (!this.sessions.has(sessionId)) {
+        this.logger.info("Deleting orphaned session file", { sessionFile });
+        fs.unlinkSync(path.join(getSessionDir(), sessionFile));
+      }
     }
   }
 
@@ -63,35 +71,44 @@ class DefaultSessionManager implements SessionManager {
   async connect(config: RunConfig, client?: McpClientType): Promise<Session> {
     let daemonClient: DaemonRPCClient | undefined;
     try {
+      this.logger.info("Connecting to daemon");
       daemonClient = await this.getDaemonClient();
       // start instance
+
+      this.logger.debug("Starting instance", { config });
       const instance = await daemonClient.startInstance(config);
       if (!instance) {
+        this.logger.error("Failed to start instance", { config });
         throw new Error(`Failed to start instance: ${config}`);
       }
+      this.logger.info("Instance started", { instance });
 
       // 세션 생성
-      const session: Session = {
-        id: uuidv4(),
+      const session = newSession({
         instanceId: instance.id,
-        startedAt: new Date().toISOString(),
-        status: SessionStatus.PENDING,
         instanceStatus: instance.status,
         connectionInfo: instance.connectionInfo,
         client,
-      };
+      });
 
       this.sessions.set(session.id, session);
       this.writeSessions();
+      this.logger.info("Session created", { session });
 
       if (instance.status === McpServerInstanceStatus.STARTING) {
+        this.logger.debug("Waiting for instance to start");
         return new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
+            this.logger.error("Timeout waiting for instance status");
             daemonClient?.dispose();
             reject(new Error("Timeout waiting for instance status"));
           }, 10000);
 
           daemonClient!.onInstanceStatusChange(async (instanceId, status) => {
+            this.logger.debug("Instance status changed", {
+              instanceId,
+              status,
+            });
             if (instanceId === instance.id) {
               const updatedSession: Session = {
                 ...session,
@@ -108,22 +125,28 @@ class DefaultSessionManager implements SessionManager {
               if (status.status === McpServerInstanceStatus.RUNNING) {
                 updatedSession.status = SessionStatus.CONNECTED;
                 clearTimeout(timeout);
+                daemonClient?.dispose();
                 resolve(updatedSession);
               }
               this.sessions.set(session.id, updatedSession);
               this.writeSessions();
+              this.logger.info("Session updated", { updatedSession });
             }
           });
         });
       }
 
       if (instance.status === McpServerInstanceStatus.RUNNING) {
+        this.logger.debug("Instance is running, returning session");
         session.status = SessionStatus.CONNECTED;
+        daemonClient?.dispose();
         return session;
       }
 
+      this.logger.error("Unexpected instance status", { instance });
       throw new Error(`Unexpected instance status: ${instance.status}`);
     } catch (error) {
+      this.logger.error("Failed to connect: unknown error", { error });
       if (daemonClient) {
         daemonClient.dispose();
       }

@@ -1,51 +1,62 @@
+import arg from "arg";
+import fs from "fs";
+import path from "path";
+import { newFileLogger } from "../../lib/logger/file-logger";
+import { Logger, newConsoleLogger } from "../../lib/logger/logger";
 import { newApp } from "./app";
-import { buildDaemonCommand } from "./commands/daemon";
-import { buildInstallCommand } from "./commands/install";
-import { buildProfileCommand } from "./commands/profile";
-import { buildRegistryCommand } from "./commands/registry";
-import { buildSearchCommand } from "./commands/search";
-import { buildServerCommand } from "./commands/server";
-import { buildSessionCommand } from "./commands/session";
+import { daemonCommand } from "./commands/daemon";
+import { installCommand } from "./commands/install";
+import { profileCommand } from "./commands/profile";
+import { registryCommand } from "./commands/registry";
+import { searchCommand } from "./commands/search";
+import { serverCommand } from "./commands/server";
+import { sessionCommand } from "./commands/session";
+const mainCommandOptions = {
+  "--verbose": Boolean,
+  "-v": "--verbose",
+  "--log-file": String,
+};
 
-// 명령행 인자 파싱 함수
-const parseArgs = (args: string[]) => {
-  const options: Record<string, any> = {};
-  const command: string[] = [];
-
-  for (let i = 2; i < args.length; i++) {
-    const arg = args[i];
-    if (arg.startsWith("--")) {
-      const [key, value] = arg.slice(2).split("=");
-      options[key] = value || true;
-    } else if (arg.startsWith("-")) {
-      const key = arg.slice(1);
-      const nextArg = args[i + 1];
-      if (nextArg && !nextArg.startsWith("-")) {
-        options[key] = nextArg;
-        i++;
-      } else {
-        options[key] = true;
-      }
-    } else {
-      command.push(arg);
+const verboseConsoleLogger =
+  (verbose: boolean | undefined) =>
+  (message: string, ...args: any[]) => {
+    if (verbose) {
+      console.log(message, ...args);
     }
-  }
-
-  return { command, options };
-};
-
-// 명령어 실행 함수 타입 정의
-type CommandExecutor = {
-  action: (options: any) => Promise<void>;
-};
+  };
 
 const main = async () => {
-  const app = newApp();
+  const options = arg(mainCommandOptions, {
+    argv: process.argv.slice(2),
+    stopAtPositional: true,
+  });
+  const subArgv = options["_"];
+  const verbose = options["--verbose"];
+  const verboseLog = verboseConsoleLogger(verbose);
+
+  const logFilePath =
+    options["--log-file"] || process.env.MCPCTL_LOG_FILE || undefined;
+
+  let logger: Logger;
+  if (logFilePath) {
+    verboseLog("logFilePath", logFilePath);
+    if (!fs.existsSync(logFilePath)) {
+      fs.mkdirSync(path.dirname(logFilePath), { recursive: true });
+    }
+    logger = newFileLogger({
+      filePath: logFilePath,
+      showVerbose: verbose,
+    });
+  } else {
+    logger = newConsoleLogger({ showVerbose: verbose });
+  }
+  const app = newApp({ verbose, logger });
   await app.init();
+  logger.debug("App initialized");
+  logger.debug("SubArgv", subArgv);
+  logger.debug("Options", options);
 
-  const { command, options } = parseArgs(process.argv);
-
-  if (command.length === 0) {
+  if (subArgv.length === 0) {
     console.error("Error: No command specified.");
     console.error("\nAvailable commands:");
     console.error("  server\t\tManage MCP servers");
@@ -59,45 +70,37 @@ const main = async () => {
     process.exit(1);
   }
 
-  const mainCommand = command[0];
+  const mainCommand = subArgv[0];
+  logger.debug("Main command", { mainCommand });
 
   try {
     switch (mainCommand) {
       case "server": {
-        const executor = buildServerCommand(app) as unknown as CommandExecutor;
-        await executor.action({ ...options, args: command.slice(1) });
+        await serverCommand(app, subArgv.slice(1));
         break;
       }
       case "session": {
-        const executor = buildSessionCommand(app) as unknown as CommandExecutor;
-        await executor.action({ ...options, args: command.slice(1) });
+        await sessionCommand(app, subArgv.slice(1));
         break;
       }
       case "install": {
-        const executor = buildInstallCommand(app) as unknown as CommandExecutor;
-        await executor.action({ ...options, args: command.slice(1) });
+        await installCommand(app, subArgv.slice(1));
         break;
       }
       case "profile": {
-        const executor = buildProfileCommand(app) as unknown as CommandExecutor;
-        await executor.action({ ...options, args: command.slice(1) });
+        await profileCommand(app, subArgv.slice(1));
         break;
       }
       case "registry": {
-        const executor = buildRegistryCommand(
-          app
-        ) as unknown as CommandExecutor;
-        await executor.action({ ...options, args: command.slice(1) });
+        await registryCommand(app, subArgv.slice(1));
         break;
       }
       case "search": {
-        const executor = buildSearchCommand(app) as unknown as CommandExecutor;
-        await executor.action({ ...options, args: command.slice(1) });
+        await searchCommand(app, subArgv.slice(1));
         break;
       }
       case "daemon": {
-        const executor = buildDaemonCommand(app) as unknown as CommandExecutor;
-        await executor.action({ ...options, args: command.slice(1) });
+        await daemonCommand(app, subArgv.slice(1));
         break;
       }
       default:
@@ -120,7 +123,7 @@ const main = async () => {
       );
     } else {
       console.error("\nAn error occurred. Use -v option for more details.");
-      if (options.v || options.verbose) {
+      if (verbose) {
         console.error(error);
       }
     }

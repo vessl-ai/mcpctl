@@ -21,7 +21,7 @@ export abstract class BaseServerInstance implements McpServerInstance {
   lastUsedAt: string;
 
   constructor(public config: RunConfig, protected logger: Logger) {
-    this.id = uuidv4();
+    this.id = `server-instance.${uuidv4()}`;
     this.connectionInfo = {
       transport: "sse",
       baseUrl: "http://localhost:8000",
@@ -40,6 +40,16 @@ export abstract class BaseServerInstance implements McpServerInstance {
 
   abstract start(): Promise<void>;
   abstract stop(): Promise<void>;
+
+  // JSON-RPC 메시지를 보내는 메서드
+  async sendJsonRpcMessage(message: any): Promise<void> {
+    if (!this.process?.stdin) {
+      throw new Error("Process stdin is not available");
+    }
+
+    const jsonMessage = JSON.stringify(message) + "\n";
+    this.process.stdin.write(jsonMessage);
+  }
 }
 
 // Local process worker implementation
@@ -53,24 +63,49 @@ export class LocalServerInstance extends BaseServerInstance {
       const port = await getPortPromise();
       this.logger.debug("Port allocated", { port });
 
-      this.process = spawn("npx", [
-        "-y",
-        "supergateway",
-        "--stdio",
-        this.config.command,
-        "--port",
-        port.toString(),
-        "--baseUrl",
-        `http://localhost:${port}`,
-        "--ssePath",
-        "/sse",
-        "--messagePath",
-        "/message",
-      ]);
+      // command를 배열로 분리하고 shell 옵션을 고려
+      const [cmd, ...args] = this.config.command.split(" ");
+      const stdioCmd = `${cmd} ${args.join(" ")}`.trim();
 
-      this.process.stdout?.on("data", (message: any) => {
-        this.logger.info("Worker stdout:", {
-          message: message.toString().trim(),
+      this.logger.debug("Starting process", { stdioCmd });
+      // supergateway의 STDIO 통신 방식에 맞춰서 설정
+      this.process = spawn(
+        "npx",
+        [
+          "-y",
+          "supergateway",
+          "--stdio",
+          stdioCmd,
+          "--port",
+          port.toString(),
+          "--baseUrl",
+          `http://localhost:${port}`,
+          "--ssePath",
+          "/sse",
+          "--messagePath",
+          "/message",
+        ],
+        {
+          stdio: ["pipe", "pipe", "pipe"],
+          shell: false,
+          windowsHide: true,
+        }
+      );
+
+      let buffer = "";
+      this.process.stdout?.on("data", (chunk: Buffer) => {
+        buffer += chunk.toString("utf8");
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? "";
+
+        lines.forEach((line) => {
+          if (!line.trim()) return;
+          try {
+            const jsonMsg = JSON.parse(line);
+            this.logger.info("Worker stdout (JSON):", { message: jsonMsg });
+          } catch {
+            this.logger.info("Worker stdout:", { message: line.trim() });
+          }
         });
       });
 
@@ -80,12 +115,6 @@ export class LocalServerInstance extends BaseServerInstance {
         });
       });
 
-      this.process.on("error", (error: Error) => {
-        this.logger.error("Worker process error:", { error });
-        this.status = McpServerInstanceStatus.FAILED;
-        this.error = error;
-      });
-
       this.process.on("exit", (code: number | null, signal: string | null) => {
         this.logger.info("Worker process exited", { code, signal });
         this.status = McpServerInstanceStatus.STOPPED;
@@ -93,6 +122,8 @@ export class LocalServerInstance extends BaseServerInstance {
       });
 
       this.connectionInfo.endpoint = `/sse`;
+      this.connectionInfo.baseUrl = `http://localhost:${port}`;
+      this.connectionInfo.port = port;
       this.connectionInfo.params = {
         port,
         baseUrl: `http://localhost:${port}`,

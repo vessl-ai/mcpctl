@@ -3,8 +3,7 @@ import os from "os";
 import path from "path";
 import { verboseLog } from "../client/core/lib/env";
 import { BaseContainer, Container } from "../lib/container/container";
-import { newFileLogger } from "../lib/logger/file-logger";
-import { Logger } from "../lib/logger/logger";
+import { Logger, newConsoleLogger } from "../lib/logger/logger";
 import { SocketTransportFactory } from "../lib/rpc/transport/socket";
 import { newServerInstanceFactory } from "./managers/server-instance/server-instance-factory";
 import {
@@ -35,10 +34,15 @@ export class DaemonApp {
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
+    console.log("logDir", logDir);
     this.container.register<Logger>(
       "logger",
-      newFileLogger({
-        filePath: path.join(logDir, "daemon.log"),
+      // newFileLogger({
+      //   filePath: path.join(logDir, "daemon.log"),
+      //   prefix: "Daemon",
+      //   showVerbose: verboseLog(),
+      // })
+      newConsoleLogger({
         prefix: "Daemon",
         showVerbose: verboseLog(),
       })

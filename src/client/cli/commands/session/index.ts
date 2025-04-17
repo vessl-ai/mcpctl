@@ -1,43 +1,44 @@
+import arg from "arg";
 import { App } from "../../app";
-import { buildSessionConnectCommand } from "./connect";
-import { buildSessionListCommand } from "./list";
-import { buildSessionStopCommand } from "./stop";
+import { sessionConnectCommand } from "./connect";
+import { sessionListCommand } from "./list";
+import { sessionStopCommand } from "./stop";
 
-// Commander.js의 Command 객체 대신 함수를 반환하도록 변경
-const buildSessionCommand = (app: App) => {
-  return {
-    action: async (options: any) => {
-      const subCommand = options.args?.[0];
+const sessionCommandOptions = {};
 
-      if (!subCommand) {
-        console.log("Session command");
-        console.log("Available subcommands:");
-        console.log("  list\t\tList MCP server sessions");
-        console.log("  stop\t\tStop MCP server sessions");
-        console.log("  connect\tConnect to MCP server");
-        return;
-      }
+export const sessionCommand = async (app: App, argv: string[]) => {
+  const options = arg(sessionCommandOptions, { argv, stopAtPositional: true });
 
-      switch (subCommand) {
-        case "list":
-          await buildSessionListCommand(app).action(options);
-          break;
-        case "stop":
-          await buildSessionStopCommand(app).action(options);
-          break;
-        case "connect":
-          await buildSessionConnectCommand(app).action(options);
-          break;
-        default:
-          console.error(`Error: '${subCommand}' is an unknown subcommand.`);
-          console.log("Available subcommands:");
-          console.log("  list\t\tList MCP server sessions");
-          console.log("  stop\t\tStop MCP server sessions");
-          console.log("  connect\tConnect to MCP server");
-          process.exit(1);
-      }
-    },
-  };
+  const subArgv = options["_"];
+  const logger = app.getLogger();
+  logger.debug("Session command", { options });
+
+  if (!subArgv || subArgv.length === 0) {
+    console.log("Session command");
+    console.log("Available subcommands:");
+    console.log("  list\t\tList MCP server sessions");
+    console.log("  stop\t\tStop MCP server sessions");
+    console.log("  connect\tConnect to MCP server");
+    return;
+  }
+  const subCommand = subArgv[0];
+
+  switch (subCommand) {
+    case "list":
+      await sessionListCommand(app, subArgv);
+      break;
+    case "stop":
+      await sessionStopCommand(app, subArgv);
+      break;
+    case "connect":
+      await sessionConnectCommand(app, subArgv);
+      break;
+    default:
+      console.error(`Error: '${subCommand}' is an unknown subcommand.`);
+      console.log("Available subcommands:");
+      console.log("  list\t\tList MCP server sessions");
+      console.log("  stop\t\tStop MCP server sessions");
+      console.log("  connect\tConnect to MCP server");
+      process.exit(1);
+  }
 };
-
-export { buildSessionCommand };
