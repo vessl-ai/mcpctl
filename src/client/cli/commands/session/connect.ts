@@ -3,19 +3,22 @@ import { spawn } from "child_process";
 import { McpServerHostingType } from "../../../../lib/types/hosting";
 import { App } from "../../app";
 
-const sessionConnectCommandOptions = {
-  "--server": String,
-  "--command": String,
-  "--command-base64": String,
-  "--profile": String,
-  "-s": "--server",
-  "-c": "--command",
-  "-c64": "--command-base64",
-  "-p": "--profile",
-};
-
 export const sessionConnectCommand = async (app: App, argv: string[]) => {
-  const options = arg(sessionConnectCommandOptions, { argv });
+  const options = arg(
+    {
+      "--server": String,
+      "--command": String,
+      "--command-base64": String,
+      "--profile": String,
+      "--env": [String],
+      "-s": "--server",
+      "-c": "--command",
+      "-c64": "--command-base64",
+      "-p": "--profile",
+      "-e": "--env",
+    },
+    { argv }
+  );
 
   const logger = app.getLogger();
   logger.info("Session connect command", { options });
@@ -43,6 +46,14 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
     process.exit(1);
   }
   const profileName = options["--profile"] || "default";
+  const env = options["--env"] || [];
+
+  let envMap: Record<string, string> = getServerEnv(
+    app,
+    profileName,
+    serverName,
+    env
+  );
 
   logger.info("Connect command", { serverName, profileName, command });
   const sessionManager = app.getSessionManager();
@@ -54,6 +65,7 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
     profileName,
     command: command,
     created: new Date().toISOString(),
+    env: envMap,
   });
 
   // ------ MUST log to logger from here -----
@@ -89,3 +101,27 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
 
   logger.info("Session connected");
 };
+function getServerEnv(
+  app: App,
+  profileName: string,
+  serverName: string,
+  env: string[]
+) {
+  let envMap: Record<string, string> = {};
+  const profileService = app.getProfileService();
+  const profileEnv = profileService.getProfileEnvForServer(
+    profileName,
+    serverName
+  );
+  if (profileEnv) {
+    envMap = { ...profileEnv };
+  }
+  if (env.length > 0) {
+    env.forEach((e) => {
+      const [key, value] = e.split("=");
+      envMap[key] = value;
+    });
+  }
+  profileService.updateProfileEnvForServer(profileName, serverName, envMap);
+  return envMap;
+}

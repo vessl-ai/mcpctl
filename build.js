@@ -3,15 +3,21 @@ const fs = require('fs');
 
 async function build() {
   try {
-    // CLI 번들링
-    await esbuild.build({
-      entryPoints: ['src/client/cli/cli.ts'],
+    // Common build options
+    const commonOptions = {
       bundle: true,
       platform: 'node',
-      target: 'node22',
-      outfile: 'dist/mcpctl.js',
+      target: 'node18',
       format: 'cjs',
       sourcemap: true,
+      external: ['readline/promises'],
+    };
+
+    // CLI 번들링
+    await esbuild.build({
+      ...commonOptions,
+      entryPoints: ['src/client/cli/cli.ts'],
+      outfile: 'dist/mcpctl.js',
       minify: true,
       banner: {
         js: '#!/usr/bin/env node\n',
@@ -20,13 +26,9 @@ async function build() {
 
     // 데몬 번들링
     await esbuild.build({
+      ...commonOptions,
       entryPoints: ['src/daemon/main.ts'],
-      bundle: true,
-      platform: 'node',
-      target: 'node22',
       outfile: 'dist/mcpctld.js',
-      format: 'cjs',
-      sourcemap: true,
       minify: true,
       banner: {
         js: '#!/usr/bin/env node\n',
@@ -35,13 +37,9 @@ async function build() {
 
     // service-templates 번들링
     await esbuild.build({
+      ...commonOptions,
       entryPoints: ['src/client/core/lib/service-templates/index.ts'],
-      bundle: true,
-      platform: 'node',
-      target: 'node22',
       outfile: 'dist/service-templates.js',
-      format: 'cjs',
-      sourcemap: true,
     });
     
     // Make files executable

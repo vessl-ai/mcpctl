@@ -52,6 +52,13 @@ sudo mcpctl daemon start
 mcpctl daemon start
 ```
 
+You can restart the daemon by:
+
+```bash
+sudo mcpctl daemon stop
+sudo mcpctl daemon start
+```
+
 ### Updating
 
 To update to the latest version:
@@ -100,20 +107,38 @@ Popular repositories included:
 - glama
 - smithery
 - pulsemcp
-- (more coming soon... you can also add your own repositories-> see [Add MCP Server Repository](#add-mcp-server-repository))
+- (more coming soon... you can also add your own repositories-> see [Add MCP Server Registry](#add-mcp-server-registry))
 - (or contribution is always welcome!)
 
-#### Search by repository and server name
+#### Search by registry and server name
 
-You can search for MCP servers by repository and server name.
+You can search for MCP servers by registry and server name.
 
 ```bash
-mcpctl search --repo glama --name my-mcp-server
+mcpctl search --registry glama --name my-mcp-server
 ```
 
-#### Semantic Search (TODO)
+#### Search by query
 
-Or you can do a semantic search, using OPENAI_API_KEY.
+You can search for MCP servers by query.
+
+```bash
+mcpctl search --query 'slack' [--registry glama] [--limit 10] [--use-llm-interactive (or -i)]
+```
+
+#### FUNNY: Interactive LLM with your search result
+
+You can use LLM to interact with your search result.
+
+```bash
+export OPENAI_API_KEY=<your-openai-api-key>
+export OPENAI_MODEL=gpt-4o-mini # default is gpt-4o-mini
+mcpctl search --query 'slack' --use-llm-interactive
+```
+
+(Currently, it only supports OpenAI API.)
+
+####
 
 ```bash
 export OPENAI_API_KEY=<your-openai-api-key>
@@ -174,9 +199,11 @@ mcpctl server list
 This will list all MCP servers you have, including the status of the server.
 
 ```bash
-ID     REPO/NAME    PROFILE     STATUS    MODE    TRANSPORT    SSE_ENDPOINT    CREATED AT
-1      glama/my-mcp-server    default    running    process    stdio    http://localhost:8080/sse   2024-01-01 12:00:00
-2      glama/my-mcp-server-2    default    running    container    SSE    http://localhost:8081/sse   2024-01-01 12:00:00
+┌──────────────────────────────────────────────────────┬─────────────┬─────────┬─────────┬───────┬───────────┬───────────────────────┬──────┬────────────────────────┐
+│ ID                                                   │ SERVER_NAME │ PROFILE │ STATUS  │ MODE  │ TRANSPORT │ SSE_ENDPOINT          │ PORT │ CREATED AT             │
+├──────────────────────────────────────────────────────┼─────────────┼─────────┼─────────┼───────┼───────────┼───────────────────────┼──────┼────────────────────────┤
+│ server-instance.251c2735-f8c0-467f-a16b-8769d6187767 │ real-slack  │ default │ running │ local │ sse       │ http://localhost:8000 │ 8000 │ YYYY. MM. DD. HH:MM:SS │
+└──────────────────────────────────────────────────────┴─────────────┴─────────┴─────────┴───────┴───────────┴───────────────────────┴──────┴────────────────────────┘
 ```
 
 To list all connection sessions you have:
@@ -198,41 +225,53 @@ ID     MCP_SERVER(ID)    CLIENTS    PROFILE    STATUS    CREATED AT
 You can add add your MCP server configurations to a profile.
 
 ```bash
-mcpctl profile add --name my-profile
-mcpctl profile set-config --repo glama --name my-mcp-server --key auth.token --value my-token
+mcpctl profile create my-profile
+mcpctl profile set-env --server-name my-mcp-server --env KEY=VALUE
+mcpctl profile get-env --server-name my-mcp-server
 ```
 
-This config will be automatically used when you connect to the MCP server.
+example:
 
 ```bash
-mcpctl connect --repo glama --name my-mcp-server --profile my-profile
+mcpctl profile get-env my-profile -s real-slack
+{
+  SLACK_BOT_TOKEN: 'xoxb-your-slack-bot-token',
+  SLACK_TEAM_ID: 'your-slack-team-id'
+}
+```
+
+This config will be automatically used when you connect to the MCP server if you specify the profile.
+
+```bash
+## Originally
+mcpctl session connect --server-name real-slack --command 'npx -y @modelcontextprotocol/server-slack' --env SLACK_BOT_TOKEN=xoxb-your-slack-bot-token --env SLACK_TEAM_ID=your-slack-team-id
+
+## with using profile
+mcpctl session connect --profile my-profile --server-name real-slack --command 'npx -y @modelcontextprotocol/server-slack'
 ```
 
 Under the hood, `mcpctl` will use the profile to set the config for the MCP server.
 
 ```
-`mcpctl connect --profile my-profile`
+`mcpctl session connect --profile my-profile`
       |
       v
-orchestrator finds the matching profile,
+cli finds the matching profile and server name, mixup the env vars
       |
       v
-orchestrator finds repo/name in the profile,
+orchestrator uses the envvars to start the MCP server (if same, uses existing)
       |
       v
-orchestrator uses the profile to start the MCP server
-      |
-      v
-mcpctl connect to the MCP server
+mcpctl creates a new session and connect to the MCP server
 ```
 
-So, if config in a profile for a repo/name is changed, orchestrator will automatically rollout the mcp server with the new config. (TODO)
+So, if config in a profile for a repo/name is changed, orchestrator will automatically rollout the mcp server with the new config.
 
 You can easily change the profile while you connect to the MCP server, by each client.
 
 ```bash
-mcpctl install --repo glama --name my-mcp-server --client claude --profile my-profile-1
-mcpctl install --repo glama --name my-mcp-server --client cursor --profile my-profile-2
+mcpctl install --server-name my-mcp-server --client claude --profile my-profile-1 --command 'npx -y @wonderwhy-er/desktop-commander'
+mcpctl install --server-name my-mcp-server --client cursor --profile my-profile-2 --command 'npx -y @wonderwhy-er/desktop-commander'
 ```
 
 Using this, your claude will use `my-profile-1` and cursor will use `my-profile-2`.
@@ -247,6 +286,10 @@ You can add your own registries to `mcpctl`.
 mcpctl registry add --name my-registry --url https://github.com/my-registry
 ```
 
+## Product Roadmap
+
+- [ ] Index registry to speed up the search.
+
 (TODO) You can pre-index your registry to speed up the semantic search.
 
 ```bash
@@ -254,3 +297,7 @@ mcpctl registry index --name my-registry
 ```
 
 - (TBU) This will fire up a new vectordb instance and index your registry.
+
+- [ ] Save and load MCP Server Set by profile.
+
+- [ ] Semantic search on registries.

@@ -18,6 +18,9 @@
     "cli": "ts-node src/client/cli/cli.ts",
     "clean": "rm -rf dist",
     "build": "tsc && node build.js",
+    "install-cli:macos": "cp dist/mcpctl.js /usr/local/bin/mcpctl && cp dist/mcpctld.js /usr/local/bin/mcpctld",
+    "install-cli:linux": "sudo cp dist/mcpctl.js /usr/local/bin/mcpctl && sudo cp dist/mcpctld.js /usr/local/bin/mcpctld",
+    "install-cli:windows": "cp dist/mcpctl.js $env:USERPROFILE\\AppData\\Roaming\\npm\\mcpctl.cmd",
     "prepublishOnly": "pnpm clean && pnpm build",
     "postinstall": "node scripts/postinstall.js"
   },
@@ -41,7 +44,7 @@
   },
   "homepage": "https://github.com/vessl-ai/mcpctl#readme",
   "engines": {
-    "node": ">=18.17.1"
+    "node": ">=18.0.0"
   },
   "os": [
     "darwin",
@@ -72,9 +75,11 @@
     "argparse": "^2.0.1",
     "axios": "^1.8.4",
     "chalk": "4",
+    "cli-table3": "^0.6.5",
     "commander": "^13.1.0",
     "eventsource": "^3.0.6",
     "node-fetch": "^3.3.2",
+    "openai": "^4.95.0",
     "portfinder": "^1.0.35",
     "uuid": "^11.1.0",
     "vscode-jsonrpc": "^8.2.1",

@@ -16,7 +16,7 @@ export interface McpClientService {
   installMcpServerToClient(
     client: McpClient,
     serverInstallConfig: McpServerInstallConfig
-  ): Promise<void>;
+  ): Promise<McpServerConfig>;
 }
 
 export class McpClientServiceImpl implements McpClientService {
@@ -37,12 +37,16 @@ export class McpClientServiceImpl implements McpClientService {
   }
 
   generateMcpServerConfig(
-    serverInstallConfig: McpServerInstallConfig
+    serverInstallConfig: McpServerInstallConfig,
+    options: { useBase64Command: boolean } = { useBase64Command: false }
   ): McpServerConfig {
     switch (serverInstallConfig.type) {
       case "stdio":
         const serverName = this.getOrGenerateServerName(serverInstallConfig);
-        const [command, args] = this.generateCommand(serverInstallConfig);
+        const [command, args] = this.generateCommand(
+          serverInstallConfig,
+          options
+        );
 
         return {
           [serverName]: {
@@ -61,21 +65,19 @@ export class McpClientServiceImpl implements McpClientService {
   async installMcpServerToClient(
     client: McpClient,
     serverInstallConfig: McpServerInstallConfig
-  ): Promise<void> {
+  ): Promise<McpServerConfig> {
     switch (client.type) {
       case McpClientType.CLAUDE:
-        await this.installMcpServerToClaude(client, serverInstallConfig);
-        return;
+        return await this.installMcpServerToClaude(client, serverInstallConfig);
       case McpClientType.CURSOR:
-        await this.installMcpServerToCursor(client, serverInstallConfig);
-        return;
+        return await this.installMcpServerToCursor(client, serverInstallConfig);
     }
   }
 
   private async installMcpServerToClaude(
     client: McpClient,
     serverInstallConfig: McpServerInstallConfig
-  ): Promise<void> {
+  ): Promise<McpServerConfig> {
     // locate claude mcp config file
     // for mac: ~/Library/Application Support/Claude/claude_desktop_config.json,
     // for windows: %APPDATA%\Claude\claude_desktop_config.json
@@ -123,12 +125,13 @@ export class McpClientServiceImpl implements McpClientService {
       claudeConfigFilePath,
       JSON.stringify(claudeConfig, null, 2)
     );
+    return serverConfig;
   }
 
   private async installMcpServerToCursor(
     client: McpClient,
     serverInstallConfig: McpServerInstallConfig
-  ): Promise<void> {
+  ): Promise<McpServerConfig> {
     // locate cursor mcp config file
     const cursorConfigFile = path.join(os.homedir(), ".cursor", "mcp.json");
     if (!fs.existsSync(cursorConfigFile)) {
@@ -147,14 +150,11 @@ export class McpClientServiceImpl implements McpClientService {
       // TODO: save envs to profile
     }
 
-    // BLACK MAGIG for cursor - command should be base64 encoded
-    if (serverInstallConfig.command) {
-      serverInstallConfig.command = Buffer.from(
-        serverInstallConfig.command
-      ).toString("base64");
-    }
+    // Black magic for cursor - command should be base64 encoded
+    const serverConfig = this.generateMcpServerConfig(serverInstallConfig, {
+      useBase64Command: true,
+    });
 
-    const serverConfig = this.generateMcpServerConfig(serverInstallConfig);
     Object.entries(serverConfig).forEach(([serverName, serverConfigBody]) => {
       cursorMcpConfig.mcpServers[serverName] = serverConfigBody;
     });
@@ -163,6 +163,8 @@ export class McpClientServiceImpl implements McpClientService {
       cursorConfigFile,
       JSON.stringify(cursorMcpConfig, null, 2)
     );
+
+    return serverConfig;
   }
 
   private getOrGenerateServerName(
@@ -186,7 +188,8 @@ export class McpClientServiceImpl implements McpClientService {
   }
 
   private generateCommand(
-    serverInstallConfig: McpServerInstallConfig
+    serverInstallConfig: McpServerInstallConfig,
+    options: { useBase64Command: boolean } = { useBase64Command: false }
   ): [string, string[]] {
     const originalCommand = serverInstallConfig.command;
     const command = "mcpctl";
@@ -195,9 +198,15 @@ export class McpClientServiceImpl implements McpClientService {
       "connect",
       "--server",
       serverInstallConfig.serverName,
-      "--command",
-      originalCommand,
     ];
+    if (options.useBase64Command) {
+      args.push(
+        "--command-base64",
+        Buffer.from(originalCommand).toString("base64")
+      );
+    } else {
+      args.push("--command", originalCommand);
+    }
     if (serverInstallConfig.env) {
       Object.entries(serverInstallConfig.env).forEach(([key, value]) => {
         args.push("--env", `${key}=${value}`);

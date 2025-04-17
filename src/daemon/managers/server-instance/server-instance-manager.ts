@@ -43,7 +43,6 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
     private logger: Logger,
     private readonly serverInstanceFactory: ServerInstanceFactory
   ) {
-    this.logger = this.logger.withContext("ServerInstanceManager");
     this.configInstanceMap = new Map();
     this.instances = new Map();
   }
@@ -98,8 +97,10 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
           throw new Error(`Existing instance not found: ${configId}`);
         }
         if (existingInstance.status !== McpServerInstanceStatus.RUNNING) {
-          this.logger.info("Instance is not running, recreating instance");
-          await this.stopInstance(configId);
+          this.logger.info("Instance is not running, recreating instance", {
+            existingInstance,
+          });
+          await this.stopInstance(existingInstance.id);
         } else {
           this.logger.info("Instance is running, checking env configuration");
           const existingEnv = existingInstance.config.env || {};
@@ -132,8 +133,8 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
         }
       }
 
-      this.logger.debug("Creating new server instance", {
-        configId,
+      this.logger.info("Creating new server instance", {
+        config,
       });
       // create server instance
       const serverInstance =
@@ -142,12 +143,14 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
           this.logger
         );
 
-      this.logger.debug("Starting server instance process", {
+      this.logger.info("Starting server instance process", {
         instanceId: serverInstance.id,
       });
       await serverInstance.start();
 
-      this.logger.info(`Instance ${serverInstance.id} started successfully`);
+      this.logger.info(`Instance ${serverInstance.id} started successfully`, {
+        serverInstance,
+      });
 
       serverInstance.status = McpServerInstanceStatus.RUNNING;
       serverInstance.startedAt = new Date().toISOString();

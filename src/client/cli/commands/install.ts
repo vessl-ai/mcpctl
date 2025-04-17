@@ -13,11 +13,13 @@ const installCommandOptions = {
   "--env": [String],
   "--server-name": String,
   "--profile": String,
+  "--log-level": String,
   "-c": "--command",
   "-a": "--client",
   "-e": "--env",
   "-n": "--server-name",
   "-p": "--profile",
+  "-l": "--log-level",
 };
 export const installCommand = async (app: App, argv: string[]) => {
   const logger = app.getLogger();
@@ -30,6 +32,7 @@ export const installCommand = async (app: App, argv: string[]) => {
   const env: string[] = options["--env"] || [];
   const serverName: string = options["--server-name"] || "";
   const profile: string | undefined = options["--profile"];
+  const logLevel: string = options["--log-level"] || "INFO";
 
   console.error(client);
 
@@ -64,7 +67,7 @@ export const installCommand = async (app: App, argv: string[]) => {
   const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
   const mcpctlEnv = {
     MCPCTL_LOG_FILE: `${homeDir}/.mcpctl/logs/${logFileKey}.log`,
-    MCPCTL_LOG_LEVEL: "INFO",
+    MCPCTL_LOG_LEVEL: logLevel,
   };
 
   const serverInstallConfig: McpServerInstallConfig = {
@@ -77,10 +80,11 @@ export const installCommand = async (app: App, argv: string[]) => {
   };
   if (client.length > 0) {
     for (const c of client) {
-      await clientService.installMcpServerToClient(
-        clientService.getClient(c),
-        serverInstallConfig
-      );
+      const installedServerConfig =
+        await clientService.installMcpServerToClient(
+          clientService.getClient(c),
+          serverInstallConfig
+        );
       console.log(chalk.green(`MCP server installed successfully to ${c}.`));
       if (c === "claude") {
         console.log(
@@ -90,7 +94,7 @@ export const installCommand = async (app: App, argv: string[]) => {
         );
       }
       console.log(chalk.green("MCP server config:"));
-      console.log(JSON.stringify(serverInstallConfig, null, 2));
+      console.log(JSON.stringify(installedServerConfig, null, 2));
     }
   } else {
     const serverConfig = await clientService.generateMcpServerConfig(

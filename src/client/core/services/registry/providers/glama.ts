@@ -28,22 +28,24 @@ interface GlamaSearchResponse {
   servers: GlamaMcpServer[];
 }
 
-type GlamaRegistryEntry = RegistryEntry & {
-};
+type GlamaRegistryEntry = RegistryEntry & {};
 
 class GlamaRegistryProvider implements RegistryProvider {
   private readonly ENDPOINT = "https://glama.ai/api/mcp/v1/servers";
 
-  async findEntriesByQuery(query: string): Promise<RegistryEntry[]> {
+  async findEntriesByQuery(
+    query: string,
+    limit?: number
+  ): Promise<RegistryEntry[]> {
     try {
       const response = await axios.get<GlamaSearchResponse>(this.ENDPOINT, {
         params: {
           query,
-          first: 100 // Maximum allowed by API
-        }
+          first: limit || 10, // Maximum allowed by API
+        },
       });
 
-      return response.data.servers.map(server => ({
+      return response.data.servers.map((server) => ({
         name: server.name,
         description: server.description,
         url: server.url,
@@ -51,7 +53,9 @@ class GlamaRegistryProvider implements RegistryProvider {
         repository: server.repository?.url,
         license: server.spdxLicense?.name,
         attributes: server.attributes,
-        hosting: server.attributes.includes('hosting:remote-capable') ? McpServerHostingType.REMOTE : McpServerHostingType.LOCAL
+        hosting: server.attributes.includes("hosting:remote-capable")
+          ? McpServerHostingType.REMOTE
+          : McpServerHostingType.LOCAL,
       }));
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -61,14 +65,17 @@ class GlamaRegistryProvider implements RegistryProvider {
     }
   }
 
-  async findEntriesBySemanticQuery(query: string): Promise<RegistryEntry[]> {
+  async findEntriesBySemanticQuery(
+    query: string,
+    limit?: number
+  ): Promise<RegistryEntry[]> {
     throw new Error("Semantic search not supported by Glama API");
   }
 
-  async findEntryByName(name: string): Promise<RegistryEntry> {
-    const entries = await this.findEntriesByQuery(name);
-    const exactMatch = entries.find(entry => entry.name === name);
-    
+  async findEntryByName(name: string, limit?: number): Promise<RegistryEntry> {
+    const entries = await this.findEntriesByQuery(name, limit);
+    const exactMatch = entries.find((entry) => entry.name === name);
+
     if (!exactMatch) {
       throw new Error(`No entry found with name: ${name}`);
     }

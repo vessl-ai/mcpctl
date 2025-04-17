@@ -24,8 +24,8 @@ export const profileShowCommand = async (app: App, argv: string[]) => {
       console.log(`\n📦 ${serverName}:`);
       console.log(`   Type: ${server.type}`);
       console.log(`   Command: ${server.command}`);
-      console.log(`   Args: ${server.args.join(" ")}`);
-      if (Object.keys(server.env).length > 0) {
+      console.log(`   Args: ${server.args?.join(" ")}`);
+      if (server.env && Object.keys(server.env).length > 0) {
         console.log("   Environment Variables:");
         Object.entries(server.env).forEach(([key, value]) => {
           console.log(`   - ${key}: ${value}`);

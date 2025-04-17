@@ -89,6 +89,10 @@ export class LocalServerInstance extends BaseServerInstance {
           stdio: ["pipe", "pipe", "pipe"],
           shell: false,
           windowsHide: true,
+          env: {
+            ...process.env,
+            ...this.config.env,
+          },
         }
       );
 

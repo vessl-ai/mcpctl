@@ -4,46 +4,62 @@ import { RegistryService } from "../registry/registry-service";
 
 interface SearchService {
   // Search for a specific entry by registry and name, when you know the exact name
-  searchByRegistryAndName(registry: string, name: string): Promise<SearchResult>;
+  searchByRegistryAndName(
+    registry: string,
+    name: string,
+    limit?: number
+  ): Promise<SearchResult>;
 
   // Search for a query in a specific registry
-  searchByQueryForRegistry(registry: string, query: string): Promise<SearchResult>;
-  
+  searchByQueryForRegistry(
+    registry: string,
+    query: string,
+    limit?: number
+  ): Promise<SearchResult>;
+
   // Search for a query in a specific registry
-  searchBySemanticQueryForRegistry(registry: string, query: string): Promise<SearchResult>;
+  searchBySemanticQueryForRegistry(
+    registry: string,
+    query: string,
+    limit?: number
+  ): Promise<SearchResult>;
 
   // Search for a query in all registries
-  searchByQuery(query: string): Promise<SearchResult>;
-  
+  searchByQuery(query: string, limit?: number): Promise<SearchResult>;
+
   // Search for a query in all registries
-  searchBySemanticQuery(query: string): Promise<SearchResult>;
+  searchBySemanticQuery(query: string, limit?: number): Promise<SearchResult>;
 
   buildSearchResult(entries: SearchResultEntry[]): SearchResult;
 
-  searchResultEntryFromRegistryEntry(registry: string, entry: RegistryEntry): SearchResultEntry;
+  searchResultEntryFromRegistryEntry(
+    registry: string,
+    entry: RegistryEntry
+  ): SearchResultEntry;
 }
-
 
 class SearchServiceImpl implements SearchService {
   constructor(private readonly registryService: RegistryService) {}
 
   async searchByRegistryAndName(
     registryName: string,
-    name: string
+    name: string,
+    limit?: number
   ): Promise<SearchResult> {
     const registryProvider =
       this.registryService.getRegistryProvider(registryName);
-    const entry = await registryProvider.findEntryByName(name);
+    const entry = await registryProvider.findEntryByName(name, limit);
     return this.buildSearchResult([
       this.searchResultEntryFromRegistryEntry(registryName, entry),
     ]);
   }
   async searchByQueryForRegistry(
     registry: string,
-    query: string
+    query: string,
+    limit?: number
   ): Promise<SearchResult> {
     const registryProvider = this.registryService.getRegistryProvider(registry);
-    const entries = await registryProvider.findEntriesByQuery(query);
+    const entries = await registryProvider.findEntriesByQuery(query, limit);
     return this.buildSearchResult(
       entries.map((entry) =>
         this.searchResultEntryFromRegistryEntry(registry, entry)
@@ -52,30 +68,37 @@ class SearchServiceImpl implements SearchService {
   }
   async searchBySemanticQueryForRegistry(
     registry: string,
-    query: string
+    query: string,
+    limit?: number
   ): Promise<SearchResult> {
     const registryProvider = this.registryService.getRegistryProvider(registry);
-    const entries = await registryProvider.findEntriesBySemanticQuery(query);
+    const entries = await registryProvider.findEntriesBySemanticQuery(
+      query,
+      limit
+    );
     return this.buildSearchResult(
       entries.map((entry) =>
         this.searchResultEntryFromRegistryEntry(registry, entry)
       )
     );
   }
-  async searchByQuery(query: string): Promise<SearchResult> {
+  async searchByQuery(query: string, limit?: number): Promise<SearchResult> {
     const registries = this.registryService.listRegistryDefs();
     const entries = await Promise.all(
       registries.map((registry) =>
-        this.searchByQueryForRegistry(registry.name, query)
+        this.searchByQueryForRegistry(registry.name, query, limit)
       )
     );
     return this.buildSearchResult(entries.flatMap((entry) => entry.entries));
   }
-  async searchBySemanticQuery(query: string): Promise<SearchResult> {
+  async searchBySemanticQuery(
+    query: string,
+    limit?: number
+  ): Promise<SearchResult> {
     const registries = this.registryService.listRegistryDefs();
     const entries = await Promise.all(
       registries.map((registry) =>
-        this.searchBySemanticQueryForRegistry(registry.name, query)
+        this.searchBySemanticQueryForRegistry(registry.name, query, limit)
       )
     );
     return this.buildSearchResult(entries.flatMap((entry) => entry.entries));
@@ -104,11 +127,6 @@ class SearchServiceImpl implements SearchService {
 
 const newSearchService = (registryService: RegistryService): SearchService => {
   return new SearchServiceImpl(registryService);
-}
-
-
-export {
-  newSearchService, SearchService,
-  SearchServiceImpl
 };
 
+export { newSearchService, SearchService, SearchServiceImpl };

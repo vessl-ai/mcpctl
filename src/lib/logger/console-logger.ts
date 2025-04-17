@@ -13,11 +13,11 @@ class ConsoleLoggerImpl extends LoggerBase implements Logger {
     this.useStderr = config?.useStderr ?? true;
   }
 
-  private pushLog(message: string, context?: Record<string, any>): void {
+  private pushLog(message: string): void {
     if (this.useStderr) {
-      console.error(`[ERROR]: [${this.now()}] [${this.prefix}] ${message}`);
+      console.error(message);
     } else {
-      console.log(`[INFO]: [${this.now()}] [${this.prefix}] ${message}`);
+      console.log(message);
     }
   }
 
@@ -27,34 +27,54 @@ class ConsoleLoggerImpl extends LoggerBase implements Logger {
 
   verbose(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.VERBOSE, this.logLevel)) {
-      this.pushLog(message, context);
+      this.pushLog(
+        `[VERBOSE]: [${this.now()}] [${
+          this.prefix
+        }] ${message} ${JSON.stringify(context)}`
+      );
     }
   }
 
   info(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.INFO, this.logLevel)) {
-      this.pushLog(message, context);
+      this.pushLog(
+        `[INFO]: [${this.now()}] [${this.prefix}] ${message} ${
+          context ? JSON.stringify(context) : ""
+        }`
+      );
     }
   }
 
   error(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.ERROR, this.logLevel)) {
-      this.pushLog(message, context);
+      this.pushLog(
+        `[ERROR]: [${this.now()}] [${this.prefix}] ${message} ${
+          context ? JSON.stringify(context) : ""
+        }`
+      );
     }
   }
 
   warn(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.WARN, this.logLevel)) {
-      this.pushLog(message, context);
+      this.pushLog(
+        `[WARN]: [${this.now()}] [${this.prefix}] ${message} ${
+          context ? JSON.stringify(context) : ""
+        }`
+      );
     }
   }
 
   debug(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.DEBUG, this.logLevel)) {
       if (context) {
-        this.pushLog(message, context);
+        this.pushLog(
+          `[DEBUG]: [${this.now()}] [${this.prefix}] ${message} ${
+            context ? JSON.stringify(context) : ""
+          }`
+        );
       } else {
-        this.pushLog(message);
+        this.pushLog(`[DEBUG]: [${this.now()}] [${this.prefix}] ${message}`);
       }
     }
   }

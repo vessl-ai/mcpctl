@@ -12,9 +12,7 @@ export interface ServerInstanceFactory {
 }
 
 class DefaultServerInstanceFactory implements ServerInstanceFactory {
-  constructor(private logger: Logger) {
-    this.logger = this.logger.withContext("ServerInstanceFactory");
-  }
+  constructor(private logger: Logger) {}
 
   async createServerInstance(config: RunConfig): Promise<McpServerInstance> {
     this.logger.info("Creating server instance", {

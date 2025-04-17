@@ -1,6 +1,4 @@
 import fs from "fs";
-import os from "os";
-import path from "path";
 import { logLevel } from "../client/core/lib/env";
 import { BaseContainer, Container } from "../lib/container/container";
 import { newConsoleLogger } from "../lib/logger/console-logger";
@@ -31,7 +29,7 @@ export class DaemonApp {
 
   private initializeDependencies(): void {
     // 기본 의존성
-    const logDir = path.join(os.homedir(), ".mcpctl");
+    const logDir = "/var/log/mcpctl";
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
@@ -57,7 +55,10 @@ export class DaemonApp {
     // 서버 인스턴스 매니저
     this.container.register<ServerInstanceManager>(
       "instanceManager",
-      newServerInstanceManager(logger, newServerInstanceFactory(logger))
+      newServerInstanceManager(
+        logger.withContext("ServerInstanceManager"),
+        newServerInstanceFactory(logger.withContext("ServerInstanceFactory"))
+      )
     );
     logger.info("Server instance manager initialized");
     logger.info("All dependencies initialized successfully");

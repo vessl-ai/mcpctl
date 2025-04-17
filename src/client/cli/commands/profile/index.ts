@@ -2,7 +2,7 @@ import arg from "arg";
 import { App } from "../../app";
 import { profileCreateCommand } from "./create";
 import { profileDeleteCommand } from "./delete";
-import { profileSetEnvCommand } from "./env";
+import { profileGetEnvCommand, profileSetEnvCommand } from "./env";
 import { profileListCommand } from "./list";
 import { profileShowCommand } from "./show";
 
@@ -32,8 +32,11 @@ export const profileCommand = async (app: App, argv: string[]) => {
     case "list":
       await profileListCommand(app, subArgv.slice(1));
       break;
-    case "env":
+    case "set-env":
       await profileSetEnvCommand(app, subArgv.slice(1));
+      break;
+    case "get-env":
+      await profileGetEnvCommand(app, subArgv.slice(1));
       break;
     case "show":
       await profileShowCommand(app, subArgv.slice(1));
@@ -46,7 +49,8 @@ export const profileCommand = async (app: App, argv: string[]) => {
       console.log("Available subcommands:");
       console.log("  create\tCreate a new MCP server profile");
       console.log("  list\t\tList MCP server profiles");
-      console.log("  env\t\tManage profile environment variables");
+      console.log("  set-env\tSet profile environment variables");
+      console.log("  get-env\tGet profile environment variables");
       console.log("  show\t\tShow profile details");
       console.log("  delete\tDelete a profile");
       process.exit(1);
