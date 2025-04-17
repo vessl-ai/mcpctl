@@ -1,6 +1,13 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
+import path from "path";
+import {
+  getMcpctldServiceTemplate,
+  SERVICE_COMMANDS,
+  SERVICE_PATHS,
+  type ServiceTemplateOptions,
+} from "../../../core/lib/service-templates";
 import { App } from "../../app";
 
 const checkSudoPrivileges = () => {
@@ -32,47 +39,52 @@ const createLogDirectories = () => {
     default:
       throw new Error(`Unsupported platform: ${platform}`);
   }
+  return logDir;
 };
 
-const createLaunchdPlist = () => {
+const setupDaemonService = () => {
+  const platform = os.platform();
+  const logDir = createLogDirectories();
+
   // node 실행 파일의 전체 경로 찾기
   const { execSync } = require("child_process");
-  const nodePath = execSync("which node").toString().trim();
-  const daemonPath = "/usr/local/bin/mcpctld";
+  const nodePath =
+    platform === "win32"
+      ? process.execPath
+      : execSync("which node").toString().trim();
+  const daemonPath =
+    platform === "win32"
+      ? path.join(
+          process.execPath,
+          "../../lib/node_modules/mcpctl/dist/mcpctld.js"
+        )
+      : "/usr/local/bin/mcpctld";
 
-  const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.mcpctl.daemon</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>${nodePath}</string>
-        <string>${daemonPath}</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardErrorPath</key>
-    <string>/var/log/mcpctl/daemon.err</string>
-    <key>StandardOutPath</key>
-    <string>/var/log/mcpctl/daemon.out</string>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    </dict>
-</dict>
-</plist>`;
+  const templateOptions: ServiceTemplateOptions = {
+    nodePath,
+    daemonPath,
+    logDir,
+  };
 
-  const plistPath = "/Library/LaunchDaemons/com.mcpctl.daemon.plist";
-  fs.writeFileSync(plistPath, plistContent);
-  fs.chmodSync(plistPath, "644");
+  const serviceContent = getMcpctldServiceTemplate(templateOptions);
+
+  // Windows는 서비스 생성 명령어를 반환하므로 별도 처리
+  if (platform === "win32") {
+    execSync(serviceContent);
+    return;
+  }
+
+  // Unix 시스템은 서비스 파일 생성
+  const servicePath = SERVICE_PATHS[platform as "darwin" | "linux"];
+  fs.writeFileSync(servicePath, serviceContent);
+  fs.chmodSync(servicePath, "644");
+
+  // Linux의 경우 systemctl reload 필요
+  if (platform === "linux") {
+    execSync(SERVICE_COMMANDS.linux.reload.join(" "));
+    execSync(SERVICE_COMMANDS.linux.enable.join(" "));
+  }
 };
-
-const startCommandOptions = {};
 
 export const startCommand = async (app: App) => {
   try {
@@ -80,32 +92,19 @@ export const startCommand = async (app: App) => {
     checkSudoPrivileges();
 
     const platform = os.platform();
-    let command: string;
-    let args: string[];
 
-    // 모든 OS에서 로그 디렉토리 생성
-    createLogDirectories();
+    // 서비스 설정
+    setupDaemonService();
 
-    switch (platform) {
-      case "darwin": // macOS
-        // plist 파일 생성 및 권한 설정
-        createLaunchdPlist();
-        command = "launchctl";
-        args = ["load", "-w", "/Library/LaunchDaemons/com.mcpctl.daemon.plist"];
-        break;
-      case "linux":
-        command = "sudo";
-        args = ["systemctl", "start", "mcpctld"];
-        break;
-      case "win32":
-        command = "net";
-        args = ["start", "mcpctld"];
-        break;
-      default:
-        throw new Error(`Unsupported platform: ${platform}`);
+    // 서비스 시작
+    const commands =
+      SERVICE_COMMANDS[platform as keyof typeof SERVICE_COMMANDS];
+    if (!commands) {
+      throw new Error(`Unsupported platform: ${platform}`);
     }
 
     console.log(`Starting MCP daemon service on ${platform}...`);
+    const [command, ...args] = commands.start;
     const child = spawn(command, args, {
       stdio: "inherit",
     });

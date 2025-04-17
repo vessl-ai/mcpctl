@@ -32,8 +32,19 @@ async function build() {
         js: '#!/usr/bin/env node\n',
       },
     });
+
+    // service-templates 번들링
+    await esbuild.build({
+      entryPoints: ['src/client/core/lib/service-templates/index.ts'],
+      bundle: true,
+      platform: 'node',
+      target: 'node22',
+      outfile: 'dist/service-templates.js',
+      format: 'cjs',
+      sourcemap: true,
+    });
     
-    // Make both files executable
+    // Make files executable
     fs.chmodSync('dist/mcpctl.js', '755');
     fs.chmodSync('dist/mcpctld.js', '755');
     

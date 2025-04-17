@@ -1,24 +1,57 @@
 {
   "name": "mcpctl",
   "version": "1.0.0",
-  "description": "",
+  "description": "The MCP Execution Control Tool - A tool for controlling the MCP execution",
   "main": "dist/mcpctl.js",
   "bin": {
     "mcpctl": "./dist/mcpctl.js",
     "mcpctld": "./dist/mcpctld.js"
   },
+  "files": [
+    "dist/mcpctl.js",
+    "dist/mcpctld.js",
+    "dist/service-templates.js",
+    "dist/*.js.map"
+  ],
   "scripts": {
     "test": "jest",
     "cli": "ts-node src/client/cli/cli.ts",
-    "clean": "rm -rf dist && rm -rf bin",
-    "build:clean": "rm -rf dist && rm -rf bin && pnpm build",
+    "clean": "rm -rf dist",
     "build": "tsc && node build.js",
-    "install-cli:macos": "cp -f ./dist/mcpctl.js /usr/local/bin/mcpctl && cp -f ./dist/mcpctld.js /usr/local/bin/mcpctld",
-    "install-cli:linux": "cp -f ./dist/mcpctl.js /usr/local/bin/mcpctl && cp -f ./dist/mcpctld.js /usr/local/bin/mcpctld"
+    "prepublishOnly": "pnpm clean && pnpm build",
+    "postinstall": "node scripts/postinstall.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "mcp",
+    "cli",
+    "control",
+    "execution",
+    "model",
+    "context",
+    "protocol"
+  ],
+  "author": "Jaejun Kyle Lee<kyle@vessl.ai>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vessl-ai/mcpctl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vessl-ai/mcpctl/issues"
+  },
+  "homepage": "https://github.com/vessl-ai/mcpctl#readme",
+  "engines": {
+    "node": ">=18.17.1"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@types/argparse": "^2.0.17",

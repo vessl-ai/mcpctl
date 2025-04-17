@@ -9,7 +9,7 @@ import { App } from "../app";
 
 const installCommandOptions = {
   "--command": String,
-  "--client": String,
+  "--client": [String],
   "--env": [String],
   "--server-name": String,
   "--profile": String,
@@ -26,10 +26,12 @@ export const installCommand = async (app: App, argv: string[]) => {
   const options = arg(installCommandOptions, { argv });
 
   const command: string = options["--command"] || "";
-  const client: string | undefined = options["--client"];
+  const client: string[] = options["--client"] || [];
   const env: string[] = options["--env"] || [];
   const serverName: string = options["--server-name"] || "";
   const profile: string | undefined = options["--profile"];
+
+  console.error(client);
 
   if (serverName === "") {
     console.error(
@@ -73,19 +75,23 @@ export const installCommand = async (app: App, argv: string[]) => {
     profile: profile,
     mcpctlEnv: mcpctlEnv,
   };
-  if (client) {
-    await clientService.installMcpServerToClient(
-      clientService.getClient(client),
-      serverInstallConfig
-    );
-    console.log(chalk.green("MCP server installed successfully"));
-    if (client === "claude") {
-      console.log(
-        chalk.green("Please restart Claude Desktop to use the new MCP server.")
+  if (client.length > 0) {
+    for (const c of client) {
+      await clientService.installMcpServerToClient(
+        clientService.getClient(c),
+        serverInstallConfig
       );
+      console.log(chalk.green(`MCP server installed successfully to ${c}.`));
+      if (c === "claude") {
+        console.log(
+          chalk.green(
+            "Please restart Claude Desktop to use the new MCP server."
+          )
+        );
+      }
+      console.log(chalk.green("MCP server config:"));
+      console.log(JSON.stringify(serverInstallConfig, null, 2));
     }
-    console.log(chalk.green("MCP server config:"));
-    console.log(JSON.stringify(serverInstallConfig, null, 2));
   } else {
     const serverConfig = await clientService.generateMcpServerConfig(
       serverInstallConfig

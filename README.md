@@ -4,7 +4,7 @@
 
 You can use `mcpctl` to:
 
-- MCP Server Discovery 
+- MCP Server Discovery
   - Search MCP servers on the repositories you specify.
   - Add and update repositories you like.
 - MCP Server Instance Orchestration
@@ -20,16 +20,75 @@ You can use `mcpctl` to:
 
 - Node.js 18.17.1 or higher
 
-### Using npm/yarn/pnpm
+### Install via npm
 
 ```bash
-npm install -g mcpctl # change to yarn or pnpm if you want
+# Install globally with sudo/administrator privileges
+sudo npm install -g mcpctl  # Linux/macOS
+# Or on Windows (Run PowerShell as Administrator)
+npm install -g mcpctl
+
+# Or using other package managers
+sudo pnpm install -g mcpctl
+sudo yarn global add mcpctl
 ```
 
-or you can use `npx` to start instantly.
+This will:
+
+1. Install both `mcpctl` and `mcpctld` commands globally on your system
+2. Create necessary log directories (`/var/log/mcpctl` on Unix, `C:\ProgramData\mcpctl\logs` on Windows)
+3. Install and start the daemon service:
+   - macOS: Creates and loads a LaunchDaemon
+   - Linux: Creates and enables a systemd service
+   - Windows: Creates and starts a Windows Service
+
+If the installation doesn't have sufficient permissions to setup the daemon service, you can manually start it later:
 
 ```bash
-npx mcpctl@latest
+# Linux/macOS
+sudo mcpctl daemon start
+
+# Windows (Run as Administrator)
+mcpctl daemon start
+```
+
+### Updating
+
+To update to the latest version:
+
+```bash
+# Linux/macOS
+sudo npm update -g mcpctl
+
+# Windows (Run as Administrator)
+npm update -g mcpctl
+```
+
+### Troubleshooting
+
+If you encounter any issues with the daemon:
+
+1. Check the daemon status:
+
+```bash
+mcpctl daemon status
+```
+
+2. Check the logs:
+
+- Linux/macOS: `/var/log/mcpctl/daemon.log`
+- Windows: `C:\ProgramData\mcpctl\logs\daemon.log`
+
+3. Try restarting the daemon:
+
+```bash
+# Linux/macOS
+sudo mcpctl daemon stop
+sudo mcpctl daemon start
+
+# Windows (Run as Administrator)
+mcpctl daemon stop
+mcpctl daemon start
 ```
 
 ## Quickstart
@@ -45,6 +104,7 @@ Popular repositories included:
 - (or contribution is always welcome!)
 
 #### Search by repository and server name
+
 You can search for MCP servers by repository and server name.
 
 ```bash
@@ -52,6 +112,7 @@ mcpctl search --repo glama --name my-mcp-server
 ```
 
 #### Semantic Search (TODO)
+
 Or you can do a semantic search, using OPENAI_API_KEY.
 
 ```bash
@@ -60,10 +121,13 @@ mcpctl search --semantic 'I want to search for a MCP server that can do X'
 ```
 
 ### Install to your client
+
 Adding to clients like Claude, Cursor, etc.
 
+- Currently it only supports claude desktop and cursor.
+
 ```bash
-mcpctl install --repo glama --name my-mcp-server --client claude
+mcpctl install --client claude --server-name my-mcp-server --command 'npx -y @wonderwhy-er/desktop-commander'
 ```
 
 This will generate a mcpServer entry that contains connect command.
@@ -71,7 +135,22 @@ This will generate a mcpServer entry that contains connect command.
 ```json
 {
   "mcpServer": {
-    "glama/my-mcp-server": "mcpctl connect --repo glama --name my-mcp-server"
+    "my-mcp-server": {
+      "type": "stdio",
+      "command": "mcpctl",
+      "args": [
+        "session",
+        "connect",
+        "--server",
+        "my-mcp-server",
+        "--command",
+        "npx -y @wonderwhy-er/desktop-commander"
+      ],
+      "env": {
+        "MCPCTL_LOG_FILE": "${HOME}/.mcpctl/logs/my-mcp-server-stdio--npx--y--wonderwhy-er-desktop-commander.log",
+        "MCPCTL_LOG_LEVEL": "INFO"
+      }
+    }
   }
 }
 ```
@@ -79,15 +158,15 @@ This will generate a mcpServer entry that contains connect command.
 You can add the same entry to multiple clients.
 
 ```bash
-mcpctl install --repo glama --name my-mcp-server --client claude --client cursor
+mcpctl install --server-name my-mcp-server --command 'npx -y @wonderwhy-er/desktop-commander' --client claude --client cursor
 ```
 
 And they will use the same mcp server instance.
 
-
 ### MCP Servers and Connection Sessions
 
 To list all MCP servers you have:
+
 ```bash
 mcpctl server list
 ```
@@ -101,6 +180,7 @@ ID     REPO/NAME    PROFILE     STATUS    MODE    TRANSPORT    SSE_ENDPOINT    C
 ```
 
 To list all connection sessions you have:
+
 ```bash
 mcpctl session list
 ```
@@ -112,7 +192,6 @@ ID     MCP_SERVER(ID)    CLIENTS    PROFILE    STATUS    CREATED AT
 1      glama/my-mcp-server(1)    "claude, cursor"    default    running    2024-01-01 12:00:00
 2      glama/my-mcp-server-2(2)    "claude"    default    running    2024-01-01 12:00:00
 ```
-
 
 ### Profile Management
 
@@ -149,7 +228,6 @@ mcpctl connect to the MCP server
 
 So, if config in a profile for a repo/name is changed, orchestrator will automatically rollout the mcp server with the new config. (TODO)
 
-
 You can easily change the profile while you connect to the MCP server, by each client.
 
 ```bash
@@ -161,8 +239,7 @@ Using this, your claude will use `my-profile-1` and cursor will use `my-profile-
 
 If they use the same mcp tool - e.g. slack, the different profiles can hold different slack account's SLACK_BOT_TOKEN.
 
-
-### Managing registries 
+### Managing registries
 
 You can add your own registries to `mcpctl`.
 
@@ -173,23 +250,7 @@ mcpctl registry add --name my-registry --url https://github.com/my-registry
 (TODO) You can pre-index your registry to speed up the semantic search.
 
 ```bash
-mcpctl registry index --name my-registry 
+mcpctl registry index --name my-registry
 ```
+
 - (TBU) This will fire up a new vectordb instance and index your registry.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
