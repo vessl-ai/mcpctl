@@ -276,7 +276,7 @@ export const searchCommand = async (app: App, argv: string[]) => {
               (item) => item.type === "text"
             );
             if (outputText && outputText.length > 0) {
-              console.log(chalk.bold(outputText[0].text));
+              console.log(chalk.bold(outputText[0].text.value));
             }
           }
 
