@@ -21,11 +21,14 @@ jobs:
         with:
           version: 8
           
-      - name: Install dependencies
-        run: pnpm install
+      - name: Install dependencies (without postinstall)
+        run: pnpm install --ignore-scripts
         
       - name: Build
         run: pnpm build
+        
+      - name: Run postinstall
+        run: node scripts/postinstall.js
         
       - name: Publish to npm
         run: pnpm publish --no-git-checks
