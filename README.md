@@ -24,13 +24,13 @@ You can use `mcpctl` to:
 
 ```bash
 # Install globally with sudo/administrator privileges
-sudo npm install -g mcpctl  # Linux/macOS
+sudo npm install -g @vessl-ai/mcpctl  # Linux/macOS
 # Or on Windows (Run PowerShell as Administrator)
-npm install -g mcpctl
+npm install -g @vessl-ai/mcpctl
 
 # Or using other package managers
-sudo pnpm install -g mcpctl
-sudo yarn global add mcpctl
+sudo pnpm install -g @vessl-ai/mcpctl
+sudo yarn global add @vessl-ai/mcpctl
 ```
 
 This will:

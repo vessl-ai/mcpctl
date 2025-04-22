@@ -1,5 +1,5 @@
 {
-  "name": "mcpctl",
+  "name": "@vessl-ai/mcpctl",
   "version": "1.0.0",
   "description": "The MCP Execution Control Tool - A tool for controlling the MCP execution",
   "main": "dist/mcpctl.js",
