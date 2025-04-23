@@ -6,11 +6,12 @@ import {
   McpServerInstallConfig,
   McpServerType,
 } from "../../lib/types/mcp-server";
+import { ProfileService } from "../profile/profile-service";
+import { SecretService } from "../secret/secret-service";
 import {
   McpClientServiceImpl,
   newMcpClientService,
 } from "./mcp-client-service";
-
 jest.mock("fs");
 jest.mock("os");
 jest.mock("path");
@@ -23,12 +24,46 @@ const logger = {
   error: jest.fn(),
   withContext: jest.fn().mockReturnThis(),
 };
+
+const mockSecretService: SecretService = {
+  getSharedSecret: jest.fn(),
+  getProfileSecret: jest.fn(),
+  setSharedSecret: jest.fn(),
+  setProfileSecret: jest.fn(),
+  removeSharedSecret: jest.fn(),
+  removeProfileSecret: jest.fn(),
+  setSharedSecrets: jest.fn(),
+  listSharedSecrets: jest.fn(),
+  resolveEnv: jest.fn(),
+};
+
+const mockProfileService: ProfileService = {
+  getProfile: jest.fn(),
+  getProfileEnvForServer: jest.fn(),
+  upsertProfileEnvForServer: jest.fn(),
+  setCurrentProfile: jest.fn(),
+  getCurrentProfile: jest.fn(),
+  getCurrentProfileName: jest.fn(),
+  removeProfileEnvForServer: jest.fn(),
+  listProfiles: jest.fn(),
+  upsertProfileSecretsForServer: jest.fn(),
+  removeProfileSecret: jest.fn(),
+  updateProfile: jest.fn(),
+  setServerEnvForProfile: jest.fn(),
+  createProfile: jest.fn(),
+  deleteProfile: jest.fn(),
+};
+
 describe("McpClientService", () => {
   let service: McpClientServiceImpl;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new McpClientServiceImpl(logger);
+    service = new McpClientServiceImpl(
+      mockProfileService,
+      mockSecretService,
+      logger
+    );
   });
 
   describe("getClient", () => {
@@ -67,16 +102,18 @@ describe("McpClientService", () => {
     it("should generate config with provided server name", () => {
       const config = service.generateMcpServerConfig({
         ...baseConfig,
-        serverName: "custom-server",
+        serverName: "other-custom-server",
       });
 
       expect(config).toEqual({
-        "custom-server": {
+        "other-custom-server": {
           type: McpServerType.STDIO,
           command: "mcpctl",
           args: [
             "session",
             "connect",
+            "--server",
+            "other-custom-server",
             "--command",
             "test-command",
             "--env",
@@ -93,12 +130,14 @@ describe("McpClientService", () => {
       const config = service.generateMcpServerConfig(baseConfig);
 
       expect(config).toEqual({
-        "server-test-command-test-profile": {
+        "custom-server": {
           type: McpServerType.STDIO,
           command: "mcpctl",
           args: [
             "session",
             "connect",
+            "--server",
+            "custom-server",
             "--command",
             "test-command",
             "--env",
@@ -225,7 +264,11 @@ describe("McpClientService", () => {
 
   describe("newMcpClientService", () => {
     it("should create new instance", () => {
-      const service = newMcpClientService(logger);
+      const service = newMcpClientService(
+        mockProfileService,
+        mockSecretService,
+        logger
+      );
       expect(service).toBeInstanceOf(McpClientServiceImpl);
     });
   });

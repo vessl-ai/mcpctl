@@ -1,4 +1,5 @@
 import arg from "arg";
+import { ValidationError } from "../../../../lib/errors";
 import { App } from "../../app";
 
 const serverStopCommandOptions = {
@@ -11,10 +12,12 @@ export const serverStopCommand = async (app: App, argv: string[]) => {
 
   const instance = options["--instance"];
 
+  const logger = app.getLogger();
+
   if (!instance) {
-    console.error("Error: Instance ID is required.");
-    console.error("Usage: mcpctl server stop <instance>");
-    process.exit(1);
+    logger.error("Error: Instance ID is required.");
+    console.log("Usage: mcpctl server stop <instance>");
+    throw new ValidationError("Error: Instance ID is required.");
   }
 
   console.log("Server stop command");

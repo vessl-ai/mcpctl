@@ -1,4 +1,5 @@
 import arg from "arg";
+import { ValidationError } from "../../../../lib/errors";
 import { App } from "../../app";
 
 const sessionStopCommandOptions = {
@@ -9,9 +10,11 @@ const sessionStopCommandOptions = {
 export const sessionStopCommand = async (app: App, argv: string[]) => {
   const options = arg(sessionStopCommandOptions, { argv });
   const sessionId = options["--session"];
+  const logger = app.getLogger();
+
   if (!sessionId) {
-    console.error("Error: Session ID is required. Use -s or --session option.");
-    process.exit(1);
+    logger.error("Error: Session ID is required. Use -s or --session option.");
+    throw new ValidationError("Error: Session ID is required.");
   }
 
   console.log("Session stop command");

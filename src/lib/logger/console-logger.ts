@@ -14,10 +14,11 @@ class ConsoleLoggerImpl extends LoggerBase implements Logger {
   }
 
   private pushLog(message: string): void {
+    const maskedMessage = this.maskSecret(message);
     if (this.useStderr) {
-      console.error(message);
+      console.error(maskedMessage);
     } else {
-      console.log(message);
+      console.log(maskedMessage);
     }
   }
 

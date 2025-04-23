@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { CliError } from "../../../../lib/errors";
 import {
   getMcpctldServiceTemplate,
   SERVICE_COMMANDS,
@@ -87,6 +88,7 @@ const setupDaemonService = () => {
 };
 
 export const startCommand = async (app: App) => {
+  const logger = app.getLogger();
   try {
     // sudo 권한 체크
     checkSudoPrivileges();
@@ -100,6 +102,7 @@ export const startCommand = async (app: App) => {
     const commands =
       SERVICE_COMMANDS[platform as keyof typeof SERVICE_COMMANDS];
     if (!commands) {
+      logger.error(`Unsupported platform: ${platform}`);
       throw new Error(`Unsupported platform: ${platform}`);
     }
 
@@ -115,6 +118,7 @@ export const startCommand = async (app: App) => {
           console.log("MCP daemon service started successfully");
           resolve(undefined);
         } else {
+          logger.error(`Failed to start MCP daemon service with code ${code}`);
           reject(
             new Error(`Failed to start MCP daemon service with code ${code}`)
           );
@@ -122,10 +126,7 @@ export const startCommand = async (app: App) => {
       });
     });
   } catch (error) {
-    console.error(
-      "Failed to start MCP daemon service:",
-      error instanceof Error ? error.message : "Unknown error"
-    );
-    process.exit(1);
+    logger.error("Failed to start MCP daemon service:", { error });
+    throw new CliError("Failed to start MCP daemon service");
   }
 };

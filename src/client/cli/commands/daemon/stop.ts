@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
+import { CliError } from "../../../../lib/errors";
 import { App } from "../../app";
 
 const checkSudoPrivileges = () => {
@@ -18,9 +19,8 @@ const removeLaunchdPlist = () => {
   }
 };
 
-const stopCommandOptions = {};
-
 export const stopCommand = async (app: App, argv: string[]) => {
+  const logger = app.getLogger();
   try {
     // sudo 권한 체크
     checkSudoPrivileges();
@@ -71,10 +71,7 @@ export const stopCommand = async (app: App, argv: string[]) => {
       });
     });
   } catch (error) {
-    console.error(
-      "Failed to stop MCP daemon service:",
-      error instanceof Error ? error.message : "Unknown error"
-    );
-    process.exit(1);
+    logger.error("Failed to stop MCP daemon service:", { error });
+    throw new CliError("Failed to stop MCP daemon service");
   }
 };

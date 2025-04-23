@@ -1,3 +1,6 @@
+import { GLOBAL_CONSTANTS } from "../constants";
+import { GLOBAL_ENV } from "../env";
+
 export interface Logger {
   verbose(message: string, context?: Record<string, any>): void;
   error(message: string, context?: Record<string, any>): void;
@@ -23,9 +26,12 @@ const logLevelOrder = [
   LogLevel.ERROR,
 ];
 
-export const verboseToLogLevel = (number: number | undefined): LogLevel => {
+export const verboseToLogLevel = (
+  number: number | undefined,
+  defaultLevel: LogLevel = LogLevel.INFO
+): LogLevel => {
   if (!number) {
-    return LogLevel.INFO;
+    return defaultLevel;
   }
   if (number === 0) {
     return LogLevel.INFO;
@@ -36,7 +42,7 @@ export const verboseToLogLevel = (number: number | undefined): LogLevel => {
   if (number >= 2) {
     return LogLevel.VERBOSE;
   }
-  return LogLevel.INFO;
+  return defaultLevel;
 };
 
 export type LoggerConfig = {
@@ -72,4 +78,28 @@ export abstract class LoggerBase implements Logger {
     const currentIndex = logLevelOrder.indexOf(currentLogLevel);
     return index >= currentIndex;
   };
+
+  protected maskSecret(message: string): string {
+    if (
+      GLOBAL_ENV.MASK_SECRET &&
+      message.includes(GLOBAL_CONSTANTS.SECRET_TAG_START) &&
+      message.includes(GLOBAL_CONSTANTS.SECRET_TAG_END)
+    ) {
+      return message.replace(
+        new RegExp(
+          `${GLOBAL_CONSTANTS.SECRET_TAG_START}.*?${GLOBAL_CONSTANTS.SECRET_TAG_END}`,
+          "g"
+        ),
+        GLOBAL_CONSTANTS.SECRET_MASK
+      );
+    } else {
+      return message.replace(
+        new RegExp(
+          `${GLOBAL_CONSTANTS.SECRET_TAG_START}|${GLOBAL_CONSTANTS.SECRET_TAG_END}`,
+          "g"
+        ),
+        ""
+      );
+    }
+  }
 }

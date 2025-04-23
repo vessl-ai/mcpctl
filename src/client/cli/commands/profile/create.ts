@@ -1,4 +1,5 @@
 import arg from "arg";
+import { CliError } from "../../../../lib/errors";
 import { App } from "../../app";
 
 const profileCreateCommandOptions = {};
@@ -6,11 +7,13 @@ const profileCreateCommandOptions = {};
 export const profileCreateCommand = async (app: App, argv: string[]) => {
   const options = arg(profileCreateCommandOptions, { argv });
 
+  const logger = app.getLogger();
+
   const name = options["_"]?.[0];
 
   if (!name) {
-    console.error("Error: Name is required.");
-    process.exit(1);
+    logger.error("Error: Name is required.");
+    throw new CliError("Error: Name is required.");
   }
 
   app.getProfileService().createProfile(name);

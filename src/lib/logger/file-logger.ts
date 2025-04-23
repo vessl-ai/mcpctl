@@ -76,7 +76,8 @@ export class FileLogger extends LoggerBase implements Logger {
   }
 
   private writeToFile(message: string): void {
-    fs.appendFileSync(this.filePath, `${message}\n`);
+    const maskedMessage = this.maskSecret(message);
+    fs.appendFileSync(this.filePath, `${maskedMessage}\n`);
   }
 }
 

@@ -3,6 +3,7 @@ type McpServerInstallConfig = {
   serverName: string;
   command: string;
   env?: Record<string, string>;
+  secrets?: Record<string, string>;
   profile?: string;
   mcpctlEnv?: Record<string, string>;
 };

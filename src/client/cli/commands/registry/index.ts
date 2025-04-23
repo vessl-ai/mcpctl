@@ -1,4 +1,5 @@
 import arg from "arg";
+import { CliError } from "../../../../lib/errors";
 import { App } from "../../app";
 import { addCommand } from "./add";
 import { deleteCommand } from "./delete";
@@ -8,13 +9,14 @@ const registryCommandOptions = {};
 
 export const registryCommand = async (app: App, argv: string[]) => {
   const options = arg(registryCommandOptions, { argv, stopAtPositional: true });
+  const logger = app.getLogger();
 
   const subArgv = options["_"];
 
   if (!subArgv || subArgv.length === 0) {
-    console.error("Error: No command specified.");
-    console.error("Available commands: list, add, delete");
-    process.exit(1);
+    logger.error("Error: No command specified.");
+    logger.error("Available commands: list, add, delete");
+    throw new CliError("Error: No command specified.");
   }
   const subCommand = subArgv[0];
 
@@ -43,6 +45,6 @@ export const registryCommand = async (app: App, argv: string[]) => {
       console.log("  list\t\tList MCP server registries");
       console.log("  add\t\tAdd a new MCP server registry");
       console.log("  delete\tDelete a MCP server registry");
-      process.exit(1);
+      return;
   }
 };

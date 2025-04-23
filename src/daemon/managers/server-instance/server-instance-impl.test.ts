@@ -153,6 +153,7 @@ describe("LocalServerInstance", () => {
         "/message",
       ],
       {
+        env: expect.anything(),
         stdio: ["pipe", "pipe", "pipe"],
         shell: false,
         windowsHide: true,

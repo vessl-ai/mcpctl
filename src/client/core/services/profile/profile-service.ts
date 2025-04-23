@@ -1,38 +1,58 @@
+import { ServerEnvConfig } from "../../lib/types/config";
 import { Profile } from "../../lib/types/profile";
 import { ConfigService } from "../config/config-service";
+import { SecretService } from "../secret/secret-service";
 import { defaultProfile } from "./default-profile";
 import { ProfileStore } from "./profile-store";
-interface ProfileService {
+
+export interface ProfileService {
   setCurrentProfile: (name: string) => void;
   getCurrentProfile: () => Profile;
-  updateCurrentProfile: (profile: Profile) => void;
+  getCurrentProfileName: () => string;
+  getProfile: (name: string) => Profile | undefined;
+  getProfileEnvForServer(
+    name: string,
+    serverName: string
+  ): Promise<ServerEnvConfig>;
+  upsertProfileEnvForServer(
+    profileName: string,
+    serverName: string,
+    env: Record<string, string>
+  ): Promise<void>;
+  removeProfileEnvForServer(
+    profileName: string,
+    serverName: string,
+    envList: string[]
+  ): Promise<void>;
+  upsertProfileSecretsForServer(
+    profileName: string,
+    serverName: string,
+    secrets: Record<string, string>
+  ): Promise<void>;
+  removeProfileSecret(
+    profileName: string,
+    serverName: string,
+    secretKey: string
+  ): Promise<void>;
+  updateProfile: (name: string, profile: Profile) => void;
   setServerEnvForProfile: (
     profileName: string,
     serverName: string,
     env: Record<string, string>
   ) => void;
-  getProfile: (name: string) => Profile;
   createProfile: (name: string) => void;
   deleteProfile: (name: string) => void;
   listProfiles: () => Profile[];
-  getProfileEnvForServer: (
-    name: string,
-    serverName: string
-  ) => Record<string, string>;
-  updateProfileEnvForServer: (
-    profileName: string,
-    serverName: string,
-    env: Record<string, string>
-  ) => void;
 }
 
-class ProfileServiceImpl implements ProfileService {
+export class ProfileServiceImpl implements ProfileService {
   private currentProfile: Profile;
   private currentProfileName: string = "default";
 
   constructor(
     private readonly profileStore: ProfileStore,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly secretService: SecretService
   ) {
     this.currentProfileName =
       this.configService.getConfig().profile.currentActiveProfile;
@@ -66,9 +86,15 @@ class ProfileServiceImpl implements ProfileService {
     return this.profileStore.loadProfile(this.currentProfileName);
   }
 
-  updateCurrentProfile(profile: Profile): void {
-    this.currentProfile = profile;
-    this.profileStore.saveProfile(this.currentProfileName, profile);
+  getCurrentProfileName(): string {
+    return this.currentProfileName;
+  }
+
+  updateProfile(name: string, profile: Profile): void {
+    this.profileStore.saveProfile(name, profile);
+    if (name === this.currentProfileName) {
+      this.currentProfile = profile;
+    }
     this.configService.updateConfig({
       profile: {
         currentActiveProfile: this.currentProfileName,
@@ -83,11 +109,28 @@ class ProfileServiceImpl implements ProfileService {
     env: Record<string, string>
   ): void {
     const profile = this.getProfile(profileName);
-    profile.servers[serverName].env = env;
-    this.updateCurrentProfile(profile);
+    if (!profile) {
+      throw new Error(`Profile ${profileName} does not exist`);
+    }
+
+    if (!profile.servers[serverName]) {
+      profile.servers[serverName] = {
+        env: {
+          env: env,
+          secrets: {},
+        },
+      };
+    } else {
+      profile.servers[serverName].env = {
+        env: env,
+        secrets: profile.servers[serverName].env?.secrets || {},
+      };
+    }
+
+    this.updateProfile(profileName, profile);
   }
 
-  getProfile(name: string): Profile {
+  getProfile(name: string): Profile | undefined {
     return this.profileStore.loadProfile(name);
   }
 
@@ -96,13 +139,7 @@ class ProfileServiceImpl implements ProfileService {
       ...defaultProfile,
       name,
     };
-    this.profileStore.saveProfile(name, profile);
-    this.configService.updateConfig({
-      profile: {
-        currentActiveProfile: this.currentProfileName,
-        allProfiles: this.profileStore.listProfileNames(),
-      },
-    });
+    this.updateProfile(name, profile);
   }
 
   listProfiles(): Profile[] {
@@ -122,54 +159,137 @@ class ProfileServiceImpl implements ProfileService {
     });
   }
 
-  getProfileEnvForServer(
+  async getProfileEnvForServer(
     name: string,
     serverName: string
-  ): Record<string, string> {
-    return this.getProfile(name)?.servers[serverName]?.env ?? {};
+  ): Promise<ServerEnvConfig> {
+    const serverConfig = this.getProfile(name)?.servers[serverName];
+    if (!serverConfig?.env) {
+      return { env: {}, secrets: {} };
+    }
+    return {
+      env: serverConfig.env.env || {},
+      secrets: serverConfig.env.secrets || {},
+    };
   }
 
-  updateProfileEnvForServer(
+  async upsertProfileEnvForServer(
     profileName: string,
     serverName: string,
     env: Record<string, string>
-  ): void {
-    const profile = this.getProfile(profileName);
-    if (!profile) {
-      this.updateCurrentProfile({
-        name: profileName,
-        servers: {
-          [serverName]: {
-            env: env,
-          },
-        },
-      });
-    } else if (!profile.servers[serverName]) {
+  ): Promise<void> {
+    const profile = this.getProfile(profileName) || {
+      name: profileName,
+      servers: {},
+    };
+
+    // 프로필 업데이트
+    if (!profile.servers[serverName]) {
       profile.servers[serverName] = {
-        env: env,
+        env: {
+          env: env,
+          secrets: {},
+        },
       };
-    } else if (!profile.servers[serverName].env) {
-      profile.servers[serverName].env = env;
     } else {
       profile.servers[serverName].env = {
-        ...(profile?.servers[serverName]?.env ?? {}),
-        ...env,
+        env: {
+          ...(profile.servers[serverName]?.env?.env || {}), // update는 기존 값을 유지한다
+          ...env,
+        },
+        secrets: {
+          ...(profile.servers[serverName]?.env?.secrets || {}),
+        },
       };
     }
-    this.updateCurrentProfile(profile);
+
+    this.updateProfile(profileName, profile);
+  }
+
+  async removeProfileEnvForServer(
+    profileName: string,
+    serverName: string,
+    envList: string[]
+  ): Promise<void> {
+    const profile = this.getProfile(profileName);
+    if (!profile?.servers[serverName]?.env?.env) return;
+
+    const updatedEnv = { ...profile.servers[serverName].env.env };
+    for (const key of envList) {
+      delete updatedEnv[key];
+    }
+
+    profile.servers[serverName].env.env = updatedEnv;
+
+    this.updateProfile(profileName, profile);
+  }
+
+  async upsertProfileSecretsForServer(
+    profileName: string,
+    serverName: string,
+    secrets: Record<string, string>
+  ): Promise<void> {
+    const profile = this.getProfile(profileName) || {
+      name: profileName,
+      servers: {},
+    };
+
+    await Promise.all(
+      Object.entries(secrets).map(async ([key, value]) => {
+        await this.secretService.setProfileSecret(profileName, key, value);
+      })
+    );
+
+    const secretRefs = Object.fromEntries(
+      Object.entries(secrets).map(([key, value]) => [key, { key }])
+    );
+
+    if (!profile.servers[serverName]) {
+      profile.servers[serverName] = {
+        env: {
+          env: {},
+          secrets: secretRefs,
+        },
+      };
+    } else {
+      profile.servers[serverName].env = {
+        env: {
+          ...(profile.servers[serverName]?.env?.env || {}),
+        },
+        secrets: {
+          ...(profile.servers[serverName]?.env?.secrets || {}), // 이건 이미 암호화 되어있으므로, 기존 값은
+          ...secretRefs,
+        },
+      };
+    }
+
+    this.updateProfile(profileName, profile);
+  }
+
+  async removeProfileSecret(
+    profileName: string,
+    serverName: string,
+    secretKey: string
+  ): Promise<void> {
+    const profile = this.getProfile(profileName);
+    if (!profile?.servers[serverName]?.env?.secrets) return;
+
+    // SecretStore에서 시크릿 삭제
+    await this.secretService.removeProfileSecret(profileName, secretKey);
+
+    // 프로필에서 시크릿 참조 삭제
+    const { [secretKey]: _, ...remainingSecrets } =
+      profile.servers[serverName].env.secrets;
+    profile.servers[serverName].env.secrets = remainingSecrets;
+
+    this.updateProfile(profileName, profile);
   }
 }
 
-const newProfileService = (
+export const newProfileService = (
   profileStore: ProfileStore,
-  configService: ConfigService
+  configService: ConfigService,
+  secretService: SecretService
 ): ProfileService => {
-  return new ProfileServiceImpl(profileStore, configService);
-};
-
-export {
-  defaultProfile,
-  newProfileService,
-  ProfileService,
-  ProfileServiceImpl,
+  return new ProfileServiceImpl(profileStore, configService, secretService);
 };

@@ -1,6 +1,7 @@
 import arg from "arg";
 import chalk from "chalk";
 import os from "os";
+import { ValidationError } from "../../../lib/errors";
 import {
   McpServerInstallConfig,
   McpServerType,
@@ -34,18 +35,16 @@ export const installCommand = async (app: App, argv: string[]) => {
   const profile: string | undefined = options["--profile"];
   const logLevel: string = options["--log-level"] || "INFO";
 
-  console.error(client);
-
   if (serverName === "") {
-    console.error(
+    logger.error(
       "Error: Server name is required. Use -n or --server-name option."
     );
-    process.exit(1);
+    throw new ValidationError("Error: Server name is required.");
   }
 
   if (command === "") {
-    console.error("Error: Command is required. Use -c or --command option.");
-    process.exit(1);
+    logger.error("Error: Command is required. Use -c or --command option.");
+    throw new ValidationError("Error: Command is required.");
   }
 
   logger.verbose(

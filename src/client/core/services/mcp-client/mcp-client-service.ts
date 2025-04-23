@@ -8,6 +8,8 @@ import {
   McpServerInstallConfig,
   McpServerType,
 } from "../../lib/types/mcp-server";
+import { ProfileService } from "../profile/profile-service";
+import { SecretService } from "../secret/secret-service";
 export interface McpClientService {
   getClient(client: string): McpClient;
   generateMcpServerConfig(
@@ -20,10 +22,11 @@ export interface McpClientService {
 }
 
 export class McpClientServiceImpl implements McpClientService {
-  private logger: Logger;
-  constructor(logger: Logger) {
-    this.logger = logger;
-  }
+  constructor(
+    private readonly profileService: ProfileService,
+    private readonly secretService: SecretService,
+    private readonly logger: Logger
+  ) {}
   getClient(client: string): McpClient {
     this.logger.verbose(`Getting client: ${client}`);
     switch (client) {
@@ -55,7 +58,7 @@ export class McpClientServiceImpl implements McpClientService {
             args,
             // env: serverInstallConfig.env,
             profile: serverInstallConfig.profile,
-            env: serverInstallConfig.mcpctlEnv,
+            // env: serverInstallConfig.mcpctlEnv, // TODO: add this
           },
         };
       case "sse":
@@ -66,12 +69,39 @@ export class McpClientServiceImpl implements McpClientService {
     client: McpClient,
     serverInstallConfig: McpServerInstallConfig
   ): Promise<McpServerConfig> {
+    // save secrets and envs to profile
+    if (serverInstallConfig.profile) {
+      if (serverInstallConfig.env) {
+        this.profileService.upsertProfileEnvForServer(
+          serverInstallConfig.profile,
+          serverInstallConfig.serverName,
+          serverInstallConfig.env || {}
+        );
+      }
+      if (serverInstallConfig.secrets) {
+        this.profileService.upsertProfileSecretsForServer(
+          serverInstallConfig.profile,
+          serverInstallConfig.serverName,
+          serverInstallConfig.secrets || {}
+        );
+      }
+    }
+
+    let serverConfig: McpServerConfig;
     switch (client.type) {
       case McpClientType.CLAUDE:
-        return await this.installMcpServerToClaude(client, serverInstallConfig);
+        serverConfig = await this.installMcpServerToClaude(
+          client,
+          serverInstallConfig
+        );
       case McpClientType.CURSOR:
-        return await this.installMcpServerToCursor(client, serverInstallConfig);
+        serverConfig = await this.installMcpServerToCursor(
+          client,
+          serverInstallConfig
+        );
     }
+
+    return serverConfig;
   }
 
   private async installMcpServerToClaude(
@@ -219,6 +249,10 @@ export class McpClientServiceImpl implements McpClientService {
   }
 }
 
-export const newMcpClientService = (logger: Logger): McpClientService => {
-  return new McpClientServiceImpl(logger);
+export const newMcpClientService = (
+  profileService: ProfileService,
+  secretService: SecretService,
+  logger: Logger
+): McpClientService => {
+  return new McpClientServiceImpl(profileService, secretService, logger);
 };

@@ -5,6 +5,7 @@ import { newConsoleLogger } from "../../lib/logger/console-logger";
 import { newFileLogger } from "../../lib/logger/file-logger";
 import { Logger, LogLevel, verboseToLogLevel } from "../../lib/logger/logger";
 import { newApp } from "./app";
+import { configCommand } from "./commands/config";
 import { daemonCommand } from "./commands/daemon";
 import { installCommand } from "./commands/install";
 import { profileCommand } from "./commands/profile";
@@ -29,7 +30,7 @@ const verboseConsoleLogger =
 const main = async () => {
   const options = arg(mainCommandOptions, {
     argv: process.argv.slice(2),
-    stopAtPositional: true,
+    permissive: true,
   });
   const subArgv = options["_"];
   const verbose = options["--verbose"];
@@ -46,11 +47,11 @@ const main = async () => {
     }
     logger = newFileLogger({
       filePath: logFilePath,
-      logLevel: verbose ? LogLevel.VERBOSE : LogLevel.INFO,
+      logLevel: verbose ? LogLevel.VERBOSE : LogLevel.ERROR,
     });
   } else {
     logger = newConsoleLogger({
-      logLevel: verboseToLogLevel(verbose),
+      logLevel: verboseToLogLevel(verbose, LogLevel.ERROR),
     });
   }
   const app = newApp({ logLevel: verboseToLogLevel(verbose), logger });
@@ -106,6 +107,10 @@ const main = async () => {
         await daemonCommand(app, subArgv.slice(1));
         break;
       }
+      case "config": {
+        await configCommand(app, subArgv.slice(1));
+        break;
+      }
       default:
         console.error(`Error: '${mainCommand}' is an unknown command.`);
         console.error("\nAvailable commands:");
@@ -125,7 +130,9 @@ const main = async () => {
         "Daemon is not running, trying to start it by running `mcpctl daemon start`"
       );
     } else {
-      console.error("\nAn error occurred. Use -v option for more details.");
+      if (!verbose) {
+        console.error("\nAn error occurred. Use -v option for more details.");
+      }
       if (verbose) {
         console.error(error);
       }

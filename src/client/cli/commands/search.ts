@@ -5,6 +5,7 @@ import { OpenAI } from "openai";
 import os from "os";
 import path from "path";
 import readline from "readline/promises";
+import { ValidationError } from "../../../lib/errors";
 import { SearchResult } from "../../core/lib/types/search-result";
 import { App } from "../app";
 
@@ -97,6 +98,8 @@ const searchCommandOptions = {
 export const searchCommand = async (app: App, argv: string[]) => {
   const options = arg(searchCommandOptions, { argv });
 
+  const logger = app.getLogger();
+
   const help = options["--help"];
   const useLLMInteractive = options["--use-llm-interactive"];
 
@@ -119,19 +122,19 @@ export const searchCommand = async (app: App, argv: string[]) => {
     console.log(chalk.dim("  -s, --semantic: Use semantic search"));
     console.log(chalk.dim("  -l, --limit: The number of results to return"));
     console.log(chalk.dim("  -h, --help: Show this help message"));
-    process.exit(0);
+    return;
   }
 
   if (!name && !query) {
-    console.error(chalk.red("Error: Either name or query must be provided"));
-    process.exit(1);
+    logger.error(chalk.red("Error: Either name or query must be provided"));
+    throw new ValidationError("Error: Either name or query must be provided");
   }
 
   if (name && query) {
-    console.error(
-      chalk.red("Error: Only one of name or query can be provided")
+    logger.error(chalk.red("Error: Only one of name or query can be provided"));
+    throw new ValidationError(
+      "Error: Only one of name or query can be provided"
     );
-    process.exit(1);
   }
 
   try {
@@ -140,8 +143,10 @@ export const searchCommand = async (app: App, argv: string[]) => {
 
     if (registry) {
       if (semantic) {
-        console.error(chalk.red("Error: Semantic search is not supported yet"));
-        process.exit(1);
+        logger.error(chalk.red("Error: Semantic search is not supported yet"));
+        throw new ValidationError(
+          "Error: Semantic search is not supported yet"
+        );
       } else {
         if (query) {
           searchResult = await searchService.searchByQueryForRegistry(
@@ -160,14 +165,18 @@ export const searchCommand = async (app: App, argv: string[]) => {
       }
     } else {
       if (semantic) {
-        console.error(chalk.red("Error: Semantic search is not supported yet"));
-        process.exit(1);
+        logger.error(chalk.red("Error: Semantic search is not supported yet"));
+        throw new ValidationError(
+          "Error: Semantic search is not supported yet"
+        );
       } else {
         if (name) {
-          console.error(
+          logger.error(
             chalk.red("Error: Name search is not supported for all registries")
           );
-          process.exit(1);
+          throw new ValidationError(
+            "Error: Name search is not supported for all registries"
+          );
         }
         if (query) {
           searchResult = await searchService.searchByQuery(query);
@@ -188,12 +197,14 @@ export const searchCommand = async (app: App, argv: string[]) => {
       );
       const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
       if (!OPENAI_API_KEY) {
-        console.error(
+        logger.error(
           chalk.red(
             "Error: OPENAI_API_KEY is not set, currently only supports OPENAI"
           )
         );
-        process.exit(1);
+        throw new ValidationError(
+          "Error: OPENAI_API_KEY is not set, currently only supports OPENAI"
+        );
       }
       const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
@@ -300,14 +311,18 @@ export const searchCommand = async (app: App, argv: string[]) => {
       prompt.close();
     }
   } catch (error) {
-    console.error(
+    logger.error(
       chalk.red(
         `\nError: ${
           error instanceof Error ? error.message : "An unknown error occurred"
         }`
       )
     );
-    process.exit(1);
+    throw new ValidationError(
+      `Error: ${
+        error instanceof Error ? error.message : "An unknown error occurred"
+      }`
+    );
   }
 };
 function loadSystemPrompt() {

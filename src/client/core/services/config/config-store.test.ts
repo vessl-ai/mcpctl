@@ -36,6 +36,12 @@ describe("FileConfigStore", () => {
         },
       ],
     },
+    secrets: {
+      shared: {},
+    },
+    sharedEnv: {
+      SHARED_VAR: "shared_value",
+    },
   };
 
   beforeEach(() => {

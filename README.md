@@ -10,7 +10,7 @@ You can use `mcpctl` to:
 - MCP Server Instance Orchestration
   - Run the MCP server on your local machine.
   - Connect to the MCP server running, reusing the server instance.
-- Profile Management
+- Config Management
   - Create and use profiles for the MCP server.
   - Profiles can store your server list, connection list, and configurations(auth data) for your MCP servers.
 
@@ -220,15 +220,23 @@ ID     MCP_SERVER(ID)    CLIENTS    PROFILE    STATUS    CREATED AT
 2      glama/my-mcp-server-2(2)    "claude"    default    running    2024-01-01 12:00:00
 ```
 
+### Config Management
+
+You can manage your env vars and secrets for your MCP server.
+
+```bash
+mcpctl config set --server-name my-mcp-server --env SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+```
+
 ### Profile Management
 
 You can add add your MCP server configurations to a profile.
 
 ```bash
 mcpctl profile create my-profile
-mcpctl profile set-env --server-name my-mcp-server --env KEY=VALUE
-mcpctl profile get-env --server-name my-mcp-server
 ```
+
+You can get/set your env vars and secrets to the profile.
 
 example:
 

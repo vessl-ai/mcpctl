@@ -78,6 +78,7 @@
     "cli-table3": "^0.6.5",
     "commander": "^13.1.0",
     "eventsource": "^3.0.6",
+    "keytar": "^7.9.0",
     "node-fetch": "^3.3.2",
     "openai": "^4.95.0",
     "portfinder": "^1.0.35",

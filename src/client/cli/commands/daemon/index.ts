@@ -1,4 +1,5 @@
 import arg from "arg";
+import { CliError } from "../../../../lib/errors";
 import { App } from "../../app";
 import { startCommand } from "./start";
 import { statusCommand } from "./status";
@@ -16,7 +17,7 @@ export const daemonCommand = async (app: App, argv: string[]) => {
     console.log("  start   - Start the MCP daemon");
     console.log("  stop    - Stop the MCP daemon");
     console.log("  status  - Check the MCP daemon status");
-    process.exit(1);
+    return;
   }
 
   switch (subcommand) {
@@ -33,6 +34,8 @@ export const daemonCommand = async (app: App, argv: string[]) => {
       console.error(
         "Unknown subcommand. Available subcommands: start, stop, status"
       );
-      process.exit(1);
+      throw new CliError(
+        "Unknown subcommand. Available subcommands: start, stop, status"
+      );
   }
 };

@@ -1,11 +1,11 @@
 import arg from "arg";
+import { CliError } from "../../../../lib/errors";
 import { App } from "../../app";
 import { profileCreateCommand } from "./create";
 import { profileDeleteCommand } from "./delete";
 import { profileGetEnvCommand, profileSetEnvCommand } from "./env";
 import { profileListCommand } from "./list";
 import { profileShowCommand } from "./show";
-
 const profileCommandOptions = {};
 
 export const profileCommand = async (app: App, argv: string[]) => {
@@ -53,6 +53,6 @@ export const profileCommand = async (app: App, argv: string[]) => {
       console.log("  get-env\tGet profile environment variables");
       console.log("  show\t\tShow profile details");
       console.log("  delete\tDelete a profile");
-      process.exit(1);
+      throw new CliError(`Error: '${subCommand}' is an unknown subcommand.`);
   }
 };

@@ -1,7 +1,6 @@
 import { Config, ProfileConfig, RegistryConfig } from "../../lib/types/config";
 import { defaultRegistryDefs } from "../registry/default-registry-defs";
 
-
 const defaultProfileConfig: ProfileConfig = {
   // Profile config
   // ...
@@ -14,10 +13,11 @@ const defaultRegistryConfig: RegistryConfig = {
   registries: defaultRegistryDefs,
 };
 
-
-const defaultConfig: Config = {
+export const defaultConfig: Config = {
   profile: defaultProfileConfig,
   registry: defaultRegistryConfig,
+  secrets: {
+    shared: {},
+  },
+  sharedEnv: {},
 };
-
-export { defaultConfig };

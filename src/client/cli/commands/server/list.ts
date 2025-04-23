@@ -1,6 +1,7 @@
 import arg from "arg";
 import chalk from "chalk";
 import Table from "cli-table3";
+import { CliError } from "../../../../lib/errors";
 import {
   McpServerInstance,
   McpServerInstanceStatus,
@@ -38,6 +39,8 @@ const formatDate = (dateStr: string): string => {
 
 export const serverListCommand = async (app: App, argv: string[]) => {
   const options = arg(serverListCommandOptions, { argv });
+
+  const logger = app.getLogger();
 
   try {
     console.log(chalk.blue.bold("\n🖥  MCP Server List\n"));
@@ -83,6 +86,7 @@ export const serverListCommand = async (app: App, argv: string[]) => {
 
     console.log(table.toString());
   } catch (error: any) {
-    console.error(chalk.red("Error fetching server list:"), error.message);
+    logger.error(chalk.red("Error fetching server list:"), error.message);
+    throw new CliError("Error fetching server list");
   }
 };

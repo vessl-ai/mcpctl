@@ -39,6 +39,6 @@ export const sessionCommand = async (app: App, argv: string[]) => {
       console.log("  list\t\tList MCP server sessions");
       console.log("  stop\t\tStop MCP server sessions");
       console.log("  connect\tConnect to MCP server");
-      process.exit(1);
+      return;
   }
 };

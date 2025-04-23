@@ -1,15 +1,15 @@
+import { ServerEnvConfig } from "./config";
 import { McpServerType } from "./mcp-server";
 
-type Profile = {
+export interface Profile {
   name: string;
-  servers: {
-    [key: string]: {
+  servers: Record<
+    string,
+    {
       type?: McpServerType;
       command?: string;
       args?: string[];
-      env?: Record<string, string>;
-    };
-  };
-};
-
-export { Profile };
+      env?: ServerEnvConfig;
+    }
+  >;
+}

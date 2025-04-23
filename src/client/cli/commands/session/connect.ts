@@ -1,6 +1,9 @@
 import arg from "arg";
 import { spawn } from "child_process";
+import { ValidationError } from "../../../../lib/errors";
 import { McpServerHostingType } from "../../../../lib/types/hosting";
+import { ServerEnvConfig } from "../../../core/lib/types/config";
+import { SecretReference } from "../../../core/lib/types/secret";
 import { App } from "../../app";
 
 export const sessionConnectCommand = async (app: App, argv: string[]) => {
@@ -11,26 +14,48 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
       "--command-base64": String,
       "--profile": String,
       "--env": [String],
+      "--secret": [String],
+      "--help": Boolean,
       "-s": "--server",
       "-c": "--command",
       "-c64": "--command-base64",
       "-p": "--profile",
       "-e": "--env",
+      "-x": "--secret",
+      "-h": "--help",
     },
     { argv }
   );
 
   const logger = app.getLogger();
-  logger.info("Session connect command", { options });
+  console.log("Session connect command", { options });
+
+  if (options["--help"]) {
+    logger.info("Session connect command");
+    logger.info(
+      "Usage: mcp session connect --server <server> --command <command> [--command-base64 <command-base64>]"
+    );
+    logger.info("Options:");
+    logger.info("  -s, --server: Server name");
+    logger.info("  -c, --command: Command to run");
+    logger.info(
+      "  -c64, --command-base64: Command to run (base64 encoded, since cursor parses mcp.json wrong)"
+    );
+    logger.info("  -p, --profile: Profile name");
+    logger.info("  -e, --env: Environment variables (key=value)");
+    logger.info("  -x, --secret: Secret (key=value)");
+    logger.info("  -h, --help: Show help");
+    return;
+  }
 
   if (!options["--server"]) {
     logger.error("Error: Server name is required. Use -s or --server option.");
-    process.exit(1);
+    throw new ValidationError("Error: Server name is required.");
   }
 
   if (!options["--command"] && !options["--command-base64"]) {
     logger.error("Error: Command is required. Use -c or --command option.");
-    process.exit(1);
+    throw new ValidationError("Error: Command is required.");
   }
 
   const serverName = options["--server"];
@@ -43,29 +68,43 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
     logger.error("Something went wrong with command decoding", {
       command: options["--command-base64"],
     });
-    process.exit(1);
+    throw new ValidationError(
+      "Error: Something went wrong with command decoding."
+    );
   }
   const profileName = options["--profile"] || "default";
   const env = options["--env"] || [];
-
-  let envMap: Record<string, string> = getServerEnv(
+  const secret = options["--secret"] || [];
+  let envMap: ServerEnvConfig = await getAndUpdateServerEnv(
     app,
     profileName,
     serverName,
     env
   );
 
-  logger.info("Connect command", { serverName, profileName, command });
+  const secretMap: Record<string, SecretReference> = {};
+  secret.forEach((s) => {
+    const [key, ref] = s.split("=");
+    secretMap[key] = {
+      key: ref,
+    };
+  });
+  envMap = {
+    env: envMap.env,
+    secrets: { ...envMap.secrets, ...secretMap },
+  };
+
+  console.log("Connect command", { serverName, profileName, command });
   const sessionManager = app.getSessionManager();
-  logger.info("Connecting to session manager");
-  logger.info("Command", { command });
+  console.log("Connecting to session manager");
+  console.log("Command", { command });
   const session = await sessionManager.connect({
     hosting: McpServerHostingType.LOCAL, // TODO: Make this configurable
     serverName,
     profileName,
     command: command,
     created: new Date().toISOString(),
-    env: envMap,
+    env: envMap.env,
   });
 
   // ------ MUST log to logger from here -----
@@ -101,27 +140,43 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
 
   logger.info("Session connected");
 };
-function getServerEnv(
+
+async function getAndUpdateServerEnv(
   app: App,
   profileName: string,
   serverName: string,
   env: string[]
-) {
-  let envMap: Record<string, string> = {};
+): Promise<ServerEnvConfig> {
+  let newEnvMap: Record<string, string> = {};
   const profileService = app.getProfileService();
-  const profileEnv = profileService.getProfileEnvForServer(
+
+  // Get profile env config (includes both env and secret refs)
+  const profileEnvConfig = await profileService.getProfileEnvForServer(
     profileName,
     serverName
   );
-  if (profileEnv) {
-    envMap = { ...profileEnv };
-  }
+
+  // Add new env variables from command line
   if (env.length > 0) {
     env.forEach((e) => {
       const [key, value] = e.split("=");
-      envMap[key] = value;
+      newEnvMap[key] = value;
     });
   }
-  profileService.updateProfileEnvForServer(profileName, serverName, envMap);
-  return envMap;
+
+  // Update profile with new env variables
+  await profileService.upsertProfileEnvForServer(
+    profileName,
+    serverName,
+    newEnvMap
+  );
+
+  // get shared env and secrets
+  const sharedEnv = app.getConfigService().getConfigSection("sharedEnv");
+
+  // Return combined env config
+  return {
+    env: { ...sharedEnv, ...profileEnvConfig.env, ...newEnvMap },
+    secrets: profileEnvConfig.secrets || {},
+  };
 }
