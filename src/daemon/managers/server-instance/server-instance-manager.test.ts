@@ -1,3 +1,4 @@
+import { SecretService } from "../../../core/services/secret/secret-service";
 import { Logger } from "../../../lib/logger/logger";
 import { McpServerHostingType } from "../../../lib/types/hosting";
 import {
@@ -33,6 +34,18 @@ class MockServerInstanceFactory implements ServerInstanceFactory {
     return Promise.resolve(this.serverInstance);
   }
 }
+
+const mockSecretService: SecretService = {
+  resolveEnv: jest.fn(),
+  getSharedSecret: jest.fn(),
+  setSharedSecret: jest.fn(),
+  setSharedSecrets: jest.fn(),
+  removeSharedSecret: jest.fn(),
+  listSharedSecrets: jest.fn(),
+  getProfileSecret: jest.fn(),
+  setProfileSecret: jest.fn(),
+  removeProfileSecret: jest.fn(),
+};
 
 describe("ServerInstanceManager", () => {
   let manager: ServerInstanceManager;

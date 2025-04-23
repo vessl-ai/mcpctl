@@ -225,7 +225,7 @@ ID     MCP_SERVER(ID)    CLIENTS    PROFILE    STATUS    CREATED AT
 You can manage your env vars and secrets for your MCP server.
 
 ```bash
-mcpctl config set --server-name my-mcp-server --env SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+mcpctl config secret set --server-name my-mcp-server --env SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 ```
 
 ### Profile Management

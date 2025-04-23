@@ -15,7 +15,8 @@
   ],
   "scripts": {
     "test": "jest",
-    "cli": "ts-node src/client/cli/cli.ts",
+    "cli": "ts-node src/cli/cli.ts",
+    "daemon": "ts-node src/daemon/main.ts",
     "clean": "rm -rf dist",
     "build": "tsc && node build.js",
     "install-cli:macos": "cp dist/mcpctl.js /usr/local/bin/mcpctl && cp dist/mcpctld.js /usr/local/bin/mcpctld",

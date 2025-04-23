@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { Logger, LoggerBase, LogLevel } from "./logger";
+import { Logger, LoggerBase, LogLevel, maskSecret } from "./logger";
 
 export class FileLogger extends LoggerBase implements Logger {
   private readonly filePath: string;
@@ -76,7 +76,7 @@ export class FileLogger extends LoggerBase implements Logger {
   }
 
   private writeToFile(message: string): void {
-    const maskedMessage = this.maskSecret(message);
+    const maskedMessage = maskSecret(message);
     fs.appendFileSync(this.filePath, `${maskedMessage}\n`);
   }
 }

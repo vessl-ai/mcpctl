@@ -54,7 +54,7 @@ async function build() {
     // CLI 번들링
     await esbuild.build({
       ...commonOptions,
-      entryPoints: ['src/client/cli/cli.ts'],
+      entryPoints: ['src/cli/cli.ts'],
       outfile: 'dist/mcpctl.js',
       minify: true,
       banner: {
@@ -76,7 +76,7 @@ async function build() {
     // service-templates 번들링
     await esbuild.build({
       ...commonOptions,
-      entryPoints: ['src/client/core/lib/service-templates/index.ts'],
+      entryPoints: ['src/core/lib/service-templates/index.ts'],
       outfile: 'dist/service-templates.js',
     });
     

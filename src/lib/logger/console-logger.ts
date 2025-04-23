@@ -1,4 +1,10 @@
-import { Logger, LoggerBase, LoggerConfig, LogLevel } from "./logger";
+import {
+  Logger,
+  LoggerBase,
+  LoggerConfig,
+  LogLevel,
+  maskSecret,
+} from "./logger";
 
 export type ConsoleLoggerConfig = LoggerConfig & {
   useStderr?: boolean;
@@ -14,7 +20,7 @@ class ConsoleLoggerImpl extends LoggerBase implements Logger {
   }
 
   private pushLog(message: string): void {
-    const maskedMessage = this.maskSecret(message);
+    const maskedMessage = maskSecret(message);
     if (this.useStderr) {
       console.error(maskedMessage);
     } else {

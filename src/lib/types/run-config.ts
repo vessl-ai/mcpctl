@@ -1,3 +1,4 @@
+import { SecretReference } from "../../core/lib/types/secret";
 import { McpServerHostingType } from "./hosting";
 
 export interface RunConfig {
@@ -6,6 +7,7 @@ export interface RunConfig {
   profileName: string;
   command: string;
   env?: Record<string, string>;
+  secrets?: Record<string, SecretReference>;
   created: string;
 }
 

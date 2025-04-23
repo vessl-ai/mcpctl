@@ -1,6 +1,6 @@
 import { GLOBAL_CONSTANTS } from "../constants";
 import { GLOBAL_ENV } from "../env";
-import { LoggerBase } from "./logger";
+import { LoggerBase, maskSecret } from "./logger";
 
 class TestLogger extends LoggerBase {
   verbose(message: string, context?: Record<string, any>): void {}
@@ -17,7 +17,7 @@ class TestLogger extends LoggerBase {
 
   // Expose protected method for testing
   public testMaskSecret(message: string): string {
-    return this.maskSecret(message);
+    return maskSecret(message);
   }
 }
 

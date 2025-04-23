@@ -30,7 +30,9 @@ export abstract class BaseServerInstance implements McpServerInstance {
     };
     this.startedAt = new Date().toISOString();
     this.lastUsedAt = new Date().toISOString();
-    this.logger = this.logger.withContext(`ServerInstance:${this.id}`);
+    this.logger = this.logger.withContext(
+      `ServerInstance:${this.id}(${this.config.serverName})`
+    );
     this.logger.info("Server instance created", {
       id: this.id,
       configId: getRunConfigId(this.config),

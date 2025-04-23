@@ -1,5 +1,21 @@
 import fs from "fs";
-import { logLevel } from "../client/core/lib/env";
+import { logLevel } from "../core/lib/env";
+import {
+  ConfigService,
+  newConfigService,
+} from "../core/services/config/config-service";
+import {
+  ConfigStore,
+  newFileConfigStore,
+} from "../core/services/config/config-store";
+import {
+  newSecretService,
+  SecretService,
+} from "../core/services/secret/secret-service";
+import {
+  newKeychainSecretStore,
+  SecretStore,
+} from "../core/services/secret/secret-store";
 import { BaseContainer, Container } from "../lib/container/container";
 import { newConsoleLogger } from "../lib/logger/console-logger";
 import { Logger } from "../lib/logger/logger";
@@ -36,11 +52,6 @@ export class DaemonApp {
     console.log("logDir", logDir);
     this.container.register<Logger>(
       "logger",
-      // newFileLogger({
-      //   filePath: path.join(logDir, "daemon.log"),
-      //   prefix: "Daemon",
-      //   showVerbose: verboseLog(),
-      // })
       newConsoleLogger({
         prefix: "Daemon",
         logLevel: logLevel(),
@@ -52,16 +63,52 @@ export class DaemonApp {
     logger.info("Initializing dependencies...");
     logger.debug("Log directory created/verified at:", { logDir });
 
+    this.registerConfigService(logger);
+    this.registerSecretService(logger);
+
     // 서버 인스턴스 매니저
+    this.registerServerInstanceManager(logger);
+    logger.info("Server instance manager initialized");
+    logger.info("All dependencies initialized successfully");
+  }
+
+  private registerConfigService(logger: Logger) {
+    this.container.register<ConfigStore>(
+      "configStore",
+      newFileConfigStore(logger.withContext("ConfigStore"))
+    );
+    this.container.register<ConfigService>(
+      "configService",
+      newConfigService(this.container.get<ConfigStore>("configStore"))
+    );
+  }
+
+  private registerSecretService(logger: Logger) {
+    this.container.register<SecretStore>(
+      "secretStore",
+      newKeychainSecretStore()
+    );
+    this.container.register<SecretService>(
+      "secretService",
+      newSecretService(
+        this.container.get<SecretStore>("secretStore"),
+        this.container.get<ConfigService>("configService"),
+        logger.withContext("SecretService")
+      )
+    );
+  }
+
+  private registerServerInstanceManager(logger: Logger) {
     this.container.register<ServerInstanceManager>(
       "instanceManager",
       newServerInstanceManager(
         logger.withContext("ServerInstanceManager"),
-        newServerInstanceFactory(logger.withContext("ServerInstanceFactory"))
+        newServerInstanceFactory(
+          this.container.get<SecretService>("secretService"),
+          logger.withContext("ServerInstanceFactory")
+        )
       )
     );
-    logger.info("Server instance manager initialized");
-    logger.info("All dependencies initialized successfully");
   }
 
   private async createRpcServer(): Promise<void> {
