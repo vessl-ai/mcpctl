@@ -1,5 +1,7 @@
 const esbuild = require('esbuild');
 const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
 
 // Native node modules plugin to handle .node files
 const nativeNodeModulesPlugin = {
@@ -48,7 +50,7 @@ async function build() {
       format: 'cjs',
       sourcemap: true,
       plugins: [nativeNodeModulesPlugin],
-      external: ['readline/promises'],
+      external: ['readline/promises', 'keytar'],
     };
 
     // CLI 번들링

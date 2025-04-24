@@ -13,47 +13,60 @@ if (!process.env.npm_config_global) {
   process.exit(0);
 }
 
-// Rebuild keytar
+// Rebuild keytar with more robust approach
 console.log('Rebuilding keytar...');
 try {
-  execSync('npm rebuild keytar', { stdio: 'inherit' });
+  // First try the standard rebuild
+  try {
+    execSync('npm rebuild keytar', { stdio: 'inherit' });
+  } catch (rebuildError) {
+    console.warn('Standard rebuild failed, trying alternative approach...');
+    
+    // Try to force reinstall
+    try {
+      // Remove the module first
+      execSync('npm uninstall keytar', { stdio: 'inherit' });
+      // Then reinstall it
+      execSync('npm install keytar@7.9.0 --save-exact', { stdio: 'inherit' });
+    } catch (reinstallError) {
+      console.error('Error: Failed to rebuild keytar. Secret management is required for mcpctl to function properly.');
+      console.error('Please make sure you have the necessary build tools installed:');
+      console.error('- On macOS: Xcode Command Line Tools');
+      console.error('- On Linux: build-essential, python, and node-gyp');
+      console.error('- On Windows: Visual Studio Build Tools');
+      console.error('');
+      console.error('You can try manually rebuilding keytar with:');
+      console.error('npm rebuild keytar --update-binary');
+      process.exit(1);
+    }
+  }
+  
+  // Verify keytar is working
+  try {
+    const keytar = require('keytar');
+    if (typeof keytar.setPassword !== 'function') {
+      throw new Error('keytar.setPassword is not a function');
+    }
+    console.log('✅ keytar successfully rebuilt and verified');
+  } catch (verifyError) {
+    console.error('Error: keytar verification failed. The module was rebuilt but appears to be incompatible.');
+    console.error('This might be due to Node.js version incompatibility or missing system libraries.');
+    console.error('Please try:');
+    console.error('1. Updating Node.js to the latest LTS version');
+    console.error('2. Installing system build tools');
+    console.error('3. Running: npm rebuild keytar --update-binary');
+    process.exit(1);
+  }
 } catch (error) {
-  console.warn('Warning: Failed to rebuild keytar. Secret management may not work properly.');
-  console.warn('You may need to run: npm rebuild keytar');
+  console.error('Error: Failed to rebuild keytar. Secret management is required for mcpctl to function properly.');
+  console.error('Please make sure you have the necessary build tools installed:');
+  console.error('- On macOS: Xcode Command Line Tools');
+  console.error('- On Linux: build-essential, python, and node-gyp');
+  console.error('- On Windows: Visual Studio Build Tools');
+  process.exit(1);
 }
 
 const platform = os.platform();
-const isRoot = process.getuid && process.getuid() === 0;
-
-// Create log directories
-function createLogDirectories() {
-  const logDirs = {
-    darwin: '/var/log/mcpctl',
-    linux: '/var/log/mcpctl',
-    win32: 'C:\\ProgramData\\mcpctl\\logs'
-  };
-
-  const logDir = logDirs[platform];
-  if (!logDir) {
-    console.error(`Unsupported platform: ${platform}`);
-    process.exit(1);
-  }
-
-  try {
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    // Set permissions on Unix systems
-    if (platform !== 'win32') {
-      fs.chmodSync(logDir, '755');
-    }
-    return logDir;
-  } catch (error) {
-    console.warn(`Warning: Could not create log directory: ${error.message}`);
-    console.warn('You may need to run: sudo mkdir -p /var/log/mcpctl && sudo chmod 755 /var/log/mcpctl');
-    return logDirs[platform];
-  }
-}
 
 // Function to execute commands with sudo
 async function executeWithSudo(command) {
@@ -68,84 +81,158 @@ async function executeWithSudo(command) {
   });
 }
 
-async function setupService() {
+// Function to execute all commands in a single batch with sudo
+async function executeAllCommands(commands) {
+  if (commands.length === 0) return;
+  
+  // Create a shell script with all commands
+  const scriptContent = commands.join('\n');
+  const scriptPath = path.join(os.tmpdir(), `mcpctl-sudo-${Date.now()}.sh`);
+  
   try {
-    // Create log directories
-    const logDir = createLogDirectories();
-
-    // Setup daemon service for each OS
-    const nodePath = platform === 'win32' ? process.execPath : execSync('which node').toString().trim();
-    const daemonPath = platform === 'win32' ? 
-      execSync('where mcpctld').toString().trim() :
-      execSync('which mcpctld').toString().trim();
-    const mcpctlPath = platform === 'win32' ? 
-      execSync('where mcpctl').toString().trim() :
-      execSync('which mcpctl').toString().trim();
-
-    const templateOptions = {
-      nodePath,
-      daemonPath,
-      logDir,
-    };
-
-    const serviceContent = getMcpctldServiceTemplate(templateOptions);
-
-    // if daemon is running, stop service
-    if (execSync('pgrep -f mcpctld').toString().trim()) {
-      console.log('[sudo] Stopping already running MCP daemon service...');
-      await executeWithSudo(`${mcpctlPath} daemon stop`);
-    }
-
-    // For Windows, execute service creation command directly
-    if (platform === 'win32') {
-      execSync(serviceContent);
-    } else {
-      // For Unix systems, create service file
-      const servicePath = SERVICE_PATHS[platform];
-      
-      if (isRoot) {
-        fs.writeFileSync(servicePath, serviceContent);
-        fs.chmodSync(servicePath, '644');
-      } else {
-        // Use sudo to write the service file
-        await executeWithSudo(`echo '${serviceContent}' > ${servicePath}`);
-        await executeWithSudo(`chmod 644 ${servicePath}`);
-      }
-
-      // For Linux, reload systemctl and enable service
-      if (platform === 'linux') {
-        if (isRoot) {
-          execSync(SERVICE_COMMANDS.linux.reload.join(' '));
-          execSync(SERVICE_COMMANDS.linux.enable.join(' '));
-        } else {
-          await executeWithSudo(SERVICE_COMMANDS.linux.reload.join(' '));
-          await executeWithSudo(SERVICE_COMMANDS.linux.enable.join(' '));
-        }
-      }
-    }
-
-    // Start the service
-    const startCommand = SERVICE_COMMANDS[platform].start;
-    if (isRoot) {
-      execSync(startCommand.join(' '));
-    } else {
-      await executeWithSudo(startCommand.join(' '));
-    }
-    console.log('MCP daemon service started successfully');
+    // Write the script to a temporary file
+    fs.writeFileSync(scriptPath, scriptContent);
+    fs.chmodSync(scriptPath, '755');
+    
+    // Execute the script with sudo
+    await executeWithSudo(`bash ${scriptPath}`);
   } catch (error) {
-    console.error('Error during service setup:', error);
-    process.exit(1);
+    console.error('Error executing commands:', error);
+    throw error;
+  } finally {
+    // Clean up the temporary script
+    try {
+      fs.unlinkSync(scriptPath);
+    } catch (error) {
+      // Ignore cleanup errors
+    }
   }
 }
 
-// Main execution
-if (isRoot) {
-  setupService();
-} else {
-  console.log('Requesting sudo privileges for service setup...');
-  setupService().catch(error => {
-    console.error('Failed to acquire sudo privileges:', error);
-    console.warn('You may need to run: sudo mcpctl daemon start');
+// Check if a process is running
+function isProcessRunning(processName) {
+  try {
+    if (platform === 'win32') {
+      const result = execSync(`tasklist /FI "IMAGENAME eq ${processName}" /NH`).toString();
+      return result.includes(processName);
+    } else {
+      const result = execSync(`pgrep -f ${processName}`).toString();
+      return result.trim().length > 0;
+    }
+  } catch (error) {
+    // If pgrep returns non-zero exit code, process is not running
+    return false;
+  }
+}
+
+// Build the complete set of commands to execute
+function buildCommandSet() {
+  const commands = [];
+  
+  // Define log directories
+  const logDirs = {
+    darwin: '/var/log/mcpctl',
+    linux: '/var/log/mcpctl',
+    win32: 'C:\\ProgramData\\mcpctl\\logs'
+  };
+  
+  const logDir = logDirs[platform];
+  if (!logDir) {
+    console.error(`Unsupported platform: ${platform}`);
     process.exit(1);
-  });
-} 
+  }
+  
+  // Add log directory creation commands
+  if (platform !== 'win32') {
+    commands.push(`mkdir -p ${logDir}`);
+    commands.push(`chmod 755 ${logDir}`);
+  }
+  
+  // Get paths
+  let daemonPath, mcpctlPath;
+  try {
+    daemonPath = platform === 'win32' ? 
+      execSync('where mcpctld').toString().trim() :
+      execSync('which mcpctld').toString().trim();
+  } catch (error) {
+    console.warn('Warning: Could not find mcpctld path. The daemon may not start properly.');
+    daemonPath = platform === 'win32' ? 'mcpctld' : '/usr/local/bin/mcpctld';
+  }
+  
+  try {
+    mcpctlPath = platform === 'win32' ? 
+      execSync('where mcpctl').toString().trim() :
+      execSync('which mcpctl').toString().trim();
+  } catch (error) {
+    console.warn('Warning: Could not find mcpctl path. The daemon may not start properly.');
+    mcpctlPath = platform === 'win32' ? 'mcpctl' : '/usr/local/bin/mcpctl';
+  }
+  
+  // Get node path
+  const nodePath = platform === 'win32' ? process.execPath : execSync('which node').toString().trim();
+  
+  // Generate service template
+  const templateOptions = {
+    nodePath,
+    daemonPath,
+    logDir,
+  };
+  
+  const serviceContent = getMcpctldServiceTemplate(templateOptions);
+  
+  // Check if daemon is running
+  let daemonRunning = false;
+  try {
+    daemonRunning = isProcessRunning('mcpctld');
+  } catch (error) {
+    console.warn('Warning: Could not check if daemon is running. Continuing anyway.');
+  }
+  
+  // Add daemon stop command if running
+  if (daemonRunning) {
+    console.log('[sudo] Stopping already running MCP daemon service...');
+    commands.push(`${mcpctlPath} daemon stop`);
+  }
+  
+  // Add service file creation commands
+  if (platform !== 'win32') {
+    const servicePath = SERVICE_PATHS[platform];
+    commands.push(`echo '${serviceContent}' > ${servicePath}`);
+    commands.push(`chmod 644 ${servicePath}`);
+    
+    // Add Linux-specific commands
+    if (platform === 'linux') {
+      commands.push(SERVICE_COMMANDS.linux.reload.join(' '));
+      commands.push(SERVICE_COMMANDS.linux.enable.join(' '));
+    }
+  } else {
+    // For Windows, we'll execute the service content directly
+    commands.push(serviceContent);
+  }
+  
+  // Add service start command
+  const startCommand = SERVICE_COMMANDS[platform].start;
+  commands.push(startCommand.join(' '));
+  
+  return commands;
+}
+
+// Main execution
+async function main() {
+  try {
+    // Build the complete command set
+    const commands = buildCommandSet();
+    
+    // Execute all commands with sudo
+    console.log('Requesting sudo privileges for service setup...');
+    await executeAllCommands(commands);
+    
+    console.log('MCP daemon service setup completed successfully');
+  } catch (error) {
+    console.error('Error during service setup:', error);
+    console.warn('You may need to run: sudo mcpctl daemon start');
+  }
+}
+
+// Run the main function
+main(); 
