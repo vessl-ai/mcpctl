@@ -18,13 +18,21 @@
 - Search MCP servers across multiple repositories
 - Add and manage custom repositories
 - Interactive LLM-powered search (OpenAI integration)
+- Registry-based server indexing
 
 ### 🚀 Server Management
 
 - Run MCP servers locally
 - Connect to existing server instances
+- Manage server sessions
+- Monitor server status and health
+
+### ⚙️ Configuration Management
+
 - Profile-based configuration management
 - Environment variable and secret management
+- Custom registry configuration
+- Client-specific settings
 
 ## 🚀 Quick Start
 

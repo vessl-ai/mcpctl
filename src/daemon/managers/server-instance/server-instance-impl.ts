@@ -20,7 +20,10 @@ export abstract class BaseServerInstance implements McpServerInstance {
   startedAt: string;
   lastUsedAt: string;
 
-  constructor(public config: RunConfig, protected logger: Logger) {
+  constructor(
+    public config: RunConfig,
+    protected logger: Logger
+  ) {
     this.id = `server-instance.${uuidv4()}`;
     this.connectionInfo = {
       transport: "sse",
