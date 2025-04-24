@@ -1,4 +1,4 @@
 export enum McpClientType {
-  CLAUDE = "claude",
-  CURSOR = "cursor",
+  CLAUDE = 'claude',
+  CURSOR = 'cursor',
 }

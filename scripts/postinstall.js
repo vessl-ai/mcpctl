@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
-const { getMcpctldServiceTemplate, SERVICE_PATHS, SERVICE_COMMANDS } = require('../dist/service-templates.js');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { getMcpctldServiceTemplate, SERVICE_COMMANDS, SERVICE_PATHS } from '../dist/service-templates.js';
 
 // Exit if not installed globally
 if (!process.env.npm_config_global) {

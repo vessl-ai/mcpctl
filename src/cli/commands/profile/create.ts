@@ -1,6 +1,6 @@
-import arg from "arg";
-import { CliError } from "../../../lib/errors";
-import { App } from "../../app";
+import arg from 'arg';
+import { CliError } from '../../../lib/errors';
+import { App } from '../../app';
 
 const profileCreateCommandOptions = {};
 
@@ -9,11 +9,11 @@ export const profileCreateCommand = async (app: App, argv: string[]) => {
 
   const logger = app.getLogger();
 
-  const name = options["_"]?.[0];
+  const name = options['_']?.[0];
 
   if (!name) {
-    logger.error("Error: Name is required.");
-    throw new CliError("Error: Name is required.");
+    logger.error('Error: Name is required.');
+    throw new CliError('Error: Name is required.');
   }
 
   app.getProfileService().createProfile(name);

@@ -1,5 +1,5 @@
-import { ServerEnvConfig } from "./config";
-import { McpServerType } from "./mcp-server";
+import { ServerEnvConfig } from './config';
+import { McpServerType } from './mcp-server';
 
 export interface Profile {
   name: string;

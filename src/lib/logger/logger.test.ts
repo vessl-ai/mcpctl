@@ -1,6 +1,6 @@
-import { GLOBAL_CONSTANTS } from "../constants";
-import { GLOBAL_ENV } from "../env";
-import { LoggerBase, maskSecret } from "./logger";
+import { GLOBAL_CONSTANTS } from '../constants';
+import { GLOBAL_ENV } from '../env';
+import { LoggerBase, maskSecret } from './logger';
 
 class TestLogger extends LoggerBase {
   verbose(message: string, context?: Record<string, any>): void {}
@@ -21,7 +21,7 @@ class TestLogger extends LoggerBase {
   }
 }
 
-describe("Logger maskSecret tests", () => {
+describe('Logger maskSecret tests', () => {
   let logger: TestLogger;
   const originalMaskSecret = GLOBAL_ENV.MASK_SECRET;
 
@@ -33,40 +33,38 @@ describe("Logger maskSecret tests", () => {
     GLOBAL_ENV.MASK_SECRET = originalMaskSecret;
   });
 
-  it("should mask secret when MASK_SECRET is true", () => {
+  it('should mask secret when MASK_SECRET is true', () => {
     GLOBAL_ENV.MASK_SECRET = true;
     const message = `This is a ${GLOBAL_CONSTANTS.SECRET_TAG_START}secret123${GLOBAL_CONSTANTS.SECRET_TAG_END} message`;
     const result = logger.testMaskSecret(message);
     expect(result).toBe(`This is a ${GLOBAL_CONSTANTS.SECRET_MASK} message`);
   });
 
-  it("should remove secret tags when MASK_SECRET is false", () => {
+  it('should remove secret tags when MASK_SECRET is false', () => {
     GLOBAL_ENV.MASK_SECRET = false;
     const message = `This is a ${GLOBAL_CONSTANTS.SECRET_TAG_START}secret123${GLOBAL_CONSTANTS.SECRET_TAG_END} message`;
     const result = logger.testMaskSecret(message);
-    expect(result).toBe("This is a secret123 message");
+    expect(result).toBe('This is a secret123 message');
   });
 
-  it("should handle multiple secrets in one message when masking", () => {
+  it('should handle multiple secrets in one message when masking', () => {
     GLOBAL_ENV.MASK_SECRET = true;
     const message = `First ${GLOBAL_CONSTANTS.SECRET_TAG_START}secret1${GLOBAL_CONSTANTS.SECRET_TAG_END} and second ${GLOBAL_CONSTANTS.SECRET_TAG_START}secret2${GLOBAL_CONSTANTS.SECRET_TAG_END}`;
     const result = logger.testMaskSecret(message);
-    expect(result).toBe(
-      `First ${GLOBAL_CONSTANTS.SECRET_MASK} and second ${GLOBAL_CONSTANTS.SECRET_MASK}`
-    );
+    expect(result).toBe(`First ${GLOBAL_CONSTANTS.SECRET_MASK} and second ${GLOBAL_CONSTANTS.SECRET_MASK}`);
   });
 
-  it("should not modify message without secret tags", () => {
+  it('should not modify message without secret tags', () => {
     GLOBAL_ENV.MASK_SECRET = true;
-    const message = "This is a normal message";
+    const message = 'This is a normal message';
     const result = logger.testMaskSecret(message);
     expect(result).toBe(message);
   });
 
-  it("should handle incomplete secret tags", () => {
+  it('should handle incomplete secret tags', () => {
     GLOBAL_ENV.MASK_SECRET = true;
     const message = `Incomplete ${GLOBAL_CONSTANTS.SECRET_TAG_START}secret`;
     const result = logger.testMaskSecret(message);
-    expect(result).toBe("Incomplete secret");
+    expect(result).toBe('Incomplete secret');
   });
 });

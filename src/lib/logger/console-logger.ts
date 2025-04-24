@@ -1,10 +1,4 @@
-import {
-  Logger,
-  LoggerBase,
-  LoggerConfig,
-  LogLevel,
-  maskSecret,
-} from "./logger";
+import { Logger, LoggerBase, LoggerConfig, LogLevel, maskSecret } from './logger';
 
 export type ConsoleLoggerConfig = LoggerConfig & {
   useStderr?: boolean;
@@ -34,52 +28,32 @@ class ConsoleLoggerImpl extends LoggerBase implements Logger {
 
   verbose(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.VERBOSE, this.logLevel)) {
-      this.pushLog(
-        `[VERBOSE]: [${this.now()}] [${
-          this.prefix
-        }] ${message} ${JSON.stringify(context)}`
-      );
+      this.pushLog(`[VERBOSE]: [${this.now()}] [${this.prefix}] ${message} ${JSON.stringify(context)}`);
     }
   }
 
   info(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.INFO, this.logLevel)) {
-      this.pushLog(
-        `[INFO]: [${this.now()}] [${this.prefix}] ${message} ${
-          context ? JSON.stringify(context) : ""
-        }`
-      );
+      this.pushLog(`[INFO]: [${this.now()}] [${this.prefix}] ${message} ${context ? JSON.stringify(context) : ''}`);
     }
   }
 
   error(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.ERROR, this.logLevel)) {
-      this.pushLog(
-        `[ERROR]: [${this.now()}] [${this.prefix}] ${message} ${
-          context ? JSON.stringify(context) : ""
-        }`
-      );
+      this.pushLog(`[ERROR]: [${this.now()}] [${this.prefix}] ${message} ${context ? JSON.stringify(context) : ''}`);
     }
   }
 
   warn(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.WARN, this.logLevel)) {
-      this.pushLog(
-        `[WARN]: [${this.now()}] [${this.prefix}] ${message} ${
-          context ? JSON.stringify(context) : ""
-        }`
-      );
+      this.pushLog(`[WARN]: [${this.now()}] [${this.prefix}] ${message} ${context ? JSON.stringify(context) : ''}`);
     }
   }
 
   debug(message: string, context?: Record<string, any>): void {
     if (this.isLogLevelEnabled(LogLevel.DEBUG, this.logLevel)) {
       if (context) {
-        this.pushLog(
-          `[DEBUG]: [${this.now()}] [${this.prefix}] ${message} ${
-            context ? JSON.stringify(context) : ""
-          }`
-        );
+        this.pushLog(`[DEBUG]: [${this.now()}] [${this.prefix}] ${message} ${context ? JSON.stringify(context) : ''}`);
       } else {
         this.pushLog(`[DEBUG]: [${this.now()}] [${this.prefix}] ${message}`);
       }

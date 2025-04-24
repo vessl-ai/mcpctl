@@ -1,7 +1,7 @@
-import { RegistryEntry } from "./registry";
+import { RegistryEntry } from './registry';
 type SearchResult = {
   entries: SearchResultEntry[];
-}
+};
 
 type SearchResultEntry = {
   registry: string;
@@ -10,11 +10,6 @@ type SearchResultEntry = {
   url: string;
   sourceUrl: string;
   entry: RegistryEntry;
-}
-
-
-export {
-  SearchResult,
-  SearchResultEntry
 };
 
+export { SearchResult, SearchResultEntry };

@@ -1,11 +1,11 @@
-import { ChildProcess } from "child_process";
-import { RunConfig } from "./run-config";
+import { ChildProcess } from 'child_process';
+import { RunConfig } from './run-config';
 
 export enum McpServerInstanceStatus {
-  STARTING = "starting",
-  RUNNING = "running",
-  STOPPED = "stopped",
-  FAILED = "failed",
+  STARTING = 'starting',
+  RUNNING = 'running',
+  STOPPED = 'stopped',
+  FAILED = 'failed',
 }
 
 export type McpServerInstanceConnectionInfo = {

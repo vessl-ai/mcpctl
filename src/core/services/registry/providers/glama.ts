@@ -1,7 +1,7 @@
-import axios from "axios";
-import { McpServerHostingType } from "../../../../lib/types/hosting";
-import { RegistryEntry } from "../../../lib/types/registry";
-import { RegistryProvider } from "./index";
+import axios from 'axios';
+import { McpServerHostingType } from '../../../../lib/types/hosting';
+import { RegistryEntry } from '../../../lib/types/registry';
+import { RegistryProvider } from './index';
 
 interface GlamaMcpServer {
   id: string;
@@ -31,12 +31,9 @@ interface GlamaSearchResponse {
 type GlamaRegistryEntry = RegistryEntry & {};
 
 class GlamaRegistryProvider implements RegistryProvider {
-  private readonly ENDPOINT = "https://glama.ai/api/mcp/v1/servers";
+  private readonly ENDPOINT = 'https://glama.ai/api/mcp/v1/servers';
 
-  async findEntriesByQuery(
-    query: string,
-    limit?: number
-  ): Promise<RegistryEntry[]> {
+  async findEntriesByQuery(query: string, limit?: number): Promise<RegistryEntry[]> {
     try {
       const response = await axios.get<GlamaSearchResponse>(this.ENDPOINT, {
         params: {
@@ -45,7 +42,7 @@ class GlamaRegistryProvider implements RegistryProvider {
         },
       });
 
-      return response.data.servers.map((server) => ({
+      return response.data.servers.map(server => ({
         name: server.name,
         description: server.description,
         url: server.url,
@@ -53,7 +50,7 @@ class GlamaRegistryProvider implements RegistryProvider {
         repository: server.repository?.url,
         license: server.spdxLicense?.name,
         attributes: server.attributes,
-        hosting: server.attributes.includes("hosting:remote-capable")
+        hosting: server.attributes.includes('hosting:remote-capable')
           ? McpServerHostingType.REMOTE
           : McpServerHostingType.LOCAL,
       }));
@@ -65,16 +62,13 @@ class GlamaRegistryProvider implements RegistryProvider {
     }
   }
 
-  async findEntriesBySemanticQuery(
-    query: string,
-    limit?: number
-  ): Promise<RegistryEntry[]> {
-    throw new Error("Semantic search not supported by Glama API");
+  async findEntriesBySemanticQuery(query: string, limit?: number): Promise<RegistryEntry[]> {
+    throw new Error('Semantic search not supported by Glama API');
   }
 
   async findEntryByName(name: string, limit?: number): Promise<RegistryEntry> {
     const entries = await this.findEntriesByQuery(name, limit);
-    const exactMatch = entries.find((entry) => entry.name === name);
+    const exactMatch = entries.find(entry => entry.name === name);
 
     if (!exactMatch) {
       throw new Error(`No entry found with name: ${name}`);

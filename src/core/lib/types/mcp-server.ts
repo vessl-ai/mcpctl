@@ -1,5 +1,5 @@
 type McpServerInstallConfig = {
-  type: "stdio" | "sse";
+  type: 'stdio' | 'sse';
   serverName: string;
   command: string;
   env?: Record<string, string>;
@@ -13,8 +13,8 @@ type McpServerConfig = {
 };
 
 enum McpServerType {
-  STDIO = "stdio",
-  SSE = "sse",
+  STDIO = 'stdio',
+  SSE = 'sse',
 }
 
 type McpServerConfigBody = {
@@ -30,9 +30,4 @@ type McpServerConfigBody = {
   headers?: Record<string, string>;
 };
 
-export {
-  McpServerConfig,
-  McpServerConfigBody,
-  McpServerInstallConfig,
-  McpServerType,
-};
+export { McpServerConfig, McpServerConfigBody, McpServerInstallConfig, McpServerType };

@@ -1,12 +1,9 @@
-import arg from "arg";
-import chalk from "chalk";
-import Table from "cli-table3";
-import { CliError } from "../../../lib/errors";
-import {
-  McpServerInstance,
-  McpServerInstanceStatus,
-} from "../../../lib/types/instance";
-import { App } from "../../app";
+import arg from 'arg';
+import chalk from 'chalk';
+import Table from 'cli-table3';
+import { CliError } from '../../../lib/errors';
+import { McpServerInstance, McpServerInstanceStatus } from '../../../lib/types/instance';
+import { App } from '../../app';
 
 const serverListCommandOptions = {};
 
@@ -26,13 +23,13 @@ const getStatusColor = (status: McpServerInstanceStatus): string => {
 };
 
 const formatDate = (dateStr: string): string => {
-  return new Date(dateStr).toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+  return new Date(dateStr).toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     hour12: false,
   });
 };
@@ -43,27 +40,19 @@ export const serverListCommand = async (app: App, argv: string[]) => {
   const logger = app.getLogger();
 
   try {
-    console.log(chalk.blue.bold("\n🖥  MCP Server List\n"));
+    console.log(chalk.blue.bold('\n🖥  MCP Server List\n'));
     const serverService = app.getServerService();
     const servers = await serverService.listServers();
 
     if (servers.length === 0) {
-      console.log(chalk.yellow("No servers found."));
+      console.log(chalk.yellow('No servers found.'));
       return;
     }
 
     const table = new Table({
-      head: [
-        "ID",
-        "SERVER_NAME",
-        "PROFILE",
-        "STATUS",
-        "MODE",
-        "TRANSPORT",
-        "SSE_ENDPOINT",
-        "PORT",
-        "CREATED AT",
-      ].map((header) => chalk.bold(header)),
+      head: ['ID', 'SERVER_NAME', 'PROFILE', 'STATUS', 'MODE', 'TRANSPORT', 'SSE_ENDPOINT', 'PORT', 'CREATED AT'].map(
+        header => chalk.bold(header)
+      ),
       style: {
         head: [],
         border: [],
@@ -86,7 +75,7 @@ export const serverListCommand = async (app: App, argv: string[]) => {
 
     console.log(table.toString());
   } catch (error: any) {
-    logger.error(chalk.red("Error fetching server list:"), error.message);
-    throw new CliError("Error fetching server list");
+    logger.error(chalk.red('Error fetching server list:'), error.message);
+    throw new CliError('Error fetching server list');
   }
 };

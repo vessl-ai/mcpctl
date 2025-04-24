@@ -1,4 +1,4 @@
-import { McpServerHostingType } from "../../../lib/types/hosting";
+import { McpServerHostingType } from '../../../lib/types/hosting';
 type RegistryDef = {
   name: string;
   url: string;
@@ -6,10 +6,10 @@ type RegistryDef = {
 };
 
 enum RegistryType {
-  GLAMA = "glama",
-  SMITHERY = "smithery",
-  GITHUB = "github",
-  CUSTOM = "custom",
+  GLAMA = 'glama',
+  SMITHERY = 'smithery',
+  GITHUB = 'github',
+  CUSTOM = 'custom',
 }
 
 // Base type for all registry entries

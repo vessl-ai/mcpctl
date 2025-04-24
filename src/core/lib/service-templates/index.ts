@@ -1,5 +1,5 @@
-import os from "os";
-import path from "path";
+import os from 'os';
+import path from 'path';
 
 export interface ServiceTemplateOptions {
   nodePath: string;
@@ -7,17 +7,15 @@ export interface ServiceTemplateOptions {
   logDir: string;
 }
 
-export function getMcpctldServiceTemplate(
-  options: ServiceTemplateOptions
-): string {
+export function getMcpctldServiceTemplate(options: ServiceTemplateOptions): string {
   const platform = os.platform();
 
   switch (platform) {
-    case "darwin":
+    case 'darwin':
       return getMacOSLaunchdTemplate(options);
-    case "linux":
+    case 'linux':
       return getLinuxSystemdTemplate(options);
-    case "win32":
+    case 'win32':
       return getWindowsServiceCommand(options);
     default:
       throw new Error(`Unsupported platform: ${platform}`);
@@ -41,9 +39,9 @@ function getMacOSLaunchdTemplate(options: ServiceTemplateOptions): string {
     <key>KeepAlive</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>${path.join(options.logDir, "daemon.error.log")}</string>
+    <string>${path.join(options.logDir, 'daemon.error.log')}</string>
     <key>StandardOutPath</key>
-    <string>${path.join(options.logDir, "daemon.log")}</string>
+    <string>${path.join(options.logDir, 'daemon.log')}</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
@@ -62,8 +60,8 @@ After=network.target
 ExecStart=${options.nodePath} ${options.daemonPath}
 Restart=always
 User=root
-StandardOutput=append:${path.join(options.logDir, "daemon.log")}
-StandardError=append:${path.join(options.logDir, "daemon.error.log")}
+StandardOutput=append:${path.join(options.logDir, 'daemon.log')}
+StandardError=append:${path.join(options.logDir, 'daemon.error.log')}
 
 [Install]
 WantedBy=multi-user.target`;
@@ -74,23 +72,23 @@ function getWindowsServiceCommand(options: ServiceTemplateOptions): string {
 }
 
 export const SERVICE_PATHS = {
-  darwin: "/Library/LaunchDaemons/com.mcpctl.daemon.plist",
-  linux: "/etc/systemd/system/mcpctld.service",
+  darwin: '/Library/LaunchDaemons/com.mcpctl.daemon.plist',
+  linux: '/etc/systemd/system/mcpctld.service',
 } as const;
 
 export const SERVICE_COMMANDS = {
   darwin: {
-    start: ["launchctl", "load", "-w", SERVICE_PATHS.darwin],
-    stop: ["launchctl", "unload", "-w", SERVICE_PATHS.darwin],
+    start: ['launchctl', 'load', '-w', SERVICE_PATHS.darwin],
+    stop: ['launchctl', 'unload', '-w', SERVICE_PATHS.darwin],
   },
   linux: {
-    start: ["systemctl", "start", "mcpctld"],
-    stop: ["systemctl", "stop", "mcpctld"],
-    reload: ["systemctl", "daemon-reload"],
-    enable: ["systemctl", "enable", "mcpctld"],
+    start: ['systemctl', 'start', 'mcpctld'],
+    stop: ['systemctl', 'stop', 'mcpctld'],
+    reload: ['systemctl', 'daemon-reload'],
+    enable: ['systemctl', 'enable', 'mcpctld'],
   },
   win32: {
-    start: ["net", "start", "mcpctld"],
-    stop: ["net", "stop", "mcpctld"],
+    start: ['net', 'start', 'mcpctld'],
+    stop: ['net', 'stop', 'mcpctld'],
   },
 } as const;

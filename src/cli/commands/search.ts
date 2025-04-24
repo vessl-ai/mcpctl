@@ -1,13 +1,13 @@
-import arg from "arg";
-import chalk from "chalk";
-import fs from "fs";
-import { OpenAI } from "openai";
-import os from "os";
-import path from "path";
-import readline from "readline/promises";
-import { SearchResult } from "../../core/lib/types/search-result";
-import { ValidationError } from "../../lib/errors";
-import { App } from "../app";
+import arg from 'arg';
+import chalk from 'chalk';
+import fs from 'fs';
+import { OpenAI } from 'openai';
+import os from 'os';
+import path from 'path';
+import readline from 'readline/promises';
+import { SearchResult } from '../../core/lib/types/search-result';
+import { ValidationError } from '../../lib/errors';
+import { App } from '../app';
 
 type EntryResultFormat = {
   name: string;
@@ -24,21 +24,24 @@ type RegistryResultFormat = {
 };
 
 const formatSearchResult = (result: SearchResult): RegistryResultFormat[] => {
-  const groupedResults = result.entries.reduce((acc, result) => {
-    const registry = result.registry || "unknown";
-    if (!acc[registry]) {
-      acc[registry] = [];
-    }
-    acc[registry].push({
-      name: result.name,
-      url: result.url,
-      description: result.description,
-      sourceUrl: result.sourceUrl,
-      hosting: result.entry.hosting,
-      attributes: result.entry.attributes,
-    });
-    return acc;
-  }, {} as Record<string, EntryResultFormat[]>);
+  const groupedResults = result.entries.reduce(
+    (acc, result) => {
+      const registry = result.registry || 'unknown';
+      if (!acc[registry]) {
+        acc[registry] = [];
+      }
+      acc[registry].push({
+        name: result.name,
+        url: result.url,
+        description: result.description,
+        sourceUrl: result.sourceUrl,
+        hosting: result.entry.hosting,
+        attributes: result.entry.attributes,
+      });
+      return acc;
+    },
+    {} as Record<string, EntryResultFormat[]>
+  );
 
   return Object.entries(groupedResults).map(([registry, items]) => ({
     registry,
@@ -48,29 +51,29 @@ const formatSearchResult = (result: SearchResult): RegistryResultFormat[] => {
 
 const printSearchResults = (results: RegistryResultFormat[]): void => {
   if (results.length === 0) {
-    console.log(chalk.yellow("\nNo results found."));
+    console.log(chalk.yellow('\nNo results found.'));
     return;
   }
 
-  console.log(chalk.bold("\nSearch Results:\n"));
+  console.log(chalk.bold('\nSearch Results:\n'));
 
-  results.forEach((registryResult) => {
+  results.forEach(registryResult => {
     console.log(chalk.bold.blue(`Registry: ${registryResult.registry}`));
 
     if (registryResult.items.length === 0) {
-      console.log(chalk.dim("  No matches found in this registry\n"));
+      console.log(chalk.dim('  No matches found in this registry\n'));
       return;
     }
 
-    registryResult.items.forEach((item) => {
+    registryResult.items.forEach(item => {
       console.log(chalk.bold.green(`\n  ${item.name}`));
-      console.log(chalk.dim("  Description:"));
+      console.log(chalk.dim('  Description:'));
       console.log(`    ${item.description}`);
-      console.log(chalk.dim("  Hosting:"));
-      console.log(`    ${item.hosting || "Not specified"}`);
-      console.log(chalk.dim("  Attributes:"));
-      console.log(`    ${item.attributes?.join(", ") || "None"}`);
-      console.log(chalk.dim("  URLs:"));
+      console.log(chalk.dim('  Hosting:'));
+      console.log(`    ${item.hosting || 'Not specified'}`);
+      console.log(chalk.dim('  Attributes:'));
+      console.log(`    ${item.attributes?.join(', ') || 'None'}`);
+      console.log(chalk.dim('  URLs:'));
       console.log(`    Main URL:     ${chalk.cyan(item.url)}`);
       console.log(`    Source URL:   ${chalk.cyan(item.sourceUrl)}`);
     });
@@ -79,20 +82,20 @@ const printSearchResults = (results: RegistryResultFormat[]): void => {
 };
 
 const searchCommandOptions = {
-  "--registry": String,
-  "--query": String,
-  "--name": String,
-  "--semantic": Boolean,
-  "--limit": Number,
-  "--help": Boolean,
-  "--use-llm-interactive": Boolean,
-  "-r": "--registry",
-  "-q": "--query",
-  "-n": "--name",
-  "-s": "--semantic",
-  "-l": "--limit",
-  "-h": "--help",
-  "-i": "--use-llm-interactive",
+  '--registry': String,
+  '--query': String,
+  '--name': String,
+  '--semantic': Boolean,
+  '--limit': Number,
+  '--help': Boolean,
+  '--use-llm-interactive': Boolean,
+  '-r': '--registry',
+  '-q': '--query',
+  '-n': '--name',
+  '-s': '--semantic',
+  '-l': '--limit',
+  '-h': '--help',
+  '-i': '--use-llm-interactive',
 };
 
 export const searchCommand = async (app: App, argv: string[]) => {
@@ -100,41 +103,37 @@ export const searchCommand = async (app: App, argv: string[]) => {
 
   const logger = app.getLogger();
 
-  const help = options["--help"];
-  const useLLMInteractive = options["--use-llm-interactive"];
+  const help = options['--help'];
+  const useLLMInteractive = options['--use-llm-interactive'];
 
-  let registry = options["--registry"];
-  let query = options["--query"];
-  let name = options["--name"];
-  let semantic = options["--semantic"];
-  let limit = options["--limit"] || 10;
+  let registry = options['--registry'];
+  let query = options['--query'];
+  let name = options['--name'];
+  let semantic = options['--semantic'];
+  let limit = options['--limit'] || 10;
 
   if (help) {
-    console.log(chalk.bold("Search Command Help"));
-    console.log(chalk.dim("Usage: mcpctl search [options]"));
+    console.log(chalk.bold('Search Command Help'));
+    console.log(chalk.dim('Usage: mcpctl search [options]'));
     console.log();
-    console.log(chalk.dim("Options:"));
-    console.log(chalk.dim("  -r, --registry: The registry to search in"));
-    console.log(chalk.dim("  -q, --query: The query to search for"));
-    console.log(
-      chalk.dim("  -n, --name: The name of the MCP server to search for")
-    );
-    console.log(chalk.dim("  -s, --semantic: Use semantic search"));
-    console.log(chalk.dim("  -l, --limit: The number of results to return"));
-    console.log(chalk.dim("  -h, --help: Show this help message"));
+    console.log(chalk.dim('Options:'));
+    console.log(chalk.dim('  -r, --registry: The registry to search in'));
+    console.log(chalk.dim('  -q, --query: The query to search for'));
+    console.log(chalk.dim('  -n, --name: The name of the MCP server to search for'));
+    console.log(chalk.dim('  -s, --semantic: Use semantic search'));
+    console.log(chalk.dim('  -l, --limit: The number of results to return'));
+    console.log(chalk.dim('  -h, --help: Show this help message'));
     return;
   }
 
   if (!name && !query) {
-    logger.error(chalk.red("Error: Either name or query must be provided"));
-    throw new ValidationError("Error: Either name or query must be provided");
+    logger.error(chalk.red('Error: Either name or query must be provided'));
+    throw new ValidationError('Error: Either name or query must be provided');
   }
 
   if (name && query) {
-    logger.error(chalk.red("Error: Only one of name or query can be provided"));
-    throw new ValidationError(
-      "Error: Only one of name or query can be provided"
-    );
+    logger.error(chalk.red('Error: Only one of name or query can be provided'));
+    throw new ValidationError('Error: Only one of name or query can be provided');
   }
 
   try {
@@ -143,40 +142,24 @@ export const searchCommand = async (app: App, argv: string[]) => {
 
     if (registry) {
       if (semantic) {
-        logger.error(chalk.red("Error: Semantic search is not supported yet"));
-        throw new ValidationError(
-          "Error: Semantic search is not supported yet"
-        );
+        logger.error(chalk.red('Error: Semantic search is not supported yet'));
+        throw new ValidationError('Error: Semantic search is not supported yet');
       } else {
         if (query) {
-          searchResult = await searchService.searchByQueryForRegistry(
-            registry,
-            query,
-            limit
-          );
+          searchResult = await searchService.searchByQueryForRegistry(registry, query, limit);
         }
         if (name) {
-          searchResult = await searchService.searchByRegistryAndName(
-            registry,
-            name,
-            limit
-          );
+          searchResult = await searchService.searchByRegistryAndName(registry, name, limit);
         }
       }
     } else {
       if (semantic) {
-        logger.error(chalk.red("Error: Semantic search is not supported yet"));
-        throw new ValidationError(
-          "Error: Semantic search is not supported yet"
-        );
+        logger.error(chalk.red('Error: Semantic search is not supported yet'));
+        throw new ValidationError('Error: Semantic search is not supported yet');
       } else {
         if (name) {
-          logger.error(
-            chalk.red("Error: Name search is not supported for all registries")
-          );
-          throw new ValidationError(
-            "Error: Name search is not supported for all registries"
-          );
+          logger.error(chalk.red('Error: Name search is not supported for all registries'));
+          throw new ValidationError('Error: Name search is not supported for all registries');
         }
         if (query) {
           searchResult = await searchService.searchByQuery(query);
@@ -188,25 +171,17 @@ export const searchCommand = async (app: App, argv: string[]) => {
       const formattedResults = formatSearchResult(searchResult);
       printSearchResults(formattedResults);
     } else {
-      console.log(chalk.yellow("\nNo results found."));
+      console.log(chalk.yellow('\nNo results found.'));
     }
 
     if (useLLMInteractive) {
-      console.log(
-        chalk.bgGreen("Entering LLM interactive mode, query about results")
-      );
+      console.log(chalk.bgGreen('Entering LLM interactive mode, query about results'));
       const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
       if (!OPENAI_API_KEY) {
-        logger.error(
-          chalk.red(
-            "Error: OPENAI_API_KEY is not set, currently only supports OPENAI"
-          )
-        );
-        throw new ValidationError(
-          "Error: OPENAI_API_KEY is not set, currently only supports OPENAI"
-        );
+        logger.error(chalk.red('Error: OPENAI_API_KEY is not set, currently only supports OPENAI'));
+        throw new ValidationError('Error: OPENAI_API_KEY is not set, currently only supports OPENAI');
       }
-      const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+      const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
       const client = new OpenAI({
         apiKey: OPENAI_API_KEY,
@@ -220,7 +195,7 @@ export const searchCommand = async (app: App, argv: string[]) => {
 
       const thread = await client.beta.threads.create();
       await client.beta.threads.messages.create(thread.id, {
-        role: "user",
+        role: 'user',
         content: `Here are the search results:
         ${JSON.stringify(searchResult)}
         `,
@@ -232,10 +207,8 @@ export const searchCommand = async (app: App, argv: string[]) => {
       });
       let finishInteractive = false;
       while (!finishInteractive) {
-        const userQuestion = await prompt.question(
-          chalk.bgYellow("Enter your question (type 'q' to quit): ")
-        );
-        if (userQuestion === "q") {
+        const userQuestion = await prompt.question(chalk.bgYellow("Enter your question (type 'q' to quit): "));
+        if (userQuestion === 'q') {
           finishInteractive = true;
           break;
         }
@@ -266,7 +239,7 @@ export const searchCommand = async (app: App, argv: string[]) => {
         //   ],
         // });
         const response = await client.beta.threads.messages.create(thread.id, {
-          role: "user",
+          role: 'user',
           content: userQuestion,
         });
 
@@ -274,18 +247,12 @@ export const searchCommand = async (app: App, argv: string[]) => {
           assistant_id: assistant.id,
         });
 
-        if (run.status === "completed") {
-          const messages = await client.beta.threads.messages.list(
-            run.thread_id
-          );
+        if (run.status === 'completed') {
+          const messages = await client.beta.threads.messages.list(run.thread_id);
 
-          const outputMessage = messages.data.filter(
-            (item) => item.role === "assistant"
-          )[0];
+          const outputMessage = messages.data.filter(item => item.role === 'assistant')[0];
           if (outputMessage) {
-            const outputText = outputMessage.content.filter(
-              (item) => item.type === "text"
-            );
+            const outputText = outputMessage.content.filter(item => item.type === 'text');
             if (outputText && outputText.length > 0) {
               console.log(chalk.bold(outputText[0].text.value));
             }
@@ -305,24 +272,14 @@ export const searchCommand = async (app: App, argv: string[]) => {
           //     });
           //   }
         } else {
-          console.log(chalk.red("Error: Failed to get the response"));
+          console.log(chalk.red('Error: Failed to get the response'));
         }
       }
       prompt.close();
     }
   } catch (error) {
-    logger.error(
-      chalk.red(
-        `\nError: ${
-          error instanceof Error ? error.message : "An unknown error occurred"
-        }`
-      )
-    );
-    throw new ValidationError(
-      `Error: ${
-        error instanceof Error ? error.message : "An unknown error occurred"
-      }`
-    );
+    logger.error(chalk.red(`\nError: ${error instanceof Error ? error.message : 'An unknown error occurred'}`));
+    throw new ValidationError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
   }
 };
 function loadSystemPrompt() {
@@ -333,16 +290,12 @@ function loadSystemPrompt() {
           You MUST acquire the excution command (start with npx or docker) for the mcp server.
            `;
   const systemPromptFilePath =
-    process.env.MCPCTL_ASSISTANT_PROMPT_FILE ||
-    path.join(os.homedir(), ".mcpctl", "assistant_prompt.json");
+    process.env.MCPCTL_ASSISTANT_PROMPT_FILE || path.join(os.homedir(), '.mcpctl', 'assistant_prompt.json');
   if (fs.existsSync(systemPromptFilePath)) {
-    const systemPromptFile = fs.readFileSync(systemPromptFilePath, "utf8");
+    const systemPromptFile = fs.readFileSync(systemPromptFilePath, 'utf8');
     if (systemPromptFile) {
       const systemPromptJson = JSON.parse(systemPromptFile);
-      if (
-        systemPromptJson.searchAssistantPrompt &&
-        systemPromptJson.searchAssistantPrompt.length > 0
-      ) {
+      if (systemPromptJson.searchAssistantPrompt && systemPromptJson.searchAssistantPrompt.length > 0) {
         systemPrompt = systemPromptJson.searchAssistantPrompt;
       }
     }

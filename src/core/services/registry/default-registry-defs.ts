@@ -1,11 +1,11 @@
-import { RegistryType } from "../../lib/types/registry";
+import { RegistryType } from '../../lib/types/registry';
 
-import { RegistryDef } from "../../lib/types/registry";
+import { RegistryDef } from '../../lib/types/registry';
 
 const defaultRegistryDefs: RegistryDef[] = [
   {
-    name: "glama",
-    url: "https://glama.ai/mcp/servers.data",
+    name: 'glama',
+    url: 'https://glama.ai/mcp/servers.data',
     knownType: RegistryType.GLAMA,
   },
   // {

@@ -1,6 +1,6 @@
-import { McpServerType } from "./mcp-server";
-import { RegistryDef } from "./registry";
-import { SecretReference, SharedSecretsConfig } from "./secret";
+import { McpServerType } from './mcp-server';
+import { RegistryDef } from './registry';
+import { SecretReference, SharedSecretsConfig } from './secret';
 
 export type Config = {
   // Profile

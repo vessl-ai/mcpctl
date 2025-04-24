@@ -11,13 +11,13 @@ describe('RegistryService', () => {
   const mockRegistryDef: RegistryDef = {
     name: 'test-registry',
     url: 'https://test.registry',
-    knownType: RegistryType.GLAMA
+    knownType: RegistryType.GLAMA,
   };
 
   const mockRegistryProvider: RegistryProvider = {
     findEntryByName: jest.fn(),
     findEntriesByQuery: jest.fn(),
-    findEntriesBySemanticQuery: jest.fn()
+    findEntriesBySemanticQuery: jest.fn(),
   };
 
   beforeEach(() => {
@@ -25,11 +25,11 @@ describe('RegistryService', () => {
       getRegistryDef: jest.fn(),
       addRegistryDef: jest.fn(),
       listRegistryDefs: jest.fn(),
-      deleteRegistryDef: jest.fn()
+      deleteRegistryDef: jest.fn(),
     } as jest.Mocked<RegistryDefStore>;
 
     registryProviderFactory = {
-      createOrGetRegistryProvider: jest.fn()
+      createOrGetRegistryProvider: jest.fn(),
     } as jest.Mocked<RegistryProviderFactory>;
 
     registryDefStore.getRegistryDef.mockReturnValue(mockRegistryDef);
@@ -53,7 +53,7 @@ describe('RegistryService', () => {
       const newRegistry: RegistryDef = {
         name: 'new-registry',
         url: 'https://new.registry',
-        knownType: RegistryType.GLAMA
+        knownType: RegistryType.GLAMA,
       };
 
       registryService.addRegistryDef(newRegistry);
@@ -96,4 +96,4 @@ describe('RegistryService', () => {
       expect(registryDefStore.deleteRegistryDef).toHaveBeenCalledWith('test-registry');
     });
   });
-}); 
+});

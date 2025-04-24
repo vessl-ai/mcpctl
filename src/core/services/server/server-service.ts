@@ -1,6 +1,6 @@
-import { Logger } from "../../../lib/logger/logger";
-import { McpServerInstance } from "../../../lib/types/instance";
-import { DaemonRPCClient } from "../../lib/rpc/client";
+import { Logger } from '../../../lib/logger/logger';
+import { McpServerInstance } from '../../../lib/types/instance';
+import { DaemonRPCClient } from '../../lib/rpc/client';
 
 export interface ServerService {
   listServers(): Promise<McpServerInstance[]>;
@@ -17,7 +17,7 @@ class DefaultServerService implements ServerService {
       const instances = await daemonClient.listInstances();
       return instances;
     } catch (error) {
-      console.error("Error listing servers:", error);
+      console.error('Error listing servers:', error);
       throw error;
     } finally {
       if (daemonClient) {
@@ -32,7 +32,7 @@ class DefaultServerService implements ServerService {
       daemonClient = await DaemonRPCClient.getInstance(this.logger);
       await daemonClient.stopInstance(instanceId);
     } catch (error) {
-      console.error("Error stopping server:", error);
+      console.error('Error stopping server:', error);
       throw error;
     } finally {
       if (daemonClient) {

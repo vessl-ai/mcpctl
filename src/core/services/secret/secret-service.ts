@@ -1,21 +1,15 @@
-import { Logger } from "../../../lib/logger/logger";
-import { SECRET_STORE } from "../../lib/constants";
-import { ServerEnvConfig } from "../../lib/types/config";
-import { SecretReference, SharedSecretsConfig } from "../../lib/types/secret";
-import { ConfigService } from "../config/config-service";
-import { SecretStore } from "./secret-store";
-import { normalizeSecretKey } from "./util";
+import { Logger } from '../../../lib/logger/logger';
+import { SECRET_STORE } from '../../lib/constants';
+import { ServerEnvConfig } from '../../lib/types/config';
+import { SecretReference, SharedSecretsConfig } from '../../lib/types/secret';
+import { ConfigService } from '../config/config-service';
+import { SecretStore } from './secret-store';
+import { normalizeSecretKey } from './util';
 export interface SecretService {
   // 공용 시크릿 관리
   getSharedSecret(key: string): Promise<string | null>;
-  setSharedSecret(
-    key: string,
-    value: string,
-    description?: string
-  ): Promise<void>;
-  setSharedSecrets(
-    secrets: Record<string, string>
-  ): Promise<Record<string, SecretReference>>;
+  setSharedSecret(key: string, value: string, description?: string): Promise<void>;
+  setSharedSecrets(secrets: Record<string, string>): Promise<Record<string, SecretReference>>;
   removeSharedSecret(key: string): Promise<void>;
   listSharedSecrets(): Record<string, SecretReference>;
 
@@ -25,10 +19,7 @@ export interface SecretService {
   removeProfileSecret(profile: string, key: string): Promise<void>;
 
   // 환경변수 해석 (시크릿 포함)
-  resolveEnv(
-    envConfig: ServerEnvConfig,
-    profile?: string
-  ): Promise<Record<string, string>>;
+  resolveEnv(envConfig: ServerEnvConfig, profile?: string): Promise<Record<string, string>>;
 }
 
 export class SecretServiceImpl implements SecretService {
@@ -42,11 +33,7 @@ export class SecretServiceImpl implements SecretService {
     return this.secretStore.getSecret(SECRET_STORE.SHARED_PROFILE, key);
   }
 
-  async setSharedSecret(
-    key: string,
-    value: string,
-    description?: string
-  ): Promise<void> {
+  async setSharedSecret(key: string, value: string, description?: string): Promise<void> {
     // 시크릿 값 저장
     await this.secretStore.setSecret(SECRET_STORE.SHARED_PROFILE, key, value);
 
@@ -65,20 +52,14 @@ export class SecretServiceImpl implements SecretService {
     });
   }
 
-  async setSharedSecrets(
-    secrets: Record<string, string>
-  ): Promise<Record<string, SecretReference>> {
+  async setSharedSecrets(secrets: Record<string, string>): Promise<Record<string, SecretReference>> {
     const config = this.configService.getConfig();
     const secretConfig: SharedSecretsConfig = config.secrets || { shared: {} };
 
     const addedSecrets: Record<string, SecretReference> = {};
     for (const [key, value] of Object.entries(secrets)) {
       const secretKey = normalizeSecretKey(key);
-      await this.secretStore.setSecret(
-        SECRET_STORE.SHARED_PROFILE,
-        secretKey,
-        value
-      );
+      await this.secretStore.setSecret(SECRET_STORE.SHARED_PROFILE, secretKey, value);
 
       secretConfig.shared[key] = {
         key: secretKey,
@@ -121,11 +102,7 @@ export class SecretServiceImpl implements SecretService {
     return this.secretStore.getSecret(profile, key);
   }
 
-  async setProfileSecret(
-    profile: string,
-    key: string,
-    value: string
-  ): Promise<void> {
+  async setProfileSecret(profile: string, key: string, value: string): Promise<void> {
     await this.secretStore.setSecret(profile, key, value);
   }
 
@@ -133,10 +110,7 @@ export class SecretServiceImpl implements SecretService {
     await this.secretStore.removeSecret(profile, key);
   }
 
-  async resolveEnv(
-    envConfig: ServerEnvConfig,
-    profile?: string
-  ): Promise<Record<string, string>> {
+  async resolveEnv(envConfig: ServerEnvConfig, profile?: string): Promise<Record<string, string>> {
     const result: Record<string, string> = {
       ...(this.configService.getConfig().sharedEnv || {}), // 공용 env 먼저
       ...(envConfig.env || {}), // 프로필별 env로 오버라이드
@@ -160,12 +134,10 @@ export class SecretServiceImpl implements SecretService {
     if (profile) {
       // 프로필별 시크릿으로 오버라이드
       const profileSecretEntries = await Promise.all(
-        Object.entries(envConfig.secrets || {}).map(
-          async ([envKey, secretRef]) => {
-            const value = await this.getProfileSecret(profile, secretRef.key);
-            return value ? [envKey, value] : null;
-          }
-        )
+        Object.entries(envConfig.secrets || {}).map(async ([envKey, secretRef]) => {
+          const value = await this.getProfileSecret(profile, secretRef.key);
+          return value ? [envKey, value] : null;
+        })
       );
 
       profileSecretEntries

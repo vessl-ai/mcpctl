@@ -1,7 +1,7 @@
-import { Profile } from "../../lib/types/profile";
+import { Profile } from '../../lib/types/profile';
 
 const defaultProfile: Profile = {
-  name: "default",
+  name: 'default',
   servers: {},
 };
 

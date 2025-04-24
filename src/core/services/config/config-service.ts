@@ -1,6 +1,6 @@
-import { Config } from "../../lib/types/config";
-import { ConfigStore } from "./config-store";
-import { defaultConfig } from "./default-config";
+import { Config } from '../../lib/types/config';
+import { ConfigStore } from './config-store';
+import { defaultConfig } from './default-config';
 interface ConfigService {
   getConfig: () => Config;
   getConfigSection<T extends keyof Config>(section: T): Config[T];
@@ -9,7 +9,6 @@ interface ConfigService {
 }
 
 class ConfigServiceImpl implements ConfigService {
-
   private config: Config;
 
   constructor(
@@ -43,15 +42,10 @@ class ConfigServiceImpl implements ConfigService {
     this.config = { ...this.config, ...config };
     this.configStore.saveConfig(this.config);
   }
-
 }
 
 const newConfigService = (configStore: ConfigStore, initialConfig?: Config): ConfigService => {
   return new ConfigServiceImpl(configStore, initialConfig);
-}
-
-export {
-  ConfigService,
-  ConfigServiceImpl,
-  newConfigService
 };
+
+export { ConfigService, ConfigServiceImpl, newConfigService };

@@ -1,6 +1,5 @@
-
 export type DaemonStatus = {
-    isRunning: boolean;
-    version: string;
-    uptime: number;
-}
+  isRunning: boolean;
+  version: string;
+  uptime: number;
+};

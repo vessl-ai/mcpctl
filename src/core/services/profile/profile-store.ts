@@ -1,8 +1,8 @@
-import fs from "fs";
-import path from "path";
-import { getProfileDir } from "../../lib/env";
-import { Profile } from "../../lib/types/profile";
-import { defaultProfile } from "./default-profile";
+import fs from 'fs';
+import path from 'path';
+import { getProfileDir } from '../../lib/env';
+import { Profile } from '../../lib/types/profile';
+import { defaultProfile } from './default-profile';
 
 interface ProfileStore {
   exists: (name: string) => boolean;
@@ -18,12 +18,9 @@ class ProfileStoreImpl implements ProfileStore {
     if (!fs.existsSync(this.profileDir)) {
       fs.mkdirSync(this.profileDir, { recursive: true });
     }
-    const defaultProfilePath = path.join(this.profileDir, "default.json");
+    const defaultProfilePath = path.join(this.profileDir, 'default.json');
     if (!fs.existsSync(defaultProfilePath)) {
-      fs.writeFileSync(
-        defaultProfilePath,
-        JSON.stringify(defaultProfile, null, 2)
-      );
+      fs.writeFileSync(defaultProfilePath, JSON.stringify(defaultProfile, null, 2));
     }
   }
 
@@ -37,22 +34,19 @@ class ProfileStoreImpl implements ProfileStore {
   }
 
   loadProfile(name: string): Profile {
-    return JSON.parse(fs.readFileSync(this.getProfilePath(name), "utf8"));
+    return JSON.parse(fs.readFileSync(this.getProfilePath(name), 'utf8'));
   }
 
   saveProfile(name: string, profile: Profile): void {
-    fs.writeFileSync(
-      this.getProfilePath(name),
-      JSON.stringify(profile, null, 2)
-    );
+    fs.writeFileSync(this.getProfilePath(name), JSON.stringify(profile, null, 2));
   }
 
   listProfileNames(): string[] {
-    return fs.readdirSync(this.profileDir).map((name) => name.split(".")[0]);
+    return fs.readdirSync(this.profileDir).map(name => name.split('.')[0]);
   }
 
   listProfiles(): Profile[] {
-    return this.listProfileNames().map((name) => this.loadProfile(name));
+    return this.listProfileNames().map(name => this.loadProfile(name));
   }
 
   deleteProfile(name: string): void {

@@ -1,5 +1,5 @@
-import { GLOBAL_CONSTANTS } from "../constants";
-import { GLOBAL_ENV } from "../env";
+import { GLOBAL_CONSTANTS } from '../constants';
+import { GLOBAL_ENV } from '../env';
 
 export interface Logger {
   verbose(message: string, context?: Record<string, any>): void;
@@ -11,25 +11,16 @@ export interface Logger {
 }
 
 export enum LogLevel {
-  VERBOSE = "VERBOSE",
-  DEBUG = "DEBUG",
-  INFO = "INFO",
-  WARN = "WARN",
-  ERROR = "ERROR",
+  VERBOSE = 'VERBOSE',
+  DEBUG = 'DEBUG',
+  INFO = 'INFO',
+  WARN = 'WARN',
+  ERROR = 'ERROR',
 }
 
-const logLevelOrder = [
-  LogLevel.VERBOSE,
-  LogLevel.DEBUG,
-  LogLevel.INFO,
-  LogLevel.WARN,
-  LogLevel.ERROR,
-];
+const logLevelOrder = [LogLevel.VERBOSE, LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
 
-export const verboseToLogLevel = (
-  number: number | undefined,
-  defaultLevel: LogLevel = LogLevel.INFO
-): LogLevel => {
+export const verboseToLogLevel = (number: number | undefined, defaultLevel: LogLevel = LogLevel.INFO): LogLevel => {
   if (!number) {
     return defaultLevel;
   }
@@ -57,19 +48,13 @@ export const maskSecret = (message: string): string => {
     message.includes(GLOBAL_CONSTANTS.SECRET_TAG_END)
   ) {
     return message.replace(
-      new RegExp(
-        `${GLOBAL_CONSTANTS.SECRET_TAG_START}.*?${GLOBAL_CONSTANTS.SECRET_TAG_END}`,
-        "g"
-      ),
+      new RegExp(`${GLOBAL_CONSTANTS.SECRET_TAG_START}.*?${GLOBAL_CONSTANTS.SECRET_TAG_END}`, 'g'),
       GLOBAL_CONSTANTS.SECRET_MASK
     );
   } else {
     return message.replace(
-      new RegExp(
-        `${GLOBAL_CONSTANTS.SECRET_TAG_START}|${GLOBAL_CONSTANTS.SECRET_TAG_END}`,
-        "g"
-      ),
-      ""
+      new RegExp(`${GLOBAL_CONSTANTS.SECRET_TAG_START}|${GLOBAL_CONSTANTS.SECRET_TAG_END}`, 'g'),
+      ''
     );
   }
 };
@@ -79,7 +64,7 @@ export abstract class LoggerBase implements Logger {
   protected readonly logLevel: LogLevel;
 
   constructor(config?: LoggerConfig) {
-    this.prefix = config?.prefix ?? "";
+    this.prefix = config?.prefix ?? '';
     this.logLevel = config?.logLevel ?? LogLevel.INFO;
   }
 
@@ -94,10 +79,7 @@ export abstract class LoggerBase implements Logger {
     return `${originalPrefix}:${newPrefix}`;
   }
 
-  protected isLogLevelEnabled = (
-    logLevel: LogLevel,
-    currentLogLevel: LogLevel
-  ): boolean => {
+  protected isLogLevelEnabled = (logLevel: LogLevel, currentLogLevel: LogLevel): boolean => {
     const index = logLevelOrder.indexOf(logLevel);
     const currentIndex = logLevelOrder.indexOf(currentLogLevel);
     return index >= currentIndex;

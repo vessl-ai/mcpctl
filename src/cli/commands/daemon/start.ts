@@ -1,21 +1,19 @@
-import { spawn } from "child_process";
-import fs from "fs";
-import os from "os";
-import path from "path";
+import { execSync, spawn } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
   getMcpctldServiceTemplate,
   SERVICE_COMMANDS,
   SERVICE_PATHS,
   type ServiceTemplateOptions,
-} from "../../../core/lib/service-templates";
-import { CliError } from "../../../lib/errors";
-import { App } from "../../app";
+} from '../../../core/lib/service-templates';
+import { CliError } from '../../../lib/errors';
+import { App } from '../../app';
 
 const checkSudoPrivileges = () => {
   if (process.getuid && process.getuid() !== 0) {
-    throw new Error(
-      "This command requires root privileges. Please run with sudo."
-    );
+    throw new Error('This command requires root privileges. Please run with sudo.');
   }
 };
 
@@ -24,15 +22,15 @@ const createLogDirectories = () => {
   let logDir: string;
 
   switch (platform) {
-    case "darwin":
-    case "linux":
-      logDir = "/var/log/mcpctl";
+    case 'darwin':
+    case 'linux':
+      logDir = '/var/log/mcpctl';
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
       }
       break;
-    case "win32":
-      logDir = "C:\\ProgramData\\mcpctl\\logs";
+    case 'win32':
+      logDir = 'C:\\ProgramData\\mcpctl\\logs';
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
       }
@@ -48,18 +46,11 @@ const setupDaemonService = () => {
   const logDir = createLogDirectories();
 
   // node 실행 파일의 전체 경로 찾기
-  const { execSync } = require("child_process");
-  const nodePath =
-    platform === "win32"
-      ? process.execPath
-      : execSync("which node").toString().trim();
+  const nodePath = platform === 'win32' ? process.execPath : execSync('which node').toString().trim();
   const daemonPath =
-    platform === "win32"
-      ? path.join(
-          process.execPath,
-          "../../lib/node_modules/mcpctl/dist/mcpctld.js"
-        )
-      : "/usr/local/bin/mcpctld";
+    platform === 'win32'
+      ? path.join(process.execPath, '../../lib/node_modules/mcpctl/dist/mcpctld.js')
+      : '/usr/local/bin/mcpctld';
 
   const templateOptions: ServiceTemplateOptions = {
     nodePath,
@@ -70,20 +61,20 @@ const setupDaemonService = () => {
   const serviceContent = getMcpctldServiceTemplate(templateOptions);
 
   // Windows는 서비스 생성 명령어를 반환하므로 별도 처리
-  if (platform === "win32") {
+  if (platform === 'win32') {
     execSync(serviceContent);
     return;
   }
 
   // Unix 시스템은 서비스 파일 생성
-  const servicePath = SERVICE_PATHS[platform as "darwin" | "linux"];
+  const servicePath = SERVICE_PATHS[platform as 'darwin' | 'linux'];
   fs.writeFileSync(servicePath, serviceContent);
-  fs.chmodSync(servicePath, "644");
+  fs.chmodSync(servicePath, '644');
 
   // Linux의 경우 systemctl reload 필요
-  if (platform === "linux") {
-    execSync(SERVICE_COMMANDS.linux.reload.join(" "));
-    execSync(SERVICE_COMMANDS.linux.enable.join(" "));
+  if (platform === 'linux') {
+    execSync(SERVICE_COMMANDS.linux.reload.join(' '));
+    execSync(SERVICE_COMMANDS.linux.enable.join(' '));
   }
 };
 
@@ -99,8 +90,7 @@ export const startCommand = async (app: App) => {
     setupDaemonService();
 
     // 서비스 시작
-    const commands =
-      SERVICE_COMMANDS[platform as keyof typeof SERVICE_COMMANDS];
+    const commands = SERVICE_COMMANDS[platform as keyof typeof SERVICE_COMMANDS];
     if (!commands) {
       logger.error(`Unsupported platform: ${platform}`);
       throw new Error(`Unsupported platform: ${platform}`);
@@ -109,24 +99,22 @@ export const startCommand = async (app: App) => {
     console.log(`Starting MCP daemon service on ${platform}...`);
     const [command, ...args] = commands.start;
     const child = spawn(command, args, {
-      stdio: "inherit",
+      stdio: 'inherit',
     });
 
     await new Promise((resolve, reject) => {
-      child.on("close", (code) => {
+      child.on('close', code => {
         if (code === 0) {
-          console.log("MCP daemon service started successfully");
+          console.log('MCP daemon service started successfully');
           resolve(undefined);
         } else {
           logger.error(`Failed to start MCP daemon service with code ${code}`);
-          reject(
-            new Error(`Failed to start MCP daemon service with code ${code}`)
-          );
+          reject(new Error(`Failed to start MCP daemon service with code ${code}`));
         }
       });
     });
   } catch (error) {
-    logger.error("Failed to start MCP daemon service:", { error });
-    throw new CliError("Failed to start MCP daemon service");
+    logger.error('Failed to start MCP daemon service:', { error });
+    throw new CliError('Failed to start MCP daemon service');
   }
 };

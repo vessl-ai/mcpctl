@@ -1,11 +1,8 @@
-import { Logger } from "../../../lib/logger/logger";
-import {
-  McpServerInstance,
-  McpServerInstanceStatus,
-} from "../../../lib/types/instance";
-import { getRunConfigId, RunConfig } from "../../../lib/types/run-config";
-import { ServerInstanceFactory } from "./server-instance-factory";
-import { BaseServerInstance } from "./server-instance-impl";
+import { Logger } from '../../../lib/logger/logger';
+import { McpServerInstance, McpServerInstanceStatus } from '../../../lib/types/instance';
+import { getRunConfigId, RunConfig } from '../../../lib/types/run-config';
+import { ServerInstanceFactory } from './server-instance-factory';
+import { BaseServerInstance } from './server-instance-impl';
 
 export interface ServerInstanceManager {
   validateConfig(config: RunConfig): Promise<boolean>;
@@ -26,10 +23,7 @@ export interface ServerInstanceManager {
   listInstances(): Promise<McpServerInstance[]>;
 
   // 인스턴스 상태 업데이트
-  updateInstanceStatus(
-    instanceId: string,
-    status: Partial<McpServerInstance>
-  ): Promise<void>;
+  updateInstanceStatus(instanceId: string, status: Partial<McpServerInstance>): Promise<void>;
 
   dispose(): Promise<void>;
 }
@@ -48,29 +42,25 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async validateConfig(config: RunConfig): Promise<boolean> {
-    this.logger.debug("Validating server instance config", { config });
+    this.logger.debug('Validating server instance config', { config });
 
     if (!config.profileName || config.profileName.length === 0) {
-      this.logger.error("Invalid Config Profile Name", { config });
+      this.logger.error('Invalid Config Profile Name', { config });
       return false;
     }
 
-    if (
-      !config.serverName ||
-      config.serverName.length === 0 ||
-      config.serverName.includes(" ")
-    ) {
-      this.logger.error("Invalid Config Server Name", { config });
+    if (!config.serverName || config.serverName.length === 0 || config.serverName.includes(' ')) {
+      this.logger.error('Invalid Config Server Name', { config });
       return false;
     }
 
     if (!config.command || config.command.length === 0) {
-      this.logger.error("Invalid Config Command", { config });
+      this.logger.error('Invalid Config Command', { config });
       return false;
     }
 
     if (!getRunConfigId(config)) {
-      this.logger.error("Invalid Config Id", { config });
+      this.logger.error('Invalid Config Id', { config });
       return false;
     }
 
@@ -78,10 +68,10 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async startInstance(config: RunConfig): Promise<McpServerInstance> {
-    this.logger.info("Starting server instance", { config });
+    this.logger.info('Starting server instance', { config });
     if (!(await this.validateConfig(config))) {
-      const error = new Error("Invalid config");
-      this.logger.error("Config validation failed", { config });
+      const error = new Error('Invalid config');
+      this.logger.error('Config validation failed', { config });
       throw error;
     }
 
@@ -93,39 +83,36 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
 
         const existingInstance = this.configInstanceMap.get(configId);
         if (!existingInstance) {
-          this.logger.error("Existing instance not found", { configId });
+          this.logger.error('Existing instance not found', { configId });
           throw new Error(`Existing instance not found: ${configId}`);
         }
         if (existingInstance.status !== McpServerInstanceStatus.RUNNING) {
-          this.logger.info("Instance is not running, recreating instance", {
+          this.logger.info('Instance is not running, recreating instance', {
             existingInstance,
           });
           await this.stopInstance(existingInstance.id);
         } else {
-          this.logger.info("Instance is running, checking env configuration");
+          this.logger.info('Instance is running, checking env configuration');
           const existingEnv = existingInstance.config.env || {};
           const newEnv = config.env || {};
           const isEnvEqual =
             Object.keys(existingEnv).length === Object.keys(newEnv).length &&
-            Object.keys(existingEnv).every(
-              (key) => existingEnv[key] === newEnv[key]
-            );
+            Object.keys(existingEnv).every(key => existingEnv[key] === newEnv[key]);
 
           if (!isEnvEqual) {
-            this.logger.info(
-              "Environment configuration changed, recreating instance",
-              { configId }
-            );
+            this.logger.info('Environment configuration changed, recreating instance', {
+              configId,
+            });
             // 기존 인스턴스 정지는 백그라운드로 처리
-            this.stopInstance(configId).catch((err) => {
-              this.logger.error("Failed to stop instance in background:", {
+            this.stopInstance(configId).catch(err => {
+              this.logger.error('Failed to stop instance in background:', {
                 error: err,
                 configId,
               });
             });
             this.configInstanceMap.delete(configId);
           } else {
-            this.logger.info("Reusing existing instance", {
+            this.logger.info('Reusing existing instance', {
               configId,
             });
             return this.configInstanceMap.get(configId)!;
@@ -133,17 +120,13 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
         }
       }
 
-      this.logger.info("Creating new server instance", {
+      this.logger.info('Creating new server instance', {
         config,
       });
       // create server instance
-      const serverInstance =
-        await this.serverInstanceFactory.createServerInstance(
-          config,
-          this.logger
-        );
+      const serverInstance = await this.serverInstanceFactory.createServerInstance(config, this.logger);
 
-      this.logger.info("Starting server instance process", {
+      this.logger.info('Starting server instance process', {
         instanceId: serverInstance.id,
       });
       await serverInstance.start();
@@ -159,7 +142,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       this.configInstanceMap.set(configId, serverInstance);
       this.instances.set(serverInstance.id, serverInstance);
 
-      this.logger.debug("Instance registered in manager", {
+      this.logger.debug('Instance registered in manager', {
         instanceId: serverInstance.id,
         configId,
         status: serverInstance.status,
@@ -167,13 +150,13 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
 
       return serverInstance;
     } catch (error) {
-      this.logger.error("Failed to start instance:", { error, configId });
+      this.logger.error('Failed to start instance:', { error, configId });
       throw error;
     }
   }
 
   async stopInstance(instanceId: string): Promise<void> {
-    this.logger.info("Stopping server instance", { instanceId });
+    this.logger.info('Stopping server instance', { instanceId });
 
     const instance = this.instances.get(instanceId);
     if (!instance) {
@@ -191,7 +174,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
         throw error;
       }
 
-      this.logger.debug("Stopping server instance process", { instanceId });
+      this.logger.debug('Stopping server instance process', { instanceId });
       if (serverInstance instanceof BaseServerInstance) {
         await serverInstance.stop();
       }
@@ -204,11 +187,11 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       this.configInstanceMap.delete(instanceId);
       this.instances.delete(instanceId);
 
-      this.logger.info("Instance stopped and removed successfully", {
+      this.logger.info('Instance stopped and removed successfully', {
         instanceId,
       });
     } catch (error) {
-      this.logger.error("Failed to stop instance:", { error, instanceId });
+      this.logger.error('Failed to stop instance:', { error, instanceId });
       instance.status = McpServerInstanceStatus.FAILED;
       instance.error = error as Error;
       throw error;
@@ -216,9 +199,9 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async getInstance(instanceId: string): Promise<McpServerInstance | null> {
-    this.logger.debug("Retrieving instance information", { instanceId });
+    this.logger.debug('Retrieving instance information', { instanceId });
     const instance = this.instances.get(instanceId) || null;
-    this.logger.debug("Instance retrieval result", {
+    this.logger.debug('Instance retrieval result', {
       instanceId,
       found: !!instance,
       status: instance?.status,
@@ -227,17 +210,14 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async listInstances(): Promise<McpServerInstance[]> {
-    this.logger.debug("Listing all instances");
+    this.logger.debug('Listing all instances');
     const instances = Array.from(this.instances.values());
-    this.logger.debug("Instance list retrieved", { count: instances.length });
+    this.logger.debug('Instance list retrieved', { count: instances.length });
     return instances;
   }
 
-  async updateInstanceStatus(
-    instanceId: string,
-    status: Partial<McpServerInstance>
-  ): Promise<void> {
-    this.logger.debug("Updating instance status", {
+  async updateInstanceStatus(instanceId: string, status: Partial<McpServerInstance>): Promise<void> {
+    this.logger.debug('Updating instance status', {
       instanceId,
       newStatus: status.status,
     });
@@ -255,21 +235,21 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
     // lastUsedAt 자동 업데이트
     instance.lastUsedAt = new Date().toISOString();
 
-    this.logger.debug("Instance status updated successfully", {
+    this.logger.debug('Instance status updated successfully', {
       instanceId,
       currentStatus: instance.status,
     });
   }
 
   async stopAllInstances(): Promise<void> {
-    this.logger.info("Stopping all instances");
+    this.logger.info('Stopping all instances');
     const instances = Array.from(this.instances.values());
     for (const instance of instances) {
       await this.stopInstance(instance.id);
     }
   }
   async dispose(): Promise<void> {
-    this.logger.info("Disposing server instance manager");
+    this.logger.info('Disposing server instance manager');
     await this.stopAllInstances();
     this.instances.clear();
     this.configInstanceMap.clear();

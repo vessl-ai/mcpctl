@@ -1,16 +1,13 @@
-import { SecretService } from "../../../core/services/secret/secret-service";
-import { GLOBAL_CONSTANTS } from "../../../lib/constants";
-import { Logger } from "../../../lib/logger/logger";
-import { McpServerHostingType } from "../../../lib/types/hosting";
-import { McpServerInstance } from "../../../lib/types/instance";
-import { RunConfig, getRunConfigId } from "../../../lib/types/run-config";
-import { LocalServerInstance } from "./server-instance-impl";
+import { SecretService } from '../../../core/services/secret/secret-service';
+import { GLOBAL_CONSTANTS } from '../../../lib/constants';
+import { Logger } from '../../../lib/logger/logger';
+import { McpServerHostingType } from '../../../lib/types/hosting';
+import { McpServerInstance } from '../../../lib/types/instance';
+import { RunConfig, getRunConfigId } from '../../../lib/types/run-config';
+import { LocalServerInstance } from './server-instance-impl';
 
 export interface ServerInstanceFactory {
-  createServerInstance(
-    config: RunConfig,
-    logger: Logger
-  ): Promise<McpServerInstance>;
+  createServerInstance(config: RunConfig, logger: Logger): Promise<McpServerInstance>;
 }
 
 class DefaultServerInstanceFactory implements ServerInstanceFactory {
@@ -25,10 +22,7 @@ class DefaultServerInstanceFactory implements ServerInstanceFactory {
       resolvedConfig.env = {};
     }
     for (const [key, ref] of Object.entries(config.secrets || {})) {
-      const secret = await this.secretService.getProfileSecret(
-        config.profileName,
-        ref.key
-      );
+      const secret = await this.secretService.getProfileSecret(config.profileName, ref.key);
       if (secret) {
         resolvedConfig.env[key] = secret;
         continue;
@@ -44,16 +38,16 @@ class DefaultServerInstanceFactory implements ServerInstanceFactory {
   }
 
   async createServerInstance(config: RunConfig): Promise<McpServerInstance> {
-    this.logger.info("Creating server instance", {
+    this.logger.info('Creating server instance', {
       configId: getRunConfigId(config),
       hosting: config.hosting,
     });
 
     const resolvedConfig = await this.resolveSecrets(config);
 
-    this.logger.debug("Resolved config", {
+    this.logger.debug('Resolved config', {
       ...resolvedConfig,
-      env: Object.keys(resolvedConfig.env || {}).map((key) => {
+      env: Object.keys(resolvedConfig.env || {}).map(key => {
         if (resolvedConfig.secrets?.[key]) {
           return {
             key,
@@ -67,25 +61,25 @@ class DefaultServerInstanceFactory implements ServerInstanceFactory {
 
     try {
       if (resolvedConfig.hosting === McpServerHostingType.LOCAL) {
-        this.logger.debug("Creating local server instance");
+        this.logger.debug('Creating local server instance');
         const instance = new LocalServerInstance(resolvedConfig, this.logger);
-        this.logger.info("Local server instance created successfully", {
+        this.logger.info('Local server instance created successfully', {
           instanceId: instance.id,
         });
         return instance;
       }
 
       if (resolvedConfig.hosting === McpServerHostingType.REMOTE) {
-        this.logger.error("Remote hosting type not supported");
+        this.logger.error('Remote hosting type not supported');
         throw new Error(`Remote hosting is not supported yet`);
       }
 
-      this.logger.error("Invalid hosting type", {
+      this.logger.error('Invalid hosting type', {
         hosting: resolvedConfig.hosting,
       });
       throw new Error(`Unsupported hosting type: ${resolvedConfig.hosting}`);
     } catch (error) {
-      this.logger.error("Failed to create server instance", {
+      this.logger.error('Failed to create server instance', {
         error,
         configId: getRunConfigId(resolvedConfig),
       });
@@ -94,9 +88,6 @@ class DefaultServerInstanceFactory implements ServerInstanceFactory {
   }
 }
 
-export const newServerInstanceFactory = (
-  secretService: SecretService,
-  logger: Logger
-): ServerInstanceFactory => {
+export const newServerInstanceFactory = (secretService: SecretService, logger: Logger): ServerInstanceFactory => {
   return new DefaultServerInstanceFactory(secretService, logger);
 };

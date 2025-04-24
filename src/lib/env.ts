@@ -3,7 +3,7 @@ const shouldMaskSecret = () => {
   const nodeEnv = process.env.NODE_ENV;
   // Override masking with MASK_SECRET if provided
   if (env) {
-    if (env.toLowerCase() === "true") {
+    if (env.toLowerCase() === 'true') {
       return true;
     } else {
       return false;
@@ -11,7 +11,7 @@ const shouldMaskSecret = () => {
   }
 
   // Default behavior: no masking in development, mask in other environments
-  return nodeEnv !== "development";
+  return nodeEnv !== 'development';
 };
 
 export const GLOBAL_ENV = {

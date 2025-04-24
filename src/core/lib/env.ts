@@ -1,12 +1,12 @@
-import os from "os";
-import path from "path";
-import { LogLevel } from "../../lib/logger/logger";
+import os from 'os';
+import path from 'path';
+import { LogLevel } from '../../lib/logger/logger';
 export const getProfileName = (): string => {
   const profileName = process.env.MCPCTL_PROFILE;
   if (profileName) {
     return profileName;
   }
-  return "default";
+  return 'default';
 };
 
 export const getProfileDir = (): string => {
@@ -15,7 +15,7 @@ export const getProfileDir = (): string => {
     return profileDir;
   }
   const homeDir = os.homedir();
-  return path.join(homeDir, ".mcpctl", "profiles");
+  return path.join(homeDir, '.mcpctl', 'profiles');
 };
 
 export const getConfigDir = (): string => {
@@ -24,12 +24,12 @@ export const getConfigDir = (): string => {
     return configDir;
   }
   const homeDir = os.homedir();
-  return path.join(homeDir, ".mcpctl", "config");
+  return path.join(homeDir, '.mcpctl', 'config');
 };
 
 export const getConfigPath = (): string => {
   const configDir = getConfigDir();
-  return path.join(configDir, "config.json");
+  return path.join(configDir, 'config.json');
 };
 
 export const getSocketPath = (): string => {
@@ -37,7 +37,7 @@ export const getSocketPath = (): string => {
   if (socketPath) {
     return socketPath;
   }
-  return "/tmp/mcp-daemon.sock";
+  return '/tmp/mcp-daemon.sock';
 };
 
 export const getSessionDir = (): string => {
@@ -45,7 +45,7 @@ export const getSessionDir = (): string => {
   if (sessionDir) {
     return sessionDir;
   }
-  return path.join(os.homedir(), ".mcpctl", "sessions");
+  return path.join(os.homedir(), '.mcpctl', 'sessions');
 };
 
 export const logLevel = (): LogLevel => {
@@ -55,15 +55,15 @@ export const logLevel = (): LogLevel => {
   }
   logLevel = logLevel.trim().toLowerCase();
   switch (logLevel) {
-    case "verbose":
+    case 'verbose':
       return LogLevel.VERBOSE;
-    case "debug":
+    case 'debug':
       return LogLevel.DEBUG;
-    case "info":
+    case 'info':
       return LogLevel.INFO;
-    case "warn":
+    case 'warn':
       return LogLevel.WARN;
-    case "error":
+    case 'error':
       return LogLevel.ERROR;
     default:
       return LogLevel.INFO;

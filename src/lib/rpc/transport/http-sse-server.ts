@@ -1,4 +1,4 @@
-import { ServerResponse } from "http";
+import { ServerResponse } from 'http';
 import {
   DataCallback,
   Disposable,
@@ -8,11 +8,11 @@ import {
   MessageReader,
   MessageWriter,
   PartialMessageInfo,
-} from "vscode-jsonrpc";
-import { Logger } from "../../logger/logger";
-import { RPCTransport } from "../transport";
+} from 'vscode-jsonrpc';
+import { Logger } from '../../logger/logger';
+import { RPCTransport } from '../transport';
 
-const SSE_DATA_PREFIX = "data: ";
+const SSE_DATA_PREFIX = 'data: ';
 
 export class SSEServerMessageReader implements MessageReader {
   private errorEmitter: Emitter<Error>;
@@ -24,12 +24,12 @@ export class SSEServerMessageReader implements MessageReader {
   private logger: Logger;
 
   constructor(logger: Logger) {
-    this.logger = logger.withContext("SSEServerMessageReader");
+    this.logger = logger.withContext('SSEServerMessageReader');
     this.errorEmitter = new Emitter<Error>();
     this.closeEmitter = new Emitter<void>();
     this.partialMessageEmitter = new Emitter<PartialMessageInfo>();
     this.isDisposed = false;
-    this.logger.debug("SSE server message reader initialized");
+    this.logger.debug('SSE server message reader initialized');
   }
 
   public get onError(): Event<Error> {
@@ -45,11 +45,11 @@ export class SSEServerMessageReader implements MessageReader {
   }
 
   public listen(callback: DataCallback): Disposable {
-    this.logger.debug("Starting message listener");
+    this.logger.debug('Starting message listener');
     this.callback = callback;
     return {
       dispose: () => {
-        this.logger.debug("Disposing message listener");
+        this.logger.debug('Disposing message listener');
         this.callback = undefined;
       },
     };
@@ -57,14 +57,14 @@ export class SSEServerMessageReader implements MessageReader {
 
   public handleData(data: string): void {
     if (this.isDisposed) {
-      this.logger.debug("Ignoring data - reader is disposed");
+      this.logger.debug('Ignoring data - reader is disposed');
       return;
     }
 
     try {
-      this.logger.debug("Processing incoming data");
+      this.logger.debug('Processing incoming data');
       // SSE messages can consist of multiple lines
-      const lines = data.split("\n");
+      const lines = data.split('\n');
       for (const line of lines) {
         if (line.startsWith(SSE_DATA_PREFIX)) {
           const [, messageData] = line.split(SSE_DATA_PREFIX);
@@ -72,7 +72,7 @@ export class SSEServerMessageReader implements MessageReader {
         }
       }
     } catch (error) {
-      this.logger.debug("Error handling data", { error });
+      this.logger.debug('Error handling data', { error });
       this.handleError(error as Error);
     }
   }
@@ -81,29 +81,29 @@ export class SSEServerMessageReader implements MessageReader {
     try {
       // Add to queue if message is incomplete
       if (this.isPartialMessage(data)) {
-        this.logger.debug("Received partial message, adding to queue");
+        this.logger.debug('Received partial message, adding to queue');
         this.messageQueue.push(data);
         return;
       }
 
       // Combine with queued messages if any exist
       if (this.messageQueue.length > 0) {
-        this.logger.debug("Processing queued messages", {
+        this.logger.debug('Processing queued messages', {
           queueLength: this.messageQueue.length,
         });
         this.messageQueue.push(data);
-        data = this.messageQueue.join("");
+        data = this.messageQueue.join('');
         this.messageQueue = [];
       }
 
       // Parse message and invoke callback
       const message = JSON.parse(data);
       if (this.callback) {
-        this.logger.debug("Invoking callback with parsed message");
+        this.logger.debug('Invoking callback with parsed message');
         this.callback(message);
       }
     } catch (error) {
-      this.logger.debug("Error handling message", { error });
+      this.logger.debug('Error handling message', { error });
       this.handleError(error as Error);
     }
   }
@@ -128,13 +128,13 @@ export class SSEServerMessageReader implements MessageReader {
   }
 
   private handleError(error: Error, message?: Message, code?: number): void {
-    this.logger.debug("Error occurred", { error });
+    this.logger.debug('Error occurred', { error });
     this.errorEmitter.fire(error);
   }
 
   dispose(): void {
     if (!this.isDisposed) {
-      this.logger.debug("Disposing SSE server message reader");
+      this.logger.debug('Disposing SSE server message reader');
       this.isDisposed = true;
       this.callback = undefined;
       this.messageQueue = [];
@@ -150,28 +150,22 @@ export class SSEServerMessageReader implements MessageReader {
 }
 
 export class SSEServerMessageWriter implements MessageWriter {
-  private errorEmitter: Emitter<
-    [Error, Message | undefined, number | undefined]
-  >;
+  private errorEmitter: Emitter<[Error, Message | undefined, number | undefined]>;
   private closeEmitter: Emitter<void>;
   private response: ServerResponse;
   private isDisposed: boolean;
   private logger: Logger;
 
   constructor(response: ServerResponse, logger: Logger) {
-    this.logger = logger.withContext("SSEServerMessageWriter");
-    this.errorEmitter = new Emitter<
-      [Error, Message | undefined, number | undefined]
-    >();
+    this.logger = logger.withContext('SSEServerMessageWriter');
+    this.errorEmitter = new Emitter<[Error, Message | undefined, number | undefined]>();
     this.closeEmitter = new Emitter<void>();
     this.response = response;
     this.isDisposed = false;
-    this.logger.debug("SSE server message writer initialized");
+    this.logger.debug('SSE server message writer initialized');
   }
 
-  public get onError(): Event<
-    [Error, Message | undefined, number | undefined]
-  > {
+  public get onError(): Event<[Error, Message | undefined, number | undefined]> {
     return this.errorEmitter.event;
   }
 
@@ -180,30 +174,30 @@ export class SSEServerMessageWriter implements MessageWriter {
   }
 
   private handleError(error: Error, message?: Message, code?: number): void {
-    this.logger.debug("Error occurred", { error, code });
+    this.logger.debug('Error occurred', { error, code });
     this.errorEmitter.fire([error, message, code]);
   }
 
   write(msg: Message): Promise<void> {
     if (this.isDisposed) {
-      const error = new Error("Writer is disposed");
-      this.logger.debug("Write failed - writer is disposed");
+      const error = new Error('Writer is disposed');
+      this.logger.debug('Write failed - writer is disposed');
       return Promise.reject(error);
     }
-    this.logger.debug("Writing message");
+    this.logger.debug('Writing message');
     const data = JSON.stringify(msg);
     this.response.write(`${SSE_DATA_PREFIX}${data}\n\n`);
     return Promise.resolve();
   }
 
   end(): void {
-    this.logger.debug("Ending response");
+    this.logger.debug('Ending response');
     this.response.end();
   }
 
   dispose(): void {
     if (!this.isDisposed) {
-      this.logger.debug("Disposing SSE server message writer");
+      this.logger.debug('Disposing SSE server message writer');
       this.isDisposed = true;
       this.response.end();
       this.errorEmitter.dispose();
@@ -222,8 +216,8 @@ export class SSEServerTransport implements RPCTransport {
   private logger: Logger;
 
   constructor(response: ServerResponse, logger: Logger) {
-    this.logger = logger.withContext("SSEServerTransport");
-    this.logger.debug("Initializing SSE server transport");
+    this.logger = logger.withContext('SSEServerTransport');
+    this.logger.debug('Initializing SSE server transport');
     this._reader = new SSEServerMessageReader(logger);
     this._writer = new SSEServerMessageWriter(response, logger);
   }
@@ -237,7 +231,7 @@ export class SSEServerTransport implements RPCTransport {
   }
 
   dispose(): void {
-    this.logger.debug("Disposing SSE server transport");
+    this.logger.debug('Disposing SSE server transport');
     this._reader.dispose();
     this._writer.dispose();
   }
@@ -247,9 +241,6 @@ export class SSEServerTransport implements RPCTransport {
   }
 }
 
-export function createSSEServerTransport(
-  response: ServerResponse,
-  logger: Logger
-): SSEServerTransport {
+export function createSSEServerTransport(response: ServerResponse, logger: Logger): SSEServerTransport {
   return new SSEServerTransport(response, logger);
 }

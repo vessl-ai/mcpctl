@@ -1,11 +1,11 @@
-import { Config, ProfileConfig, RegistryConfig } from "../../lib/types/config";
-import { defaultRegistryDefs } from "../registry/default-registry-defs";
+import { Config, ProfileConfig, RegistryConfig } from '../../lib/types/config';
+import { defaultRegistryDefs } from '../registry/default-registry-defs';
 
 const defaultProfileConfig: ProfileConfig = {
   // Profile config
   // ...
-  currentActiveProfile: "default",
-  allProfiles: ["default"],
+  currentActiveProfile: 'default',
+  allProfiles: ['default'],
 };
 
 const defaultRegistryConfig: RegistryConfig = {

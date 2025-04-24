@@ -1,5 +1,6 @@
-const esbuild = require('esbuild');
-const fs = require('fs');
+import esbuild from 'esbuild';
+import fs from 'fs';
+import { resolve } from 'path';
 
 // Native node modules plugin to handle .node files
 const nativeNodeModulesPlugin = {
@@ -8,17 +9,21 @@ const nativeNodeModulesPlugin = {
     // If a ".node" file is imported within a module in the "file" namespace, resolve 
     // it to an absolute path and put it into the "node-file" virtual namespace.
     build.onResolve({ filter: /\.node$/, namespace: 'file' }, args => ({
-      path: require.resolve(args.path, { paths: [args.resolveDir] }),
+      path: resolve(args.resolveDir, args.path),
       namespace: 'node-file',
     }))
 
-    // Files in the "node-file" virtual namespace call "require()" on the
-    // path from esbuild of the ".node" file in the output directory.
+    // Files in the "node-file" virtual namespace use dynamic import
     build.onLoad({ filter: /.*/, namespace: 'node-file' }, args => ({
       contents: `
-        import path from ${JSON.stringify(args.path)}
-        try { module.exports = require(path) }
-        catch {}
+        const path = ${JSON.stringify(args.path)};
+        let mod;
+        try { 
+          mod = await import(path);
+        } catch {}
+        if (mod) {
+          Object.assign(exports, mod);
+        }
       `,
     }))
 
@@ -45,10 +50,11 @@ async function build() {
       bundle: true,
       platform: 'node',
       target: 'node18',
-      format: 'cjs',
+      format: 'esm',
       sourcemap: true,
       plugins: [nativeNodeModulesPlugin],
-      external: ['readline/promises'],
+      external: ['readline/promises', 'keytar'],
+      mainFields: ['module', 'main'],
     };
 
     // CLI 번들링
