@@ -13,6 +13,15 @@ if (!process.env.npm_config_global) {
   process.exit(0);
 }
 
+// Rebuild keytar
+console.log('Rebuilding keytar...');
+try {
+  execSync('npm rebuild keytar', { stdio: 'inherit' });
+} catch (error) {
+  console.warn('Warning: Failed to rebuild keytar. Secret management may not work properly.');
+  console.warn('You may need to run: npm rebuild keytar');
+}
+
 const platform = os.platform();
 const isRoot = process.getuid && process.getuid() === 0;
 

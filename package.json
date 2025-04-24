@@ -1,6 +1,6 @@
 {
   "name": "@vessl-ai/mcpctl",
-  "version": "0.0.4",
+  "version": "0.0.5-rc1",
   "description": "The MCP Execution Control Tool - A tool for controlling the MCP execution",
   "main": "dist/mcpctl.js",
   "bin": {
@@ -85,5 +85,8 @@
     "uuid": "^11.1.0",
     "vscode-jsonrpc": "^8.2.1",
     "zod": "^3.24.2"
+  },
+  "optionalDependencies": {
+    "keytar": "^7.9.0"
   }
 }
