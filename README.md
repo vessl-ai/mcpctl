@@ -137,6 +137,7 @@ mcpctl daemon start
 - [ ] Registry indexing for faster search
 - [ ] Profile-based MCP Server Set management
 - [ ] Enhanced semantic search capabilities
+- [ ] Container / Kubernetes based MCP Server instance management
 
 ## 📝 License
 

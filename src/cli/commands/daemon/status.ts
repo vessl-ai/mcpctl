@@ -13,6 +13,14 @@ export const statusCommand = async (app: App) => {
     console.log(`Daemon status: ${status.isRunning ? "running" : "stopped"}`);
     console.log(`Daemon uptime: ${status.uptime}ms`);
   } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      logger.error(
+        "No daemon found. Please start the daemon first by `sudo mcpctl daemon start`"
+      );
+      throw new CliError(
+        "No daemon found. Please start the daemon first by `sudo mcpctl daemon start`"
+      );
+    }
     logger.error("Failed to get daemon status:", { error });
     throw new CliError("Failed to get daemon status");
   } finally {

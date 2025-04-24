@@ -1,7 +1,6 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
-import path from "path";
 import {
   getMcpctldServiceTemplate,
   SERVICE_COMMANDS,
@@ -55,11 +54,8 @@ const setupDaemonService = () => {
       : execSync("which node").toString().trim();
   const daemonPath =
     platform === "win32"
-      ? path.join(
-          process.execPath,
-          "../../lib/node_modules/mcpctl/dist/mcpctld.js"
-        )
-      : "/usr/local/bin/mcpctld";
+      ? execSync("where mcpctld").toString().trim()
+      : execSync("which mcpctld").toString().trim();
 
   const templateOptions: ServiceTemplateOptions = {
     nodePath,

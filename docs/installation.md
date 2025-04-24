@@ -124,10 +124,10 @@ To update to the latest version:
 
 ```bash
 # Linux/macOS
-sudo npm update -g mcpctl
+sudo npm update -g @vessl-ai/mcpctl
 
 # Windows (Run as Administrator)
-npm update -g mcpctl
+npm update -g @vessl-ai/mcpctl
 ```
 
 ## Uninstallation
@@ -136,10 +136,10 @@ To remove MCPCTL:
 
 ```bash
 # Linux/macOS
-sudo npm uninstall -g mcpctl
+sudo npm uninstall -g @vessl-ai/mcpctl
 
 # Windows (Run as Administrator)
-npm uninstall -g mcpctl
+npm uninstall -g @vessl-ai/mcpctl
 ```
 
 This will:

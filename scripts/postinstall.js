@@ -4,6 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { exec } = require('@expo/sudo-prompt');
 const { getMcpctldServiceTemplate, SERVICE_PATHS, SERVICE_COMMANDS } = require('../dist/service-templates.js');
 
 // Exit if not installed globally
@@ -45,16 +46,32 @@ function createLogDirectories() {
   }
 }
 
-try {
-  // Create log directories
-  const logDir = createLogDirectories();
+// Function to execute commands with sudo
+async function executeWithSudo(command) {
+  return new Promise((resolve, reject) => {
+    exec(command, { name: 'mcpctl' }, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+}
 
-  // Setup daemon service for each OS
-  if (isRoot) {
+async function setupService() {
+  try {
+    // Create log directories
+    const logDir = createLogDirectories();
+
+    // Setup daemon service for each OS
     const nodePath = platform === 'win32' ? process.execPath : execSync('which node').toString().trim();
     const daemonPath = platform === 'win32' ? 
-      path.join(process.execPath, '../../lib/node_modules/mcpctl/dist/mcpctld.js') :
-      '/usr/local/bin/mcpctld';
+      execSync('where mcpctld').toString().trim() :
+      execSync('which mcpctld').toString().trim();
+    const mcpctlPath = platform === 'win32' ? 
+      execSync('where mcpctl').toString().trim() :
+      execSync('which mcpctl').toString().trim();
 
     const templateOptions = {
       nodePath,
@@ -64,31 +81,62 @@ try {
 
     const serviceContent = getMcpctldServiceTemplate(templateOptions);
 
+    // if daemon is running, stop service
+    if (execSync('pgrep -f mcpctld').toString().trim()) {
+      console.log('[sudo] Stopping already running MCP daemon service...');
+      await executeWithSudo(`${mcpctlPath} daemon stop`);
+    }
+
     // For Windows, execute service creation command directly
     if (platform === 'win32') {
       execSync(serviceContent);
     } else {
       // For Unix systems, create service file
       const servicePath = SERVICE_PATHS[platform];
-      fs.writeFileSync(servicePath, serviceContent);
-      fs.chmodSync(servicePath, '644');
+      
+      if (isRoot) {
+        fs.writeFileSync(servicePath, serviceContent);
+        fs.chmodSync(servicePath, '644');
+      } else {
+        // Use sudo to write the service file
+        await executeWithSudo(`echo '${serviceContent}' > ${servicePath}`);
+        await executeWithSudo(`chmod 644 ${servicePath}`);
+      }
 
       // For Linux, reload systemctl and enable service
       if (platform === 'linux') {
-        execSync(SERVICE_COMMANDS.linux.reload.join(' '));
-        execSync(SERVICE_COMMANDS.linux.enable.join(' '));
+        if (isRoot) {
+          execSync(SERVICE_COMMANDS.linux.reload.join(' '));
+          execSync(SERVICE_COMMANDS.linux.enable.join(' '));
+        } else {
+          await executeWithSudo(SERVICE_COMMANDS.linux.reload.join(' '));
+          await executeWithSudo(SERVICE_COMMANDS.linux.enable.join(' '));
+        }
       }
     }
 
     // Start the service
     const startCommand = SERVICE_COMMANDS[platform].start;
-    execSync(startCommand.join(' '));
+    if (isRoot) {
+      execSync(startCommand.join(' '));
+    } else {
+      await executeWithSudo(startCommand.join(' '));
+    }
     console.log('MCP daemon service started successfully');
-  } else {
-    console.warn('Warning: Not running as root/administrator. Daemon service setup skipped.');
-    console.warn('You may need to run: sudo mcpctl daemon start');
+  } catch (error) {
+    console.error('Error during service setup:', error);
+    process.exit(1);
   }
-} catch (error) {
-  console.error('Error during post-install:', error);
-  process.exit(1);
+}
+
+// Main execution
+if (isRoot) {
+  setupService();
+} else {
+  console.log('Requesting sudo privileges for service setup...');
+  setupService().catch(error => {
+    console.error('Failed to acquire sudo privileges:', error);
+    console.warn('You may need to run: sudo mcpctl daemon start');
+    process.exit(1);
+  });
 } 
