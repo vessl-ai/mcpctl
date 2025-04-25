@@ -15,7 +15,7 @@ const logger = {
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
-  withContext: jest.fn().mockReturnThis(),
+  withContext: jest.fn().mockImplementation(() => logger),
 };
 
 describe("FileConfigStore", () => {
@@ -48,14 +48,20 @@ describe("FileConfigStore", () => {
     jest.clearAllMocks();
     (fs.existsSync as jest.Mock).mockReturnValue(true);
     (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockConfig));
-    configStore = new FileConfigStoreImpl(logger, testConfigPath);
+    configStore = new FileConfigStoreImpl(
+      logger.withContext("ConfigStore"),
+      testConfigPath
+    );
   });
 
   describe("constructor", () => {
     it("should create config file if it does not exist", () => {
       (fs.existsSync as jest.Mock).mockReturnValue(false);
 
-      configStore = new FileConfigStoreImpl(logger, testConfigPath);
+      configStore = new FileConfigStoreImpl(
+        logger.withContext("ConfigStore"),
+        testConfigPath
+      );
 
       expect(fs.mkdirSync).toHaveBeenCalledWith("/test", { recursive: true });
       expect(fs.writeFileSync).toHaveBeenCalledWith(
@@ -67,7 +73,10 @@ describe("FileConfigStore", () => {
     it("should not create config file if it exists", () => {
       (fs.existsSync as jest.Mock).mockReturnValue(true);
 
-      configStore = new FileConfigStoreImpl(logger, testConfigPath);
+      configStore = new FileConfigStoreImpl(
+        logger.withContext("ConfigStore"),
+        testConfigPath
+      );
 
       expect(fs.mkdirSync).not.toHaveBeenCalled();
       expect(fs.writeFileSync).not.toHaveBeenCalled();
