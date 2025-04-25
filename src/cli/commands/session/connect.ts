@@ -114,20 +114,77 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
   const connectionUrl = `${session.connectionInfo.baseUrl}${session.connectionInfo.endpoint}`;
   logger.info("Connecting to " + connectionUrl);
 
+  // Buffer to store stdin data before connection
+  const stdinBuffer: Buffer[] = [];
+  let isConnected = false;
+  let isTerminated = false;
+
+  // Start collecting stdin data
+  process.stdin.on("data", (chunk) => {
+    if (!isConnected && !isTerminated) {
+      stdinBuffer.push(Buffer.from(chunk));
+    }
+  });
+
   const child = spawn(`npx`, ["-y", "supergateway", "--sse", connectionUrl], {
     stdio: ["pipe", "pipe", "pipe"],
   });
 
+  child.stdin!.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EPIPE") {
+      logger.warn("Child process has closed its stdin (EPIPE)");
+      isTerminated = true;
+    } else {
+      logger.error("Error writing to child stdin:", { error: err.message });
+    }
+  });
+
   child.on("exit", (code, signal) => {
+    isTerminated = true;
     logger.info(`Child process exited with code ${code} and signal ${signal}`);
   });
 
   child.on("error", (error) => {
+    isTerminated = true;
     logger.error("Child process error", error);
+  });
+
+  // When child process is ready, flush buffer and start piping
+  child.stdout!.once("data", () => {
+    if (isTerminated) {
+      logger.warn("Process terminated before connection was established");
+      return;
+    }
+
+    isConnected = true;
+    logger.info("Connection established, flushing stdin buffer...");
+
+    // Flush buffered data
+    for (const data of stdinBuffer) {
+      try {
+        if (!isTerminated) {
+          child.stdin!.write(data);
+        }
+      } catch (err) {
+        logger.error("Error flushing buffer:", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        break;
+      }
+    }
+
+    // Clear buffer after flushing
+    stdinBuffer.length = 0;
+
+    // Start piping new stdin data if process is still alive
+    if (!isTerminated) {
+      process.stdin.pipe(child.stdin!);
+    }
   });
 
   const kill = async () => {
     logger.info("Received termination signal, cleaning up...");
+    isTerminated = true;
     await sessionManager.disconnect(session.id, false);
     logger.info("Session disconnected");
     child.kill();
@@ -137,7 +194,6 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
   process.on("SIGTERM", kill);
   child.stdout!.pipe(process.stdout);
   child.stderr!.pipe(process.stderr);
-  process.stdin.pipe(child.stdin!);
 
   logger.info("Session connected");
 };
