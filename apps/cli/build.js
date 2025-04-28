@@ -42,11 +42,49 @@ const nativeNodeModulesPlugin = {
 
 async function build() {
   try {
-    // Build all packages first
-    execSync('pnpm run build --filter=./packages/*', { stdio: 'inherit' });
+    // Common build options
+    const commonOptions = {
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'cjs',
+      sourcemap: true,
+      plugins: [nativeNodeModulesPlugin],
+      external: ['readline/promises', 'keytar'],
+    };
 
-    // Build CLI app (which includes daemon)
-    execSync('pnpm run build --filter=./apps/cli', { stdio: 'inherit' });
+    // CLI 번들링
+    await esbuild.build({
+      ...commonOptions,
+      entryPoints: ['src/cli/cli.ts'],
+      outfile: 'dist/mcpctl.js',
+      minify: true,
+      banner: {
+        js: '#!/usr/bin/env node\n',
+      },
+    });
+
+    // 데몬 번들링
+    await esbuild.build({
+      ...commonOptions,
+      entryPoints: ['src/daemon/main.ts'],
+      outfile: 'dist/mcpctld.js',
+      minify: true,
+      banner: {
+        js: '#!/usr/bin/env node\n',
+      },
+    });
+
+    // service-templates 번들링
+    await esbuild.build({
+      ...commonOptions,
+      entryPoints: ['src/core/lib/service-templates/index.ts'],
+      outfile: 'dist/service-templates.js',
+    });
+    
+    // Make files executable
+    fs.chmodSync('dist/mcpctl.js', '755');
+    fs.chmodSync('dist/mcpctld.js', '755');
     
     console.log('Build completed successfully!');
   } catch (error) {

@@ -1,0 +1,48 @@
+{
+  "name": "@vessl-ai/mcpctl",
+  "version": "0.0.6-rc1",
+  "private": false,
+  "main": "./dist/cli.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mcpctl": "./dist/cli.js",
+    "mcpctld": "./dist/daemon.js"
+  },
+  "scripts": {
+    "build": "npx tsup src/cli/cli.ts src/daemon/daemon.ts --format cjs --dts",
+    "dev": "npx tsup src/cli/cli.ts src/daemon/daemon.ts --format cjs --watch --dts",
+    "lint": "eslint src/",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "test": "jest",
+    "cli": "ts-node src/cli/cli.ts",
+    "daemon": "ts-node src/daemon/daemon.ts",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@mcpctl/core": "workspace:*",
+    "@mcpctl/lib": "workspace:*",
+    "commander": "^11.0.0",
+    "inquirer": "^8.2.5",
+    "chalk": "^4.1.2",
+    "express": "^4.18.2",
+    "ws": "^8.13.0",
+    "winston": "^3.8.2",
+    "keytar": "^7.9.0",
+    "portfinder": "^1.0.35"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/inquirer": "^8.2.5",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.15.11",
+    "@types/ws": "^8.5.4",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.2",
+    "tsup": "^6.7.0",
+    "typescript": "^5.0.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
