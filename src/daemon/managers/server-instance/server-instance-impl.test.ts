@@ -1,4 +1,6 @@
 import { spawn } from "child_process";
+import * as os from "os";
+import * as path from "path";
 import { getPortPromise } from "portfinder";
 import { Logger } from "../../../lib/logger/logger";
 import { McpServerHostingType } from "../../../lib/types/hosting";
@@ -12,6 +14,10 @@ import {
 jest.mock("child_process");
 jest.mock("portfinder");
 jest.mock("../../../lib/logger/logger");
+
+// Set up temporary directory for tests
+const tempLogDir = path.join(os.tmpdir(), "mcpctl-test-logs");
+process.env.MCPCTL_LOG_DIR = tempLogDir;
 
 describe("BaseServerInstance", () => {
   let config: RunConfig;

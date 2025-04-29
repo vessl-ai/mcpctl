@@ -1,6 +1,6 @@
 {
   "name": "@vessl-ai/mcpctl",
-  "version": "0.0.6",
+  "version": "0.0.7-rc1",
   "description": "The MCP Execution Control Tool - A tool for controlling the MCP execution",
   "main": "dist/mcpctl.js",
   "bin": {
@@ -82,6 +82,7 @@
     "chalk": "4",
     "cli-table3": "^0.6.5",
     "eventsource": "^3.0.6",
+    "inquirer": "^12.6.0",
     "keytar": "^7.9.0",
     "node-fetch": "^3.3.2",
     "openai": "^4.95.0",

@@ -45,7 +45,7 @@ export class DaemonApp {
 
   private initializeDependencies(): void {
     // 기본 의존성
-    const logDir = "/var/log/mcpctl";
+    const logDir = "/var/log/mcpctl/daemon";
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }

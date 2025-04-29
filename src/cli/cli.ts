@@ -8,6 +8,7 @@ import { newApp } from "./app";
 import { configCommand } from "./commands/config";
 import { daemonCommand } from "./commands/daemon";
 import { installCommand } from "./commands/install";
+import { logsCommand } from "./commands/logs";
 import { profileCommand } from "./commands/profile";
 import { registryCommand } from "./commands/registry";
 import { searchCommand } from "./commands/search";
@@ -70,6 +71,7 @@ const main = async () => {
     console.error("  registry\t\tManage MCP registries");
     console.error("  search\t\tSearch for MCP packages");
     console.error("  daemon\t\tManage MCP daemon");
+    console.error("  logs\t\tView MCP logs");
     console.error("\nFor detailed help: mcpctl <command> --help");
     process.exit(1);
   }
@@ -111,6 +113,10 @@ const main = async () => {
         await configCommand(app, subArgv.slice(1));
         break;
       }
+      case "logs": {
+        await logsCommand(app, subArgv.slice(1));
+        break;
+      }
       default:
         console.error(`Error: '${mainCommand}' is an unknown command.`);
         console.error("\nAvailable commands:");
@@ -121,6 +127,7 @@ const main = async () => {
         console.error("  registry\t\tManage MCP registries");
         console.error("  search\t\tSearch for MCP packages");
         console.error("  daemon\t\tManage MCP daemon");
+        console.error("  logs\t\tView MCP logs");
         console.error("\nFor detailed help: mcpctl <command> --help");
         process.exit(1);
     }

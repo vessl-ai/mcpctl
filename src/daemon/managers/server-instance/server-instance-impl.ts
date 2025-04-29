@@ -1,4 +1,6 @@
 import { ChildProcess, spawn } from "child_process";
+import fs from "fs";
+import path from "path";
 import { getPortPromise } from "portfinder";
 import { v4 as uuidv4 } from "uuid";
 import { Logger } from "../../../lib/logger/logger";
@@ -20,10 +22,7 @@ export abstract class BaseServerInstance implements McpServerInstance {
   startedAt: string;
   lastUsedAt: string;
 
-  constructor(
-    public config: RunConfig,
-    protected logger: Logger
-  ) {
+  constructor(public config: RunConfig, protected logger: Logger) {
     this.id = `server-instance.${uuidv4()}`;
     this.connectionInfo = {
       transport: "sse",
@@ -64,9 +63,29 @@ export class LocalServerInstance extends BaseServerInstance {
       configId: getRunConfigId(this.config),
     });
     try {
-      this.logger.debug("Finding available port...");
-      const port = await getPortPromise();
+      const port = await getPortPromise({ port: 8000 });
       this.logger.debug("Port allocated", { port });
+
+      // Create log directory if it doesn't exist
+      const logDir =
+        process.env.MCPCTL_LOG_DIR ||
+        path.join("/var/log", "mcpctl", "server-instances");
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+
+      // Create log file path
+      const logFile = path.join(
+        logDir,
+        `${this.config.serverName}-${this.config.profileName || "default"}.log`
+      );
+
+      // Initialize log file (clear existing content)
+      fs.writeFileSync(logFile, "");
+
+      // Create write streams for stdout and stderr
+      const stdoutStream = fs.createWriteStream(logFile, { flags: "a" });
+      const stderrStream = fs.createWriteStream(logFile, { flags: "a" });
 
       // command를 배열로 분리하고 shell 옵션을 고려
       const [cmd, ...args] = this.config.command.split(" ");
@@ -100,6 +119,10 @@ export class LocalServerInstance extends BaseServerInstance {
           },
         }
       );
+
+      // Redirect stdout and stderr to log file
+      this.process.stdout?.pipe(stdoutStream);
+      this.process.stderr?.pipe(stderrStream);
 
       let buffer = "";
       this.process.stdout?.on("data", (chunk: Buffer) => {
