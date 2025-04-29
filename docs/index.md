@@ -6,19 +6,21 @@ MCPCTL (MCP Execution Control Tool) is a powerful command-line tool for managing
 
 ## Table of Contents
 
-1. [Installation](./installation.md)
-2. [Core Concepts](./core-concepts.md)
-3. [Features](./features/index.md)
+1. [Quick Start](./quickstart.md)
+2. [Installation](./installation.md)
+3. [Core Concepts](./core-concepts.md)
+4. [Features](./features/index.md)
    - [Server Discovery](./features/server-discovery.md)
    - [Server Instance Management](./features/server-instance.md)
    - [Configuration Management](./features/configuration.md)
    - [Profile Management](./features/profile.md)
-4. [CLI Reference](./cli-reference.md)
-5. [Architecture](./architecture.md)
-6. [Development Guide](./development.md)
+5. [CLI Reference](./cli-reference.md)
+6. [Architecture](./architecture.md)
+7. [Development Guide](./development.md)
 
 ## Quick Links
 
+- [Quick Start Guide](./quickstart.md)
 - [Installation Guide](./installation.md)
 - [CLI Commands](./cli-reference.md)
 - [Configuration Guide](./features/configuration.md)

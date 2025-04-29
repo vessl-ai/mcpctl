@@ -22,7 +22,7 @@
     "clean": "rm -rf dist",
     "build": "tsc && node build.js",
     "docs:init": "uv sync",
-    "docs:serve": "uv run mkdocs serve",
+    "docs:serve": "uv run mkdocs serve -a localhost:9099",
     "docs:build": "uv run mkdocs build",
     "install-cli:macos": "cp dist/mcpctl.js /usr/local/bin/mcpctl && cp dist/mcpctld.js /usr/local/bin/mcpctld",
     "install-cli:linux": "sudo cp dist/mcpctl.js /usr/local/bin/mcpctl && sudo cp dist/mcpctld.js /usr/local/bin/mcpctld",
