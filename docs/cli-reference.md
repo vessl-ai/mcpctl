@@ -138,6 +138,107 @@ Options:
   --log-level <level>   # Set log level
 ```
 
+### Log Management
+
+#### View Logs
+
+```bash
+mcpctl logs [subcommand] [options]
+
+Subcommands:
+  daemon              # View daemon logs
+  client              # View client logs
+  server              # View server logs
+  session             # View session logs
+
+Options:
+  --viewer <name>     # Log viewer (less, tail, bat, fzf)
+  --type <type>       # Log type (for daemon logs)
+  --server <name>     # Server name (for client logs)
+  --date <date>       # Log date (for client logs)
+  --window <window>   # Log window (for client logs)
+  --all               # View all logs (for client logs)
+  --instance <name>   # Server instance (for server logs)
+  --profile <name>    # Server profile (for server logs)
+  --since <time>      # Start time (for session logs)
+  --until <time>      # End time (for session logs)
+```
+
+Each subcommand supports the following operations:
+
+- `list`: List available logs
+- `view`: View logs
+- `follow`: Follow logs in real-time
+
+### Examples
+
+#### View Daemon Logs
+
+```bash
+# List available daemon logs
+mcpctl logs daemon list
+
+# View daemon logs using less
+mcpctl logs daemon view --viewer less
+
+# Follow daemon logs in real-time
+mcpctl logs daemon follow
+
+# View daemon error logs
+mcpctl logs daemon view --type error
+```
+
+#### View Client Logs
+
+```bash
+# List available client logs
+mcpctl logs client list
+
+# View Claude logs
+mcpctl logs client view claude
+
+# View Cursor logs for a specific date and window
+mcpctl logs client view cursor --date 2024-04-29 --window main
+
+# View all Cursor logs
+mcpctl logs client view cursor --all
+
+# Follow Claude logs in real-time
+mcpctl logs client follow claude
+```
+
+#### View Server Logs
+
+```bash
+# List available server logs
+mcpctl logs server list
+
+# View server logs
+mcpctl logs server view my-server
+
+# View server logs for a specific instance
+mcpctl logs server view my-server --instance instance-1
+
+# Follow server logs in real-time
+mcpctl logs server follow my-server --profile production
+```
+
+#### View Session Logs
+
+```bash
+# List available session logs
+mcpctl logs session list
+
+# View session logs
+mcpctl logs session view session-123
+
+# View session logs within a time range
+mcpctl logs session view session-123 --since "2024-04-29 00:00:00" --until "2024-04-29 23:59:59"
+
+# Follow session logs in real-time
+mcpctl logs session follow session-123
+```
+
 ### Client Integration
 
 ```bash

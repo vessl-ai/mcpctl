@@ -27,6 +27,13 @@
 - Manage server sessions
 - Monitor server status and health
 
+### 📝 Log Management
+
+- View daemon, client, server, and session logs
+- Real-time log following
+- Multiple log viewer support (less, tail, bat, fzf)
+- Filtered log viewing by date, window, and instance
+
 ### ⚙️ Configuration Management
 
 - Profile-based configuration management
@@ -78,6 +85,22 @@ mcpctl server list
 
 # List sessions
 mcpctl session list
+```
+
+4. **View Logs**
+
+```bash
+# View daemon logs
+mcpctl logs daemon view
+
+# View client logs
+mcpctl logs client view claude|cursor|...
+
+# View server logs
+mcpctl logs server view my-server
+
+# View session logs
+mcpctl logs session view session-123
 ```
 
 ## 🔧 Configuration

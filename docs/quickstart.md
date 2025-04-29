@@ -112,6 +112,28 @@ mcpctl session start --server-name my-server
 mcpctl session stop --session-id <session-id>
 ```
 
+### Managing Logs
+
+```bash
+# View daemon logs
+mcpctl logs daemon view
+
+# View client logs
+mcpctl logs client view claude
+
+# View server logs
+mcpctl logs server view my-server
+
+# View session logs
+mcpctl logs session view session-123
+
+# Follow logs in real-time
+mcpctl logs daemon follow
+mcpctl logs client follow claude
+mcpctl logs server follow my-server
+mcpctl logs session follow session-123
+```
+
 ### Registry Management
 
 ```bash
