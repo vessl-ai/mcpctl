@@ -35,9 +35,7 @@ jobs:
           version: 8
 
       - name: Install uv
-        uses: uv-packages/action-setup@v2
-        with:
-          version: 1
+        uses: astral-sh/setup-uv@v5
           
       - name: Install dependencies
         run: pnpm docs:init
