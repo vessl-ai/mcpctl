@@ -8,7 +8,7 @@ MCPCTL (MCP Execution Control Tool) is a powerful command-line tool for managing
 
 1. [Installation](./installation.md)
 2. [Core Concepts](./core-concepts.md)
-3. [Features](./features.md)
+3. [Features](./features/index.md)
    - [Server Discovery](./features/server-discovery.md)
    - [Server Instance Management](./features/server-instance.md)
    - [Configuration Management](./features/configuration.md)

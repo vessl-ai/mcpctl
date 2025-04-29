@@ -1,0 +1,13 @@
+site_name: MCPCTL
+site_url: https://docs.mcpctl.dev
+site_author: cooco119
+site_description: MCPCTL is a command-line tool for managing MCP servers and configurations.
+
+theme:
+  name: readthedocs
+  highlightjs: true
+  hljs_languages:
+    - javascript
+    - python
+    - bash
+    - json
