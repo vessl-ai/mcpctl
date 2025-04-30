@@ -7,8 +7,11 @@ import { Logger, LogLevel, verboseToLogLevel } from "../lib/logger/logger";
 import { newApp } from "./app";
 import { configCommand } from "./commands/config";
 import { daemonCommand } from "./commands/daemon";
+import deleteCommand from "./commands/delete";
 import { installCommand } from "./commands/install";
+import { listCommand } from "./commands/list";
 import { logsCommand } from "./commands/logs";
+import { mcpconfigCommand } from "./commands/mcpconfig";
 import { profileCommand } from "./commands/profile";
 import { registryCommand } from "./commands/registry";
 import { searchCommand } from "./commands/search";
@@ -72,6 +75,9 @@ const main = async () => {
     console.error("  search\t\tSearch for MCP packages");
     console.error("  daemon\t\tManage MCP daemon");
     console.error("  logs\t\tView MCP logs");
+    console.error("  list\t\tList MCP servers");
+    console.error("  delete\t\tDelete MCP server from client");
+    console.error("  mcpconfig\t\tManage MCP configurations");
     console.error("\nFor detailed help: mcpctl <command> --help");
     process.exit(1);
   }
@@ -117,6 +123,18 @@ const main = async () => {
         await logsCommand(app, subArgv.slice(1));
         break;
       }
+      case "list": {
+        await listCommand(app, subArgv.slice(1));
+        break;
+      }
+      case "delete": {
+        await deleteCommand(subArgv.slice(1));
+        break;
+      }
+      case "mcpconfig": {
+        await mcpconfigCommand(subArgv.slice(1));
+        break;
+      }
       default:
         console.error(`Error: '${mainCommand}' is an unknown command.`);
         console.error("\nAvailable commands:");
@@ -128,6 +146,9 @@ const main = async () => {
         console.error("  search\t\tSearch for MCP packages");
         console.error("  daemon\t\tManage MCP daemon");
         console.error("  logs\t\tView MCP logs");
+        console.error("  list\t\tList MCP servers");
+        console.error("  delete\t\tDelete MCP server from client");
+        console.error("  mcpconfig\t\tManage MCP configurations");
         console.error("\nFor detailed help: mcpctl <command> --help");
         process.exit(1);
     }

@@ -71,10 +71,7 @@ export const installCommand = async (app: App, argv: string[]) => {
   );
 
   const serverType = McpServerType.STDIO; // TODO: 추후 변경
-  const sanitizedCommand = command.replace(/[^a-zA-Z0-9]/g, "-");
-  const logFileKey = `${serverName}-${serverType}-${
-    profile ? profile : ""
-  }-${sanitizedCommand}`;
+  const logFileKey = `session.${client}.${serverName}`;
   const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
   const mcpctlEnv = {
     MCPCTL_LOG_FILE: `${homeDir}/.mcpctl/logs/${logFileKey}.log`,

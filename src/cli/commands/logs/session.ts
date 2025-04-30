@@ -33,13 +33,14 @@ export const sessionLogsCommand = async (app: App, argv: string[]) => {
   }
 
   const subCommand = subArgv[0];
-  const sessionId = subArgv[1];
+  const clientName = subArgv[1];
+  const serverName = subArgv[2];
   const logDir = path.join(os.homedir(), ".mcpctl", "logs");
   const viewer = options["--viewer"] || "less";
 
-  if (!sessionId && subCommand !== "list") {
-    logger.error("Error: Session ID is required.");
-    throw new CliError("Error: Session ID is required.");
+  if ((!clientName || !serverName) && subCommand !== "list") {
+    logger.error("Error: Client name and server name are required.");
+    throw new CliError("Error: Client name and server name are required.");
   }
 
   switch (subCommand) {
@@ -47,10 +48,10 @@ export const sessionLogsCommand = async (app: App, argv: string[]) => {
       await listSessionLogs(logDir);
       break;
     case "view":
-      await viewSessionLogs(logDir, sessionId, viewer);
+      await viewSessionLogs(app, logDir, clientName, serverName, viewer);
       break;
     case "follow":
-      await followSessionLogs(logDir, sessionId);
+      await followSessionLogs(app, logDir, clientName, serverName);
       break;
     default:
       logger.error(`Error: '${subCommand}' is an unknown subcommand.`);
@@ -70,11 +71,14 @@ async function listSessionLogs(logDir: string) {
 
   const files = fs
     .readdirSync(logDir)
-    .filter((file) => file.startsWith("session-") && file.endsWith(".log"))
+    .filter((file) => file.startsWith("session.") && file.endsWith(".log"))
     .map((file) => {
       const stats = fs.statSync(path.join(logDir, file));
+      const [_, client, server] = file.split(".");
       return {
         name: file,
+        client,
+        server,
         size: formatFileSize(stats.size),
         modified: stats.mtime,
       };
@@ -83,7 +87,7 @@ async function listSessionLogs(logDir: string) {
   console.log("Available session logs:");
   files.forEach((file) => {
     console.log(
-      `- ${file.name} (${
+      `- ${file.client}.${file.server} (${
         file.size
       }, modified ${file.modified.toLocaleString()})`
     );
@@ -91,42 +95,57 @@ async function listSessionLogs(logDir: string) {
 }
 
 async function viewSessionLogs(
+  app: App,
   logDir: string,
-  sessionId: string,
+  clientName: string,
+  serverName: string,
   viewer: string
 ) {
-  const logFile = path.join(logDir, `session-${sessionId}.log`);
+  const logFile = path.join(logDir, `session.${clientName}.${serverName}.log`);
   if (!fs.existsSync(logFile)) {
-    console.log(`No log found for session ${sessionId}.`);
+    console.log(
+      `No log found for client ${clientName} and server ${serverName}.`
+    );
     return;
   }
 
-  const viewerCommand = getViewerCommand(viewer, logFile);
-  spawn(viewerCommand, [], { stdio: "inherit" });
+  if (viewer.toLowerCase() === "fzf") {
+    const cat = spawn("cat", [logFile]);
+    const fzf = spawn("fzf", [], { stdio: ["pipe", "inherit", "inherit"] });
+    cat.stdout.pipe(fzf.stdin);
+  } else {
+    const [command, args] = getViewerCommand(viewer, logFile);
+    spawn(command, args, { stdio: "inherit" });
+  }
 }
 
-async function followSessionLogs(logDir: string, sessionId: string) {
-  const logFile = path.join(logDir, `session-${sessionId}.log`);
+async function followSessionLogs(
+  app: App,
+  logDir: string,
+  clientName: string,
+  serverName: string
+) {
+  const logFile = path.join(logDir, `session.${clientName}.${serverName}.log`);
   if (!fs.existsSync(logFile)) {
-    console.log(`No log found for session ${sessionId}.`);
+    console.log(
+      `No log found for client ${clientName} and server ${serverName}.`
+    );
     return;
   }
 
   spawn("tail", ["-f", logFile], { stdio: "inherit" });
 }
 
-function getViewerCommand(viewer: string, file: string): string {
+function getViewerCommand(viewer: string, file: string): [string, string[]] {
   switch (viewer.toLowerCase()) {
     case "less":
-      return `less ${file}`;
+      return ["less", [file]];
     case "tail":
-      return `tail -f ${file}`;
+      return ["tail", ["-f", file]];
     case "bat":
-      return `bat --paging=always ${file}`;
-    case "fzf":
-      return `cat ${file} | fzf`;
+      return ["bat", ["--paging=always", file]];
     default:
-      return `less ${file}`;
+      return ["less", [file]];
   }
 }
 
