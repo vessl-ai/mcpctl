@@ -1,6 +1,8 @@
 import arg from "arg";
 import { spawn } from "child_process";
 import fs from "fs";
+import { unlink } from "fs/promises";
+import inquirer from "inquirer";
 import os from "os";
 import path from "path";
 import { promisify } from "util";
@@ -125,6 +127,7 @@ export const clientLogsCommand = async (app: App, argv: string[]) => {
     console.log("  list\tList available client logs");
     console.log("  view\tView client logs");
     console.log("  follow\tFollow client logs in real-time");
+    console.log("  remove\tRemove client logs");
     return;
   }
 
@@ -161,12 +164,16 @@ export const clientLogsCommand = async (app: App, argv: string[]) => {
       case "follow":
         await followClientLogs(clientName, server, date, window, logPaths);
         break;
+      case "remove":
+        await removeClientLogs(clientName, server, date, window, logPaths);
+        break;
       default:
         logger.error(`Error: '${subCommand}' is an unknown subcommand.`);
         console.log("Available subcommands:");
         console.log("  list\tList available client logs");
         console.log("  view\tView client logs");
         console.log("  follow\tFollow client logs in real-time");
+        console.log("  remove\tRemove client logs");
         throw new CliError(`Error: '${subCommand}' is an unknown subcommand.`);
     }
   } catch (error: unknown) {
@@ -358,14 +365,53 @@ async function followClientLogs(
     const { command, args } = getViewerCommand("tail", logFile);
     spawn(command, args, { stdio: "inherit" });
   } else if (clientName === "cursor") {
+    const { base, logPath } = logPaths.cursor;
+
     if (!date || !window) {
-      console.log(
-        "Error: Date and window are required for following Cursor logs."
-      );
-      return;
+      // Find the most recent log
+      if (!(await exists(base))) {
+        console.log("No Cursor logs found.");
+        return;
+      }
+
+      let dates = await readdir(base);
+      // if mac, ignore .DS_Store
+      if (os.platform() === "darwin") {
+        dates = dates.filter((d) => d !== ".DS_Store");
+      }
+
+      let mostRecentDate = "";
+      let mostRecentWindow = "";
+      let mostRecentTime = 0;
+
+      for (const d of dates) {
+        const dateDir = path.join(base, d);
+        if (!(await exists(dateDir))) continue;
+
+        const windows = await readdir(dateDir);
+        for (const w of windows) {
+          const logPath = path.join(base, logPaths.cursor.logPath(d, w));
+          if (await exists(logPath)) {
+            const stats = await stat(logPath);
+            if (stats.mtime.getTime() > mostRecentTime) {
+              mostRecentTime = stats.mtime.getTime();
+              mostRecentDate = d;
+              mostRecentWindow = w;
+            }
+          }
+        }
+      }
+
+      if (!mostRecentDate || !mostRecentWindow) {
+        console.log("No Cursor logs found.");
+        return;
+      }
+
+      date = mostRecentDate;
+      window = mostRecentWindow;
+      console.log(`Following most recent log: ${date}/${window}`);
     }
 
-    const { base, logPath } = logPaths.cursor;
     const fullLogPath = path.join(base, logPath(date, window));
 
     if (!(await exists(fullLogPath))) {
@@ -375,6 +421,123 @@ async function followClientLogs(
 
     const { command, args } = getViewerCommand("tail", fullLogPath);
     spawn(command, args, { stdio: "inherit" });
+  } else {
+    console.log("Unknown client. Available clients: claude, cursor");
+  }
+}
+
+async function removeClientLogs(
+  clientName: string,
+  server: string | undefined,
+  date: string | undefined,
+  window: string | undefined,
+  logPaths: LogPathConfig
+) {
+  if (clientName === "claude") {
+    const { base, mainLog, serverLog } = logPaths.claude;
+    if (!(await exists(base))) {
+      console.log("No Claude logs found.");
+      return;
+    }
+
+    let targetFiles: string[] = [];
+    if (server) {
+      const logFile = path.join(base, serverLog(server));
+      if (await exists(logFile)) {
+        targetFiles.push(logFile);
+      }
+    } else {
+      const mainLogFile = path.join(base, mainLog);
+      if (await exists(mainLogFile)) {
+        targetFiles.push(mainLogFile);
+      }
+    }
+
+    if (targetFiles.length === 0) {
+      console.log(
+        `No Claude logs found for ${server ? `server ${server}` : "main log"}.`
+      );
+      return;
+    }
+
+    const { confirm } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "confirm",
+        message: `Are you sure you want to remove ${targetFiles.length} Claude log file(s)?`,
+        default: false,
+      },
+    ]);
+
+    if (!confirm) {
+      console.log("Operation cancelled.");
+      return;
+    }
+
+    for (const file of targetFiles) {
+      await unlink(file);
+      console.log(`Removed: ${path.basename(file)}`);
+    }
+    console.log("All selected Claude logs have been removed.");
+  } else if (clientName === "cursor") {
+    const { base, logPath } = logPaths.cursor;
+    if (!(await exists(base))) {
+      console.log("No Cursor logs found.");
+      return;
+    }
+
+    let targetFiles: string[] = [];
+    if (date && window) {
+      const logFile = path.join(base, logPaths.cursor.logPath(date, window));
+      if (await exists(logFile)) {
+        targetFiles.push(logFile);
+      }
+    } else {
+      const dates = await readdir(base);
+      for (const d of dates) {
+        const dateDir = path.join(base, d);
+        if (!(await exists(dateDir))) continue;
+
+        const windows = await readdir(dateDir);
+        for (const w of windows) {
+          const logFile = path.join(base, logPaths.cursor.logPath(d, w));
+          if (await exists(logFile)) {
+            targetFiles.push(logFile);
+          }
+        }
+      }
+    }
+
+    if (targetFiles.length === 0) {
+      console.log(
+        `No Cursor logs found for ${
+          date && window
+            ? `date ${date} and window ${window}`
+            : "any date and window"
+        }.`
+      );
+      return;
+    }
+
+    const { confirm } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "confirm",
+        message: `Are you sure you want to remove ${targetFiles.length} Cursor log file(s)?`,
+        default: false,
+      },
+    ]);
+
+    if (!confirm) {
+      console.log("Operation cancelled.");
+      return;
+    }
+
+    for (const file of targetFiles) {
+      await unlink(file);
+      console.log(`Removed: ${path.basename(file)}`);
+    }
+    console.log("All selected Cursor logs have been removed.");
   } else {
     console.log("Unknown client. Available clients: claude, cursor");
   }

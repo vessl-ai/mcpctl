@@ -169,6 +169,7 @@ Each subcommand supports the following operations:
 - `list`: List available logs
 - `view`: View logs
 - `follow`: Follow logs in real-time
+- `remove`: Remove logs
 
 ### Examples
 
@@ -186,6 +187,12 @@ mcpctl logs daemon follow
 
 # View daemon error logs
 mcpctl logs daemon view --type error
+
+# Remove all daemon logs
+mcpctl logs daemon remove
+
+# Remove specific daemon log type
+mcpctl logs daemon remove --type error
 ```
 
 #### View Client Logs
@@ -205,6 +212,15 @@ mcpctl logs client view cursor --all
 
 # Follow Claude logs in real-time
 mcpctl logs client follow claude
+
+# Remove all Claude logs
+mcpctl logs client remove claude
+
+# Remove specific Claude server logs
+mcpctl logs client remove claude --server my-server
+
+# Remove specific Cursor logs
+mcpctl logs client remove cursor --date 2024-04-29 --window main
 ```
 
 #### View Server Logs
@@ -221,6 +237,12 @@ mcpctl logs server view my-server --instance instance-1
 
 # Follow server logs in real-time
 mcpctl logs server follow my-server --profile production
+
+# Remove all server logs
+mcpctl logs server remove
+
+# Remove specific server logs
+mcpctl logs server remove my-server --instance instance-1 --profile production
 ```
 
 #### View Session Logs
@@ -237,6 +259,12 @@ mcpctl logs session view session-123 --since "2024-04-29 00:00:00" --until "2024
 
 # Follow session logs in real-time
 mcpctl logs session follow session-123
+
+# Remove all session logs
+mcpctl logs session remove
+
+# Remove specific session logs
+mcpctl logs session remove session-123
 ```
 
 ### Client Integration
@@ -316,3 +344,7 @@ mcpctl config secret set SLACK_TOKEN "xoxb-token" --encrypt
 - `6`: Network error
 - `7`: Timeout
 - `8`: Resource not found
+
+```
+
+```

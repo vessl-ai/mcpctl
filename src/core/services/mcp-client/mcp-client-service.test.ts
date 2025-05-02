@@ -25,15 +25,12 @@ const logger = {
   withContext: jest.fn().mockReturnThis(),
 };
 
-const mockSecretService: SecretService = {
-  getSharedSecret: jest.fn(),
-  getProfileSecret: jest.fn(),
-  setSharedSecret: jest.fn(),
-  setProfileSecret: jest.fn(),
-  removeSharedSecret: jest.fn(),
-  removeProfileSecret: jest.fn(),
-  setSharedSecrets: jest.fn(),
-  listSharedSecrets: jest.fn(),
+const secretService: jest.Mocked<SecretService> = {
+  getSecret: jest.fn(),
+  setSecret: jest.fn(),
+  setSecrets: jest.fn(),
+  removeSecret: jest.fn(),
+  listSecrets: jest.fn(),
   resolveEnv: jest.fn(),
 };
 
@@ -61,7 +58,7 @@ describe("McpClientService", () => {
     jest.clearAllMocks();
     service = new McpClientServiceImpl(
       mockProfileService,
-      mockSecretService,
+      secretService,
       logger
     );
   });
@@ -266,7 +263,7 @@ describe("McpClientService", () => {
     it("should create new instance", () => {
       const service = newMcpClientService(
         mockProfileService,
-        mockSecretService,
+        secretService,
         logger
       );
       expect(service).toBeInstanceOf(McpClientServiceImpl);

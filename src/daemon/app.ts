@@ -1,4 +1,5 @@
 import fs from "fs";
+import { LOG_PATHS, SOCKET_PATHS } from "../core/lib/constants/paths";
 import { logLevel } from "../core/lib/env";
 import {
   ConfigService,
@@ -26,10 +27,13 @@ import {
   ServerInstanceManager,
 } from "./managers/server-instance/server-instance-manager";
 import { RPCServer } from "./rpc/server";
+import { newPortService, PortService } from "./services/port/port-service";
+
 export class DaemonApp {
   private container: Container;
-  private rpcServer!: RPCServer;
+  private rpcServer: RPCServer | undefined;
   private initPromise: Promise<void>;
+
   constructor() {
     this.container = new BaseContainer();
     this.initializeDependencies();
@@ -45,7 +49,7 @@ export class DaemonApp {
 
   private initializeDependencies(): void {
     // 기본 의존성
-    const logDir = "/var/log/mcpctl/daemon";
+    const logDir = LOG_PATHS[process.platform as keyof typeof LOG_PATHS];
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
@@ -65,6 +69,7 @@ export class DaemonApp {
 
     this.registerConfigService(logger);
     this.registerSecretService(logger);
+    this.registerPortService(logger);
 
     // 서버 인스턴스 매니저
     this.registerServerInstanceManager(logger);
@@ -98,15 +103,18 @@ export class DaemonApp {
     );
   }
 
+  private registerPortService(logger: Logger) {
+    this.container.register<PortService>("portService", newPortService(logger));
+  }
+
   private registerServerInstanceManager(logger: Logger) {
+    const secretService = this.container.get<SecretService>("secretService");
+    const portService = this.container.get<PortService>("portService");
     this.container.register<ServerInstanceManager>(
-      "instanceManager",
+      "serverInstanceManager",
       newServerInstanceManager(
-        logger.withContext("ServerInstanceManager"),
-        newServerInstanceFactory(
-          this.container.get<SecretService>("secretService"),
-          logger.withContext("ServerInstanceFactory")
-        )
+        logger,
+        newServerInstanceFactory(secretService, logger, portService)
       )
     );
   }
@@ -116,7 +124,10 @@ export class DaemonApp {
     logger.info("Creating RPC server...");
 
     // create uds socket file
-    const socketFile = "/tmp/mcp-daemon.sock";
+    const socketFile =
+      SOCKET_PATHS[process.platform as keyof typeof SOCKET_PATHS];
+    logger.debug("Socket file path:", { socketFile });
+
     if (fs.existsSync(socketFile)) {
       logger.debug("Removing existing socket file:", { socketFile });
       fs.unlinkSync(socketFile);
@@ -124,33 +135,54 @@ export class DaemonApp {
 
     const transportFactory = new SocketTransportFactory(logger);
     logger.debug("Creating socket transport...");
-    const transport = await transportFactory.create({
-      type: "socket",
-      endpoint: socketFile,
-      params: {
-        isServer: true, // Enable server mode
-      },
-    });
-    logger.debug("Socket transport created successfully");
+    try {
+      const transport = await transportFactory.create({
+        type: "socket",
+        endpoint: socketFile,
+        params: {
+          isServer: true,
+        },
+      });
+      logger.debug("Socket transport created successfully");
 
-    this.rpcServer = new RPCServer(
-      transport,
-      this.getInstanceManager(),
-      logger
-    );
-    this.rpcServer.listen();
-    logger.info("RPC server started and listening on socket:", { socketFile });
+      const instanceManager = this.container.get<ServerInstanceManager>(
+        "serverInstanceManager"
+      );
+      this.rpcServer = new RPCServer(transport, instanceManager, logger);
+      this.rpcServer.listen();
+      logger.info("RPC server started and listening on socket:", {
+        socketFile,
+      });
+
+      // Verify socket file exists and has correct permissions
+      if (fs.existsSync(socketFile)) {
+        const stats = fs.statSync(socketFile);
+        logger.debug("Socket file stats:", {
+          socketFile,
+          mode: stats.mode.toString(8),
+          uid: stats.uid,
+          gid: stats.gid,
+        });
+      } else {
+        logger.error("Socket file was not created:", { socketFile });
+      }
+    } catch (error) {
+      logger.error("Failed to create RPC server:", { error });
+      throw error;
+    }
   }
 
   public getInstanceManager(): ServerInstanceManager {
-    return this.container.get<ServerInstanceManager>("instanceManager");
+    return this.container.get<ServerInstanceManager>("serverInstanceManager");
   }
 
   public async dispose(): Promise<void> {
     const logger = this.container.get<Logger>("logger");
     logger.info("Disposing daemon application...");
     await this.getInstanceManager().dispose();
-    this.rpcServer.dispose();
+    if (this.rpcServer) {
+      this.rpcServer.dispose();
+    }
     logger.info("Daemon application disposed successfully");
   }
 }

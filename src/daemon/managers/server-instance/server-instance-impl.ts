@@ -1,8 +1,8 @@
 import { ChildProcess, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
-import { getPortPromise } from "portfinder";
 import { v4 as uuidv4 } from "uuid";
+import { LOG_PATHS } from "../../../core/lib/constants/paths";
 import { Logger } from "../../../lib/logger/logger";
 import {
   McpServerInstance,
@@ -10,6 +10,7 @@ import {
   McpServerInstanceStatus,
 } from "../../../lib/types/instance";
 import { RunConfig, getRunConfigId } from "../../../lib/types/run-config";
+import { PortService } from "../../services/port/port-service";
 
 // Base worker implementation
 export abstract class BaseServerInstance implements McpServerInstance {
@@ -21,8 +22,13 @@ export abstract class BaseServerInstance implements McpServerInstance {
   connectionInfo: McpServerInstanceConnectionInfo;
   startedAt: string;
   lastUsedAt: string;
+  protected portService: PortService;
 
-  constructor(public config: RunConfig, protected logger: Logger) {
+  constructor(
+    public config: RunConfig,
+    protected logger: Logger,
+    portService: PortService
+  ) {
     this.id = `server-instance.${uuidv4()}`;
     this.connectionInfo = {
       transport: "sse",
@@ -32,6 +38,7 @@ export abstract class BaseServerInstance implements McpServerInstance {
     };
     this.startedAt = new Date().toISOString();
     this.lastUsedAt = new Date().toISOString();
+    this.portService = portService;
     this.logger = this.logger.withContext(
       `ServerInstance:${this.id}(${this.config.serverName})`
     );
@@ -63,13 +70,14 @@ export class LocalServerInstance extends BaseServerInstance {
       configId: getRunConfigId(this.config),
     });
     try {
-      const port = await getPortPromise({ port: 8000 });
+      const port = await this.portService.allocatePort();
       this.logger.debug("Port allocated", { port });
 
       // Create log directory if it doesn't exist
-      const logDir =
-        process.env.MCPCTL_LOG_DIR ||
-        path.join("/var/log", "mcpctl", "server-instances");
+      const logDir = path.join(
+        LOG_PATHS[process.platform as keyof typeof LOG_PATHS],
+        "server-instances"
+      );
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
       }
@@ -151,6 +159,7 @@ export class LocalServerInstance extends BaseServerInstance {
         this.logger.info("Worker process exited", { code, signal });
         this.status = McpServerInstanceStatus.STOPPED;
         this.process = undefined;
+        this.portService.releasePort(port);
       });
 
       this.connectionInfo.endpoint = `/sse`;
@@ -179,6 +188,7 @@ export class LocalServerInstance extends BaseServerInstance {
       this.logger.debug("Killing worker process");
       this.process.kill();
       this.process = undefined;
+      this.portService.releasePort(this.connectionInfo.port);
     }
     this.status = McpServerInstanceStatus.STOPPED;
     this.logger.info("Local server instance stopped", { status: this.status });

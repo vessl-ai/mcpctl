@@ -1,19 +1,12 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
+import { SERVICE_PATHS } from "../../../core/lib/constants/paths";
 import { CliError } from "../../../lib/errors";
 import { App } from "../../app";
 
-const checkSudoPrivileges = () => {
-  if (process.getuid && process.getuid() !== 0) {
-    throw new Error(
-      "This command requires root privileges. Please run with sudo."
-    );
-  }
-};
-
 const removeLaunchdPlist = () => {
-  const plistPath = "/Library/LaunchDaemons/com.mcpctl.daemon.plist";
+  const plistPath = SERVICE_PATHS.darwin;
   if (fs.existsSync(plistPath)) {
     fs.unlinkSync(plistPath);
   }
@@ -22,9 +15,6 @@ const removeLaunchdPlist = () => {
 export const stopCommand = async (app: App, argv: string[]) => {
   const logger = app.getLogger();
   try {
-    // sudo 권한 체크
-    checkSudoPrivileges();
-
     const platform = os.platform();
     let command: string;
     let args: string[];
@@ -32,15 +22,11 @@ export const stopCommand = async (app: App, argv: string[]) => {
     switch (platform) {
       case "darwin": // macOS
         command = "launchctl";
-        args = [
-          "unload",
-          "-w",
-          "/Library/LaunchDaemons/com.mcpctl.daemon.plist",
-        ];
+        args = ["unload", "-w", SERVICE_PATHS.darwin];
         break;
       case "linux":
-        command = "sudo";
-        args = ["systemctl", "stop", "mcpctld"];
+        command = "systemctl";
+        args = ["--user", "stop", "mcpctld"];
         break;
       case "win32":
         command = "net";

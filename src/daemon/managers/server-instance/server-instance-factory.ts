@@ -4,44 +4,19 @@ import { Logger } from "../../../lib/logger/logger";
 import { McpServerHostingType } from "../../../lib/types/hosting";
 import { McpServerInstance } from "../../../lib/types/instance";
 import { RunConfig, getRunConfigId } from "../../../lib/types/run-config";
+import { PortService } from "../../services/port/port-service";
 import { LocalServerInstance } from "./server-instance-impl";
 
 export interface ServerInstanceFactory {
-  createServerInstance(
-    config: RunConfig,
-    logger: Logger
-  ): Promise<McpServerInstance>;
+  createServerInstance(config: RunConfig): Promise<McpServerInstance>;
 }
 
 class DefaultServerInstanceFactory implements ServerInstanceFactory {
   constructor(
     private readonly secretService: SecretService,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly portService: PortService
   ) {}
-
-  private async resolveSecrets(config: RunConfig): Promise<RunConfig> {
-    const resolvedConfig = { ...config };
-    if (!resolvedConfig.env) {
-      resolvedConfig.env = {};
-    }
-    for (const [key, ref] of Object.entries(config.secrets || {})) {
-      const secret = await this.secretService.getProfileSecret(
-        config.profileName,
-        ref.key
-      );
-      if (secret) {
-        resolvedConfig.env[key] = secret;
-        continue;
-      }
-      const sharedSecret = await this.secretService.getSharedSecret(ref.key);
-      if (sharedSecret) {
-        resolvedConfig.env[key] = sharedSecret;
-        continue;
-      }
-      throw new Error(`Secret ${ref.key} not found`);
-    }
-    return resolvedConfig;
-  }
 
   async createServerInstance(config: RunConfig): Promise<McpServerInstance> {
     this.logger.info("Creating server instance", {
@@ -68,7 +43,11 @@ class DefaultServerInstanceFactory implements ServerInstanceFactory {
     try {
       if (resolvedConfig.hosting === McpServerHostingType.LOCAL) {
         this.logger.debug("Creating local server instance");
-        const instance = new LocalServerInstance(resolvedConfig, this.logger);
+        const instance = new LocalServerInstance(
+          resolvedConfig,
+          this.logger.withContext("LocalServerInstance"),
+          this.portService
+        );
         this.logger.info("Local server instance created successfully", {
           instanceId: instance.id,
         });
@@ -92,11 +71,45 @@ class DefaultServerInstanceFactory implements ServerInstanceFactory {
       throw error;
     }
   }
+
+  private async resolveSecrets(config: RunConfig): Promise<RunConfig> {
+    if (!config.secrets || Object.keys(config.secrets).length === 0) {
+      return config;
+    }
+
+    const resolvedConfig = { ...config };
+    const resolvedSecrets: Record<string, string> = {};
+
+    for (const [key, secretRef] of Object.entries(config.secrets)) {
+      try {
+        const secret = await this.secretService.getSecret(secretRef.key);
+        if (!secret) {
+          throw new Error(`Secret ${secretRef.key} not found`);
+        }
+        resolvedSecrets[key] = secret;
+      } catch (error) {
+        this.logger.error("Failed to resolve secret", {
+          error,
+          secretRef,
+          key,
+        });
+        throw error;
+      }
+    }
+
+    resolvedConfig.env = {
+      ...resolvedConfig.env,
+      ...resolvedSecrets,
+    };
+
+    return resolvedConfig;
+  }
 }
 
 export const newServerInstanceFactory = (
   secretService: SecretService,
-  logger: Logger
+  logger: Logger,
+  portService: PortService
 ): ServerInstanceFactory => {
-  return new DefaultServerInstanceFactory(secretService, logger);
+  return new DefaultServerInstanceFactory(secretService, logger, portService);
 };

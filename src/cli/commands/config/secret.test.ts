@@ -44,14 +44,11 @@ describe("Secret Commands", () => {
     } as jest.Mocked<Logger>;
 
     secretService = {
-      setSharedSecrets: jest.fn(),
-      getSharedSecret: jest.fn(),
-      listSharedSecrets: jest.fn(),
-      removeSharedSecret: jest.fn(),
-      getProfileSecret: jest.fn(),
-      setProfileSecret: jest.fn(),
-      removeProfileSecret: jest.fn(),
-      setSharedSecret: jest.fn(),
+      getSecret: jest.fn(),
+      setSecret: jest.fn(),
+      setSecrets: jest.fn(),
+      removeSecret: jest.fn(),
+      listSecrets: jest.fn(),
       resolveEnv: jest.fn(),
     } as jest.Mocked<SecretService>;
 
@@ -88,6 +85,16 @@ describe("Secret Commands", () => {
   });
 
   describe("secretSetCommand", () => {
+    it("should set secrets", async () => {
+      const secrets = { TEST_KEY: "test-value" };
+      await secretSetCommand(app, ["--entry", "TEST_KEY=test-value"]);
+      expect(secretService.setSecrets).toHaveBeenCalledWith(
+        secrets,
+        undefined,
+        undefined
+      );
+    });
+
     it("should set shared secrets when --shared flag is used", async () => {
       const argv = [
         "--shared",
@@ -98,10 +105,14 @@ describe("Secret Commands", () => {
       ];
       await secretSetCommand(app, argv);
 
-      expect(secretService.setSharedSecrets).toHaveBeenCalledWith({
-        KEY1: "value1",
-        KEY2: "value2",
-      });
+      expect(secretService.setSecrets).toHaveBeenCalledWith(
+        {
+          KEY1: "value1",
+          KEY2: "value2",
+        },
+        undefined,
+        undefined
+      );
       expect(consoleSpy).toHaveBeenCalledWith(
         "✅ Shared secret updated successfully!"
       );
@@ -157,7 +168,7 @@ describe("Secret Commands", () => {
 
   describe("secretGetCommand", () => {
     it("should get all shared secrets when --shared flag is used", async () => {
-      secretService.listSharedSecrets.mockReturnValue({
+      secretService.listSecrets.mockReturnValue({
         KEY1: { key: "KEY1", value: "value1" } as SecretReference,
         KEY2: {
           key: "KEY2",
@@ -165,15 +176,15 @@ describe("Secret Commands", () => {
           description: "test desc",
         } as SecretReference,
       });
-      secretService.getSharedSecret.mockImplementation(async (key) =>
+      secretService.getSecret.mockImplementation(async (key) =>
         key === "KEY1" ? "value1" : "value2"
       );
 
       const argv = ["--shared"];
       await secretGetCommand(app, argv);
 
-      expect(secretService.listSharedSecrets).toHaveBeenCalled();
-      expect(secretService.getSharedSecret).toHaveBeenCalledTimes(2);
+      expect(secretService.listSecrets).toHaveBeenCalled();
+      expect(secretService.getSecret).toHaveBeenCalledTimes(2);
     });
 
     it("should get specific profile secret when profile, server and key are specified", async () => {
@@ -212,7 +223,7 @@ describe("Secret Commands", () => {
       const argv = ["--shared", "--key", "KEY1"];
       await secretRemoveCommand(app, argv);
 
-      expect(secretService.removeSharedSecret).toHaveBeenCalledWith("KEY1");
+      expect(secretService.removeSecret).toHaveBeenCalledWith("KEY1");
       expect(consoleSpy).toHaveBeenCalledWith(
         "✅ Shared secret 'KEY1' removed successfully!"
       );
@@ -263,12 +274,12 @@ describe("Secret Commands", () => {
           description: "Second shared secret",
         } as SecretReference,
       };
-      secretService.listSharedSecrets.mockReturnValue(mockSharedSecrets);
+      secretService.listSecrets.mockReturnValue(mockSharedSecrets);
 
       const argv = ["--shared"];
       await secretListCommand(app, argv);
 
-      expect(secretService.listSharedSecrets).toHaveBeenCalled();
+      expect(secretService.listSecrets).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith("\n🔐 Shared secrets:");
       expect(consoleSpy).toHaveBeenCalledWith("================");
       expect(consoleSpy).toHaveBeenCalledWith("  - KEY1: First shared secret");
@@ -276,12 +287,12 @@ describe("Secret Commands", () => {
     });
 
     it("should show message when no shared secrets exist", async () => {
-      secretService.listSharedSecrets.mockReturnValue({});
+      secretService.listSecrets.mockReturnValue({});
 
       const argv = ["--shared"];
       await secretListCommand(app, argv);
 
-      expect(secretService.listSharedSecrets).toHaveBeenCalled();
+      expect(secretService.listSecrets).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith("\n🔐 Shared secrets:");
       expect(consoleSpy).toHaveBeenCalledWith("================");
       expect(consoleSpy).toHaveBeenCalledWith("  No shared secrets set");
@@ -363,7 +374,7 @@ describe("Secret Commands", () => {
           description: "First shared secret",
         } as SecretReference,
       };
-      secretService.listSharedSecrets.mockReturnValue(mockSharedSecrets);
+      secretService.listSecrets.mockReturnValue(mockSharedSecrets);
 
       // Mock profiles and their secrets
       const mockProfiles = [

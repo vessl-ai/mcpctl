@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { exec } = require('@expo/sudo-prompt');
-const { getMcpctldServiceTemplate, SERVICE_PATHS, SERVICE_COMMANDS } = require('../dist/service-templates.js');
+const { getMcpctldServiceTemplate, SERVICE_COMMANDS } = require('../dist/service-templates.js');
+const { LOG_PATHS, SERVICE_PATHS } = require('../dist/constants/paths.js');
 
 // Exit if not installed globally
 if (!process.env.npm_config_global) {
@@ -130,13 +131,7 @@ function buildCommandSet() {
   const commands = [];
   
   // Define log directories
-  const logDirs = {
-    darwin: '/var/log/mcpctl',
-    linux: '/var/log/mcpctl',
-    win32: 'C:\\ProgramData\\mcpctl\\logs'
-  };
-  
-  const logDir = logDirs[platform];
+  const logDir = LOG_PATHS[platform];
   if (!logDir) {
     console.error(`Unsupported platform: ${platform}`);
     process.exit(1);
@@ -156,7 +151,7 @@ function buildCommandSet() {
       execSync('which mcpctld').toString().trim();
   } catch (error) {
     console.warn('Warning: Could not find mcpctld path. The daemon may not start properly.');
-    daemonPath = platform === 'win32' ? 'mcpctld' : '/usr/local/bin/mcpctld';
+    daemonPath = platform === 'win32' ? 'mcpctld' : path.join(BINARY_PATHS[platform], 'mcpctld');
   }
   
   try {
@@ -165,7 +160,7 @@ function buildCommandSet() {
       execSync('which mcpctl').toString().trim();
   } catch (error) {
     console.warn('Warning: Could not find mcpctl path. The daemon may not start properly.');
-    mcpctlPath = platform === 'win32' ? 'mcpctl' : '/usr/local/bin/mcpctl';
+    mcpctlPath = platform === 'win32' ? 'mcpctl' : path.join(BINARY_PATHS[platform], 'mcpctl');
   }
   
   // Get node path

@@ -8,7 +8,6 @@ import {
   McpServerInstallConfig,
   McpServerType,
 } from "../../lib/types/mcp-server";
-import { SecretReference } from "../../lib/types/secret";
 import { ProfileService } from "../profile/profile-service";
 import { SecretService } from "../secret/secret-service";
 export interface McpClientService {
@@ -86,22 +85,27 @@ export class McpClientServiceImpl implements McpClientService {
       serverInstallConfig.secrets &&
       Object.keys(serverInstallConfig.secrets).length > 0
     ) {
-      let secretRef: Record<string, SecretReference>;
-      if (serverInstallConfig.profile) {
-        secretRef = await this.profileService.upsertProfileSecretsForServer(
-          serverInstallConfig.profile,
-          serverInstallConfig.serverName,
-          serverInstallConfig.secrets || {}
-        );
-      } else {
-        secretRef = await this.secretService.setSharedSecrets(
-          serverInstallConfig.secrets || {}
+      // Check if all secrets exist
+      const existingSecrets = this.secretService.listSecrets();
+      const missingSecrets: string[] = [];
+
+      for (const [key, secretKey] of Object.entries(
+        serverInstallConfig.secrets
+      )) {
+        if (!existingSecrets[secretKey]) {
+          missingSecrets.push(secretKey);
+        }
+      }
+
+      if (missingSecrets.length > 0) {
+        throw new Error(
+          `The following secrets are not registered: ${missingSecrets.join(
+            ", "
+          )}. Please register them first using 'mcpctl config secret set --entry KEY=VALUE'`
         );
       }
-      serverInstallConfig.secrets = Object.fromEntries(
-        Object.entries(secretRef).map(([key, value]) => [key, value.key])
-      );
-      this.logger.debug("secretRef", secretRef);
+
+      // Use the secret keys directly since they are already references
       this.logger.debug("secrets", serverInstallConfig.secrets);
     }
 
@@ -261,9 +265,12 @@ export class McpClientServiceImpl implements McpClientService {
       });
     }
     if (serverInstallConfig.secrets) {
-      Object.entries(serverInstallConfig.secrets).forEach(([key, value]) => {
-        args.push("--secret", `${key}=${value}`);
-      });
+      // Use the secret key directly since it's already a reference
+      Object.entries(serverInstallConfig.secrets).forEach(
+        ([key, secretKey]) => {
+          args.push("--secret", `${key}=${secretKey}`);
+        }
+      );
     }
     if (serverInstallConfig.profile) {
       args.push("--profile", serverInstallConfig.profile);

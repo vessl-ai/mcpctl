@@ -27,12 +27,13 @@ export const daemonLogsCommand = async (app: App, argv: string[]) => {
     console.log("  list\tList available daemon logs");
     console.log("  view\tView daemon logs");
     console.log("  follow\tFollow daemon logs in real-time");
+    console.log("  remove\tRemove daemon logs");
     return;
   }
 
   const subCommand = subArgv[0];
-  const logDir = "/var/log/mcpctl/daemon";
-  const logType = options["--type"] || "log";
+  const logDir = "/var/log/mcpctl";
+  const logType = options["--type"] || "error";
   const viewer = options["--viewer"] || "less";
 
   switch (subCommand) {
@@ -45,12 +46,16 @@ export const daemonLogsCommand = async (app: App, argv: string[]) => {
     case "follow":
       await followDaemonLogs(logDir, logType);
       break;
+    case "remove":
+      await removeDaemonLogs(logDir, logType);
+      break;
     default:
       logger.error(`Error: '${subCommand}' is an unknown subcommand.`);
       console.log("Available subcommands:");
       console.log("  list\tList available daemon logs");
       console.log("  view\tView daemon logs");
       console.log("  follow\tFollow daemon logs in real-time");
+      console.log("  remove\tRemove daemon logs");
       throw new CliError(`Error: '${subCommand}' is an unknown subcommand.`);
   }
 };
@@ -163,4 +168,50 @@ function formatFileSize(bytes: number): string {
   }
 
   return `${size.toFixed(1)}${units[unitIndex]}`;
+}
+
+async function removeDaemonLogs(logDir: string, logType: string | undefined) {
+  if (!fs.existsSync(logDir)) {
+    console.log("No daemon logs found.");
+    return;
+  }
+
+  const files = fs
+    .readdirSync(logDir)
+    .filter((file) => file.startsWith("daemon"));
+
+  if (files.length === 0) {
+    console.log("No daemon logs found to remove.");
+    return;
+  }
+
+  let targetFiles = files;
+  if (logType) {
+    targetFiles = files.filter((file) => file === `daemon.${logType}.log`);
+    if (targetFiles.length === 0) {
+      console.log(`No daemon ${logType} logs found to remove.`);
+      return;
+    }
+  }
+
+  const { confirm } = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "confirm",
+      message: `Are you sure you want to remove ${targetFiles.length} daemon log file(s)?`,
+      default: false,
+    },
+  ]);
+
+  if (!confirm) {
+    console.log("Operation cancelled.");
+    return;
+  }
+
+  for (const file of targetFiles) {
+    const filePath = path.join(logDir, file);
+    fs.unlinkSync(filePath);
+    console.log(`Removed: ${file}`);
+  }
+  console.log("All selected daemon logs have been removed.");
 }

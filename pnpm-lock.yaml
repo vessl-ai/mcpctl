@@ -14,6 +14,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.9.0
         version: 1.9.0
+      '@vessl-ai/mcpctl':
+        specifier: file:vessl-ai-mcpctl-0.0.7-rc1.tgz
+        version: file:vessl-ai-mcpctl-0.0.7-rc1.tgz(@types/node@22.14.0)
       arg:
         specifier: ^5.0.2
         version: 5.0.2
@@ -24,7 +27,7 @@ importers:
         specifier: ^1.8.4
         version: 1.8.4
       chalk:
-        specifier: '4'
+        specifier: ^4.0.0
         version: 4.1.2
       cli-table3:
         specifier: ^0.6.5
@@ -698,6 +701,13 @@ packages:
 
   '@types/yargs@17.0.33':
     resolution: {integrity: sha512-WpxBCKWPLr4xSsHgz511rFJAM+wS28w2zEO1QDNY5zM/S8ok70NNfztH0xwhqKyaK0OHCbN98LDAZuy1ctxDkA==}
+
+  '@vessl-ai/mcpctl@file:vessl-ai-mcpctl-0.0.7-rc1.tgz':
+    resolution: {integrity: sha512-tul8yiBM+Awcgl1yAa1adSnp2pMIGSVo7hpNUqUPFd1LslKAfei6ZDevABFe6p42MpXXKPAEQrgiuMVoi4jbdw==, tarball: file:vessl-ai-mcpctl-0.0.7-rc1.tgz}
+    version: 0.0.7-rc1
+    engines: {node: '>=18.0.0'}
+    os: [darwin, linux, win32]
+    hasBin: true
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -2849,6 +2859,31 @@ snapshots:
   '@types/yargs@17.0.33':
     dependencies:
       '@types/yargs-parser': 21.0.3
+
+  '@vessl-ai/mcpctl@file:vessl-ai-mcpctl-0.0.7-rc1.tgz(@types/node@22.14.0)':
+    dependencies:
+      '@expo/sudo-prompt': 9.3.2
+      '@modelcontextprotocol/sdk': 1.9.0
+      arg: 5.0.2
+      argparse: 2.0.1
+      axios: 1.8.4
+      chalk: 4.1.2
+      cli-table3: 0.6.5
+      eventsource: 3.0.6
+      inquirer: 12.6.0(@types/node@22.14.0)
+      keytar: 7.9.0
+      node-fetch: 3.3.2
+      openai: 4.95.0(zod@3.24.2)
+      portfinder: 1.0.35
+      uuid: 11.1.0
+      vscode-jsonrpc: 8.2.1
+      zod: 3.24.2
+    transitivePeerDependencies:
+      - '@types/node'
+      - debug
+      - encoding
+      - supports-color
+      - ws
 
   abort-controller@3.0.0:
     dependencies:

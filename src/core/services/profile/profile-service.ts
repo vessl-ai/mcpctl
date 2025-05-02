@@ -3,7 +3,6 @@ import { Profile } from "../../lib/types/profile";
 import { SecretReference } from "../../lib/types/secret";
 import { ConfigService } from "../config/config-service";
 import { SecretService } from "../secret/secret-service";
-import { normalizeSecretKey } from "../secret/util";
 import { defaultProfile } from "./default-profile";
 import { ProfileStore } from "./profile-store";
 
@@ -236,40 +235,41 @@ export class ProfileServiceImpl implements ProfileService {
       servers: {},
     };
 
-    const secretRefs: Record<string, SecretReference> = {};
-    await Promise.all(
-      Object.entries(secrets).map(async ([key, value]) => {
-        const secretKey = normalizeSecretKey(key);
-        await this.secretService.setProfileSecret(
-          profileName,
-          secretKey,
-          value
-        );
-        secretRefs[key] = { key: secretKey };
-      })
-    );
+    // const secretRefs: Record<string, SecretReference> = {};
+    // await Promise.all(
+    //   Object.entries(secrets).map(async ([key, value]) => {
+    //     const secretKey = normalizeSecretKey(key);
+    //     await this.secretService.setProfileSecret(
+    //       profileName,
+    //       secretKey,
+    //       value
+    //     );
+    //     secretRefs[key] = { key: secretKey };
+    //   })
+    // );
 
-    if (!profile.servers[serverName]) {
-      profile.servers[serverName] = {
-        env: {
-          env: {},
-          secrets: secretRefs,
-        },
-      };
-    } else {
-      profile.servers[serverName].env = {
-        env: {
-          ...(profile.servers[serverName]?.env?.env || {}),
-        },
-        secrets: {
-          ...(profile.servers[serverName]?.env?.secrets || {}), // 이건 이미 암호화 되어있으므로, 기존 값은
-          ...secretRefs,
-        },
-      };
-    }
+    // if (!profile.servers[serverName]) {
+    //   profile.servers[serverName] = {
+    //     env: {
+    //       env: {},
+    //       secrets: secretRefs,
+    //     },
+    //   };
+    // } else {
+    //   profile.servers[serverName].env = {
+    //     env: {
+    //       ...(profile.servers[serverName]?.env?.env || {}),
+    //     },
+    //     secrets: {
+    //       ...(profile.servers[serverName]?.env?.secrets || {}), // 이건 이미 암호화 되어있으므로, 기존 값은
+    //       ...secretRefs,
+    //     },
+    //   };
+    // }
 
-    this.updateProfile(profileName, profile);
-    return secretRefs;
+    // this.updateProfile(profileName, profile);
+    // return secretRefs;
+    throw new Error("Not implemented");
   }
 
   async removeProfileSecret(
@@ -277,18 +277,20 @@ export class ProfileServiceImpl implements ProfileService {
     serverName: string,
     secretKey: string
   ): Promise<void> {
-    const profile = this.getProfile(profileName);
-    if (!profile?.servers[serverName]?.env?.secrets) return;
+    // const profile = this.getProfile(profileName);
+    // if (!profile?.servers[serverName]?.env?.secrets) return;
 
-    // SecretStore에서 시크릿 삭제
-    await this.secretService.removeProfileSecret(profileName, secretKey);
+    // // SecretStore에서 시크릿 삭제
+    // await this.secretService.removeProfileSecret(profileName, secretKey);
 
-    // 프로필에서 시크릿 참조 삭제
-    const { [secretKey]: _, ...remainingSecrets } =
-      profile.servers[serverName].env.secrets;
-    profile.servers[serverName].env.secrets = remainingSecrets;
+    // // 프로필에서 시크릿 참조 삭제
+    // const { [secretKey]: _, ...remainingSecrets } =
+    //   profile.servers[serverName].env.secrets;
+    // profile.servers[serverName].env.secrets = remainingSecrets;
 
-    this.updateProfile(profileName, profile);
+    // this.updateProfile(profileName, profile);
+
+    throw new Error("Not implemented");
   }
 }
 

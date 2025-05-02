@@ -35,16 +35,13 @@ class MockServerInstanceFactory implements ServerInstanceFactory {
   }
 }
 
-const mockSecretService: SecretService = {
+const secretService: jest.Mocked<SecretService> = {
+  getSecret: jest.fn(),
+  setSecret: jest.fn(),
+  setSecrets: jest.fn(),
+  removeSecret: jest.fn(),
+  listSecrets: jest.fn(),
   resolveEnv: jest.fn(),
-  getSharedSecret: jest.fn(),
-  setSharedSecret: jest.fn(),
-  setSharedSecrets: jest.fn(),
-  removeSharedSecret: jest.fn(),
-  listSharedSecrets: jest.fn(),
-  getProfileSecret: jest.fn(),
-  setProfileSecret: jest.fn(),
-  removeProfileSecret: jest.fn(),
 };
 
 describe("ServerInstanceManager", () => {

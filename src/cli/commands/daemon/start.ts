@@ -1,44 +1,24 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
+import path from "path";
+import { LOG_PATHS, SERVICE_PATHS } from "../../../core/lib/constants/paths";
 import {
   getMcpctldServiceTemplate,
   SERVICE_COMMANDS,
-  SERVICE_PATHS,
   type ServiceTemplateOptions,
 } from "../../../core/lib/service-templates";
 import { CliError } from "../../../lib/errors";
 import { App } from "../../app";
 
-const checkSudoPrivileges = () => {
-  if (process.getuid && process.getuid() !== 0) {
-    throw new Error(
-      "This command requires root privileges. Please run with sudo."
-    );
-  }
-};
-
 const createLogDirectories = () => {
   const platform = os.platform();
-  let logDir: string;
+  const logDir = LOG_PATHS[platform as keyof typeof LOG_PATHS];
 
-  switch (platform) {
-    case "darwin":
-    case "linux":
-      logDir = "/var/log/mcpctl";
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
-      }
-      break;
-    case "win32":
-      logDir = "C:\\ProgramData\\mcpctl\\logs";
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
-      }
-      break;
-    default:
-      throw new Error(`Unsupported platform: ${platform}`);
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
   }
+
   return logDir;
 };
 
@@ -60,7 +40,7 @@ const setupDaemonService = () => {
   const templateOptions: ServiceTemplateOptions = {
     nodePath,
     daemonPath,
-    logDir,
+    logDir: LOG_PATHS[platform as keyof typeof LOG_PATHS],
   };
 
   const serviceContent = getMcpctldServiceTemplate(templateOptions);
@@ -72,7 +52,14 @@ const setupDaemonService = () => {
   }
 
   // Unix 시스템은 서비스 파일 생성
-  const servicePath = SERVICE_PATHS[platform as "darwin" | "linux"];
+  const servicePath = SERVICE_PATHS[platform as keyof typeof SERVICE_PATHS];
+
+  // Ensure parent directories exist
+  const parentDir = path.dirname(servicePath);
+  if (!fs.existsSync(parentDir)) {
+    fs.mkdirSync(parentDir, { recursive: true });
+  }
+
   fs.writeFileSync(servicePath, serviceContent);
   fs.chmodSync(servicePath, "644");
 
@@ -86,9 +73,6 @@ const setupDaemonService = () => {
 export const startCommand = async (app: App) => {
   const logger = app.getLogger();
   try {
-    // sudo 권한 체크
-    checkSudoPrivileges();
-
     const platform = os.platform();
 
     // 서비스 설정

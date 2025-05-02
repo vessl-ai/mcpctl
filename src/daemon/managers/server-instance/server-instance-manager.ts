@@ -134,14 +134,14 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       }
 
       this.logger.info("Creating new server instance", {
-        config,
+        config: {
+          ...config,
+          secrets: Object.keys(config.secrets || {}),
+        },
       });
       // create server instance
       const serverInstance =
-        await this.serverInstanceFactory.createServerInstance(
-          config,
-          this.logger
-        );
+        await this.serverInstanceFactory.createServerInstance(config);
 
       this.logger.info("Starting server instance process", {
         instanceId: serverInstance.id,

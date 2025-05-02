@@ -1,7 +1,9 @@
 import arg from "arg";
 import { spawn } from "child_process";
 import fs from "fs";
+import inquirer from "inquirer";
 import path from "path";
+import { LOG_PATHS } from "../../../core/lib/constants/paths";
 import { CliError } from "../../../lib/errors";
 import { App } from "../../app";
 
@@ -28,12 +30,16 @@ export const serverLogsCommand = async (app: App, argv: string[]) => {
     console.log("  list\tList available server logs");
     console.log("  view\tView server logs");
     console.log("  follow\tFollow server logs in real-time");
+    console.log("  remove\tRemove server logs");
     return;
   }
 
   const subCommand = subArgv[0];
   const serverName = subArgv[1];
-  const logDir = path.join("/var/log", "mcpctl", "server-instances");
+  const logDir = path.join(
+    LOG_PATHS[process.platform as keyof typeof LOG_PATHS],
+    "server-instances"
+  );
   const viewer = options["--viewer"] || "less";
   const instance = options["--instance"];
   const profile = options["--profile"] || "default";
@@ -53,12 +59,16 @@ export const serverLogsCommand = async (app: App, argv: string[]) => {
     case "follow":
       await followServerLogs(logDir, serverName, instance, profile);
       break;
+    case "remove":
+      await removeServerLogs(logDir, serverName, instance, profile);
+      break;
     default:
       logger.error(`Error: '${subCommand}' is an unknown subcommand.`);
       console.log("Available subcommands:");
       console.log("  list\tList available server logs");
       console.log("  view\tView server logs");
       console.log("  follow\tFollow server logs in real-time");
+      console.log("  remove\tRemove server logs");
       throw new CliError(`Error: '${subCommand}' is an unknown subcommand.`);
   }
 };
@@ -105,8 +115,15 @@ async function viewServerLogs(
     return;
   }
 
-  const viewerCommand = getViewerCommand(viewer, logFile);
-  spawn(viewerCommand, [], { stdio: "inherit" });
+  const { command, args } = getViewerCommand(viewer, logFile);
+  if (viewer.toLowerCase() === "fzf") {
+    // fzf의 경우 cat과 파이프로 연결
+    const cat = spawn("cat", [logFile]);
+    const fzf = spawn(command, args, { stdio: ["pipe", "inherit", "inherit"] });
+    cat.stdout?.pipe(fzf.stdin!);
+  } else {
+    spawn(command, args, { stdio: "inherit" });
+  }
 }
 
 async function followServerLogs(
@@ -135,18 +152,21 @@ function getServerLogPath(
   return path.join(logDir, `${baseName}${instanceSuffix}.log`);
 }
 
-function getViewerCommand(viewer: string, file: string): string {
+function getViewerCommand(
+  viewer: string,
+  file: string
+): { command: string; args: string[] } {
   switch (viewer.toLowerCase()) {
     case "less":
-      return `less ${file}`;
+      return { command: "less", args: [file] };
     case "tail":
-      return `tail -f ${file}`;
+      return { command: "tail", args: ["-f", file] };
     case "bat":
-      return `bat --paging=always ${file}`;
+      return { command: "bat", args: ["--paging=always", file] };
     case "fzf":
-      return `cat ${file} | fzf`;
+      return { command: "fzf", args: [] };
     default:
-      return `less ${file}`;
+      return { command: "less", args: [file] };
   }
 }
 
@@ -161,4 +181,60 @@ function formatFileSize(bytes: number): string {
   }
 
   return `${size.toFixed(1)}${units[unitIndex]}`;
+}
+
+async function removeServerLogs(
+  logDir: string,
+  serverName: string | undefined,
+  instance: string | undefined,
+  profile: string
+) {
+  if (!fs.existsSync(logDir)) {
+    console.log("No server logs found.");
+    return;
+  }
+
+  const files = fs.readdirSync(logDir).filter((file) => file.endsWith(".log"));
+
+  if (files.length === 0) {
+    console.log("No server logs found to remove.");
+    return;
+  }
+
+  let targetFiles = files;
+  if (serverName) {
+    const baseName = `${serverName}-${profile}`;
+    const instanceSuffix = instance ? `-${instance}` : "";
+    const pattern = `${baseName}${instanceSuffix}.log`;
+    targetFiles = files.filter((file) => file === pattern);
+    if (targetFiles.length === 0) {
+      console.log(
+        `No server logs found for ${serverName}${
+          instance ? ` instance ${instance}` : ""
+        } with profile ${profile}.`
+      );
+      return;
+    }
+  }
+
+  const { confirm } = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "confirm",
+      message: `Are you sure you want to remove ${targetFiles.length} server log file(s)?`,
+      default: false,
+    },
+  ]);
+
+  if (!confirm) {
+    console.log("Operation cancelled.");
+    return;
+  }
+
+  for (const file of targetFiles) {
+    const filePath = path.join(logDir, file);
+    fs.unlinkSync(filePath);
+    console.log(`Removed: ${file}`);
+  }
+  console.log("All selected server logs have been removed.");
 }

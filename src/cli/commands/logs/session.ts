@@ -1,6 +1,7 @@
 import arg from "arg";
 import { spawn } from "child_process";
 import fs from "fs";
+import inquirer from "inquirer";
 import os from "os";
 import path from "path";
 import { CliError } from "../../../lib/errors";
@@ -53,12 +54,16 @@ export const sessionLogsCommand = async (app: App, argv: string[]) => {
     case "follow":
       await followSessionLogs(app, logDir, clientName, serverName);
       break;
+    case "remove":
+      await removeSessionLogs(logDir, clientName, serverName);
+      break;
     default:
       logger.error(`Error: '${subCommand}' is an unknown subcommand.`);
       console.log("Available subcommands:");
       console.log("  list\tList available session logs");
       console.log("  view\tView session logs");
       console.log("  follow\tFollow session logs in real-time");
+      console.log("  remove\tRemove session logs");
       throw new CliError(`Error: '${subCommand}' is an unknown subcommand.`);
   }
 };
@@ -87,7 +92,7 @@ async function listSessionLogs(logDir: string) {
   console.log("Available session logs:");
   files.forEach((file) => {
     console.log(
-      `- ${file.client}.${file.server} (${
+      `- ${file.name} (${
         file.size
       }, modified ${file.modified.toLocaleString()})`
     );
@@ -134,6 +139,84 @@ async function followSessionLogs(
   }
 
   spawn("tail", ["-f", logFile], { stdio: "inherit" });
+}
+
+async function removeSessionLogs(
+  logDir: string,
+  clientName?: string,
+  serverName?: string
+) {
+  if (!fs.existsSync(logDir)) {
+    console.log("No session logs found.");
+    return;
+  }
+
+  if (!clientName && !serverName) {
+    // Remove all session logs
+    const files = fs
+      .readdirSync(logDir)
+      .filter((file) => file.startsWith("session.") && file.endsWith(".log"));
+
+    if (files.length === 0) {
+      console.log("No session logs found to remove.");
+      return;
+    }
+
+    const { confirm } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "confirm",
+        message: `Are you sure you want to remove all ${files.length} session logs?`,
+        default: false,
+      },
+    ]);
+
+    if (!confirm) {
+      console.log("Operation cancelled.");
+      return;
+    }
+
+    for (const file of files) {
+      const filePath = path.join(logDir, file);
+      fs.unlinkSync(filePath);
+      console.log(`Removed: ${file}`);
+    }
+    console.log("All session logs have been removed.");
+  } else if (clientName && serverName) {
+    // Remove specific session log
+    const logFile = path.join(
+      logDir,
+      `session.${clientName}.${serverName}.log`
+    );
+    if (!fs.existsSync(logFile)) {
+      console.log(
+        `No log found for client ${clientName} and server ${serverName}.`
+      );
+      return;
+    }
+
+    const { confirm } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "confirm",
+        message: `Are you sure you want to remove the log file for client ${clientName} and server ${serverName}?`,
+        default: false,
+      },
+    ]);
+
+    if (!confirm) {
+      console.log("Operation cancelled.");
+      return;
+    }
+
+    fs.unlinkSync(logFile);
+    console.log(`Removed: session.${clientName}.${serverName}.log`);
+  } else {
+    console.log(
+      "Error: Both client name and server name are required for specific log removal."
+    );
+    return;
+  }
 }
 
 function getViewerCommand(viewer: string, file: string): [string, string[]] {
