@@ -2,6 +2,10 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import readline from "readline";
+import {
+  CLIENT_CONFIG_PATHS,
+  CONFIG_PATHS,
+} from "../../../core/lib/constants/paths";
 import arg = require("arg");
 
 const loadCommandOptions = {
@@ -44,8 +48,7 @@ const loadCommand = async (argv: string[]) => {
 
 const loadConfig = async (client: string, name: string) => {
   const configFile = path.join(
-    os.homedir(),
-    ".mcpctl",
+    CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS],
     "configs",
     client.toLowerCase(),
     `${name}.json`
@@ -86,8 +89,7 @@ const loadConfig = async (client: string, name: string) => {
     // Save current configuration
     const currentConfig = await getCurrentConfig(client);
     const saveDir = path.join(
-      os.homedir(),
-      ".mcpctl",
+      CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS],
       "configs",
       client.toLowerCase()
     );
@@ -109,38 +111,23 @@ const loadConfig = async (client: string, name: string) => {
 const getCurrentConfig = async (client: string): Promise<any> => {
   switch (client.toLowerCase()) {
     case "cursor":
-      const cursorConfigFile = path.join(os.homedir(), ".cursor", "mcp.json");
+      const cursorConfigFile =
+        CLIENT_CONFIG_PATHS.cursor[
+          os.platform() as keyof typeof CLIENT_CONFIG_PATHS.cursor
+        ];
       if (!fs.existsSync(cursorConfigFile)) {
         throw new Error("Cursor config file not found");
       }
       return JSON.parse(fs.readFileSync(cursorConfigFile, "utf8"));
     case "claude":
-      let claudeConfigFilePath = "";
-      switch (os.platform()) {
-        case "darwin":
-          claudeConfigFilePath = path.join(
-            os.homedir(),
-            "Library",
-            "Application Support",
-            "Claude",
-            "claude_desktop_config.json"
-          );
-          break;
-        case "win32":
-          claudeConfigFilePath = path.join(
-            os.homedir(),
-            "AppData",
-            "Claude",
-            "claude_desktop_config.json"
-          );
-          break;
-        default:
-          throw new Error("Unsupported platform");
-      }
-      if (!fs.existsSync(claudeConfigFilePath)) {
+      const claudeConfigFile =
+        CLIENT_CONFIG_PATHS.claude[
+          os.platform() as keyof typeof CLIENT_CONFIG_PATHS.claude
+        ];
+      if (!fs.existsSync(claudeConfigFile)) {
         throw new Error("Claude config file not found");
       }
-      return JSON.parse(fs.readFileSync(claudeConfigFilePath, "utf8"));
+      return JSON.parse(fs.readFileSync(claudeConfigFile, "utf8"));
     default:
       throw new Error(`Unsupported client: ${client}`);
   }
@@ -149,33 +136,18 @@ const getCurrentConfig = async (client: string): Promise<any> => {
 const applyConfig = async (client: string, config: any): Promise<void> => {
   switch (client.toLowerCase()) {
     case "cursor":
-      const cursorConfigFile = path.join(os.homedir(), ".cursor", "mcp.json");
+      const cursorConfigFile =
+        CLIENT_CONFIG_PATHS.cursor[
+          os.platform() as keyof typeof CLIENT_CONFIG_PATHS.cursor
+        ];
       fs.writeFileSync(cursorConfigFile, JSON.stringify(config, null, 2));
       break;
     case "claude":
-      let claudeConfigFilePath = "";
-      switch (os.platform()) {
-        case "darwin":
-          claudeConfigFilePath = path.join(
-            os.homedir(),
-            "Library",
-            "Application Support",
-            "Claude",
-            "claude_desktop_config.json"
-          );
-          break;
-        case "win32":
-          claudeConfigFilePath = path.join(
-            os.homedir(),
-            "AppData",
-            "Claude",
-            "claude_desktop_config.json"
-          );
-          break;
-        default:
-          throw new Error("Unsupported platform");
-      }
-      fs.writeFileSync(claudeConfigFilePath, JSON.stringify(config, null, 2));
+      const claudeConfigFile =
+        CLIENT_CONFIG_PATHS.claude[
+          os.platform() as keyof typeof CLIENT_CONFIG_PATHS.claude
+        ];
+      fs.writeFileSync(claudeConfigFile, JSON.stringify(config, null, 2));
       break;
     default:
       throw new Error(`Unsupported client: ${client}`);

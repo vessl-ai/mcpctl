@@ -1,21 +1,49 @@
+import winston from "winston";
 import { GLOBAL_CONSTANTS } from "../constants";
 import { GLOBAL_ENV } from "../env";
+import { LogLevel } from "./types";
 
-export interface Logger {
-  verbose(message: string, context?: Record<string, any>): void;
-  error(message: string, context?: Record<string, any>): void;
-  warn(message: string, context?: Record<string, any>): void;
-  debug(message: string, context?: Record<string, any>): void;
-  info(message: string, context?: Record<string, any>): void;
-  withContext(context: string): Logger;
+export { LogLevel } from "./types";
+
+export abstract class LoggerBase {
+  protected prefix: string;
+  protected logLevel: LogLevel;
+
+  constructor(options: { prefix: string; logLevel: LogLevel }) {
+    this.prefix = options.prefix;
+    this.logLevel = options.logLevel;
+  }
+
+  protected isLogLevelEnabled(
+    level: LogLevel,
+    currentLevel: LogLevel
+  ): boolean {
+    return level >= currentLevel;
+  }
+
+  protected appendPrefix(prefix: string, context: string): string {
+    return context ? `${prefix}:${context}` : prefix;
+  }
+
+  protected now(): string {
+    return new Date().toISOString();
+  }
+
+  abstract verbose(message: string, ...args: any[]): void;
+  abstract info(message: string, ...args: any[]): void;
+  abstract error(message: string, ...args: any[]): void;
+  abstract warn(message: string, ...args: any[]): void;
+  abstract debug(message: string, ...args: any[]): void;
+  abstract withContext(context: string): Logger;
 }
 
-export enum LogLevel {
-  VERBOSE = "VERBOSE",
-  DEBUG = "DEBUG",
-  INFO = "INFO",
-  WARN = "WARN",
-  ERROR = "ERROR",
+export interface Logger {
+  verbose(message: string, ...args: any[]): void;
+  info(message: string, ...args: any[]): void;
+  error(message: string, ...args: any[]): void;
+  warn(message: string, ...args: any[]): void;
+  debug(message: string, ...args: any[]): void;
+  withContext(context: string): Logger;
 }
 
 const logLevelOrder = [
@@ -48,6 +76,12 @@ export const verboseToLogLevel = (
 export type LoggerConfig = {
   prefix?: string;
   logLevel?: LogLevel;
+  transports?: winston.transport[];
+  logPath?: string;
+  console?: {
+    stdout?: boolean;
+    stderr?: boolean;
+  };
 };
 
 export const maskSecret = (message: string): string => {
@@ -74,32 +108,112 @@ export const maskSecret = (message: string): string => {
   }
 };
 
-export abstract class LoggerBase implements Logger {
-  protected readonly prefix: string;
-  protected readonly logLevel: LogLevel;
+export class WinstonLogger implements Logger {
+  private readonly logger: winston.Logger;
+  private readonly prefix: string;
 
   constructor(config?: LoggerConfig) {
+    const defaultTransports: winston.transport[] = [];
+
+    // Add console transports based on config
+    const consoleConfig = config?.console ?? { stdout: true, stderr: false };
+
+    const customFormat = winston.format.printf(
+      ({ level, message, timestamp, ...meta }) => {
+        const prefix = config?.prefix ? `[${config.prefix}]` : "";
+        const metaString = Object.keys(meta).length ? JSON.stringify(meta) : "";
+        return `${timestamp} ${level} ${prefix} ${message} ${metaString}`;
+      }
+    );
+
+    if (consoleConfig.stdout) {
+      defaultTransports.push(
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.timestamp(),
+            customFormat
+          ),
+        })
+      );
+    }
+    if (consoleConfig.stderr) {
+      defaultTransports.push(
+        new winston.transports.Console({
+          level: "info",
+          stderrLevels: ["verbose", "debug", "info", "warn", "error"],
+          format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.timestamp(),
+            customFormat
+          ),
+        })
+      );
+    }
+
     this.prefix = config?.prefix ?? "";
-    this.logLevel = config?.logLevel ?? LogLevel.INFO;
+    this.logger = winston.createLogger({
+      level: config?.logLevel?.toLowerCase() ?? "info",
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
+      transports: defaultTransports,
+    });
+
+    if (config?.transports) {
+      config.transports.forEach((transport) => {
+        this.logger.add(transport);
+      });
+    }
+
+    // Add file transport if logPath is provided
+    if (config?.logPath) {
+      this.logger.add(
+        new winston.transports.File({
+          filename: config.logPath,
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            customFormat
+          ),
+        })
+      );
+    }
   }
 
-  abstract verbose(message: string, context?: Record<string, any>): void;
-  abstract info(message: string, context?: Record<string, any>): void;
-  abstract error(message: string, context?: Record<string, any>): void;
-  abstract warn(message: string, context?: Record<string, any>): void;
-  abstract debug(message: string, context?: Record<string, any>): void;
-  abstract withContext(context: string): Logger;
+  verbose(message: string, context?: Record<string, any>): void {
+    this.logger.verbose(message, { ...context, prefix: this.prefix });
+  }
 
-  protected appendPrefix(originalPrefix: string, newPrefix: string): string {
+  info(message: string, context?: Record<string, any>): void {
+    this.logger.info(message, { ...context, prefix: this.prefix });
+  }
+
+  error(message: string, context?: Record<string, any>): void {
+    this.logger.error(message, { ...context, prefix: this.prefix });
+  }
+
+  warn(message: string, context?: Record<string, any>): void {
+    this.logger.warn(message, { ...context, prefix: this.prefix });
+  }
+
+  debug(message: string, context?: Record<string, any>): void {
+    this.logger.debug(message, { ...context, prefix: this.prefix });
+  }
+
+  withContext(context: string): Logger {
+    return new WinstonLogger({
+      prefix: this.appendPrefix(this.prefix, context),
+      logLevel: this.logger.level as LogLevel,
+      transports: this.logger.transports,
+    });
+  }
+
+  private appendPrefix(originalPrefix: string, newPrefix: string): string {
     return `${originalPrefix}:${newPrefix}`;
   }
-
-  protected isLogLevelEnabled = (
-    logLevel: LogLevel,
-    currentLogLevel: LogLevel
-  ): boolean => {
-    const index = logLevelOrder.indexOf(logLevel);
-    const currentIndex = logLevelOrder.indexOf(currentLogLevel);
-    return index >= currentIndex;
-  };
 }
+
+export const newLogger = (config?: LoggerConfig): Logger => {
+  return new WinstonLogger(config);
+};

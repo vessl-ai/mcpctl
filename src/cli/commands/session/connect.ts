@@ -119,67 +119,40 @@ export const sessionConnectCommand = async (app: App, argv: string[]) => {
   let isConnected = false;
   let isTerminated = false;
 
+  const child = spawn(
+    `npx`,
+    ["-y", "supergateway", "--sse", connectionUrl, "--stderr"],
+    {
+      stdio: ["pipe", "pipe", "pipe"],
+    }
+  );
+
   // Start collecting stdin data
   process.stdin.on("data", (chunk) => {
-    if (!isConnected && !isTerminated) {
-      stdinBuffer.push(Buffer.from(chunk));
-    }
+    logger.info("Stdin pipe data", { chunk });
+    child.stdin!.write(chunk);
   });
 
-  const child = spawn(`npx`, ["-y", "supergateway", "--sse", connectionUrl], {
-    stdio: ["pipe", "pipe", "pipe"],
+  // Add data validation for stdout
+  child.stdout!.on("data", (data) => {
+    logger.info("Stdout pipe data", { data: data.toString() });
+    process.stdout.write(data);
   });
 
-  child.stdin!.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EPIPE") {
-      logger.warn("Child process has closed its stdin (EPIPE)");
-      isTerminated = true;
-    } else {
-      logger.error("Error writing to child stdin:", { error: err.message });
-    }
+  child.stderr!.on("data", (data) => {
+    logger.error("supergateway stderr", { data: data.toString() });
+  });
+
+  child.on("error", (error) => {
+    logger.error("child on error", { error: error.message });
   });
 
   child.on("exit", (code, signal) => {
     isTerminated = true;
-    logger.info(`Child process exited with code ${code} and signal ${signal}`);
-  });
-
-  child.on("error", (error) => {
-    isTerminated = true;
-    logger.error("Child process error", error);
-  });
-
-  // When child process is ready, flush buffer and start piping
-  child.stdout!.once("data", () => {
-    if (isTerminated) {
-      logger.warn("Process terminated before connection was established");
-      return;
-    }
-
-    isConnected = true;
-    logger.info("Connection established, flushing stdin buffer...");
-
-    // Flush buffered data
-    for (const data of stdinBuffer) {
-      try {
-        if (!isTerminated) {
-          child.stdin!.write(data);
-        }
-      } catch (err) {
-        logger.error("Error flushing buffer:", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        break;
-      }
-    }
-
-    // Clear buffer after flushing
-    stdinBuffer.length = 0;
-
-    // Start piping new stdin data if process is still alive
-    if (!isTerminated) {
-      process.stdin.pipe(child.stdin!);
-    }
+    logger.error(
+      `supergateway process exited with code ${code} and signal ${signal}`
+    );
+    kill();
   });
 
   const kill = async () => {

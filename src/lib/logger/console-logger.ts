@@ -1,93 +1,65 @@
-import {
-  Logger,
-  LoggerBase,
-  LoggerConfig,
-  LogLevel,
-  maskSecret,
-} from "./logger";
+import { Logger, LoggerBase, LogLevel } from "./logger";
 
-export type ConsoleLoggerConfig = LoggerConfig & {
-  useStderr?: boolean;
+export type ConsoleLoggerConfig = {
+  prefix?: string;
+  logLevel?: LogLevel;
 };
 
-class ConsoleLoggerImpl extends LoggerBase implements Logger {
-  private useStderr: boolean;
-
+export class ConsoleLogger extends LoggerBase implements Logger {
   constructor(config?: ConsoleLoggerConfig) {
-    super(config);
-    // default to stderr because mcp server uses stdio for transport
-    this.useStderr = config?.useStderr ?? true;
+    super({
+      prefix: config?.prefix || "",
+      logLevel: config?.logLevel || LogLevel.INFO,
+    });
   }
 
-  private pushLog(message: string): void {
-    const maskedMessage = maskSecret(message);
-    if (this.useStderr) {
-      console.error(maskedMessage);
-    } else {
-      console.log(maskedMessage);
-    }
-  }
-
-  now(): string {
-    return new Date().toISOString();
-  }
-
-  verbose(message: string, context?: Record<string, any>): void {
+  verbose(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.VERBOSE, this.logLevel)) {
-      this.pushLog(
-        `[VERBOSE]: [${this.now()}] [${
-          this.prefix
-        }] ${message} ${JSON.stringify(context)}`
+      console.log(
+        `[VERBOSE] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
       );
     }
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.INFO, this.logLevel)) {
-      this.pushLog(
-        `[INFO]: [${this.now()}] [${this.prefix}] ${message} ${
-          context ? JSON.stringify(context) : ""
-        }`
+      console.info(
+        `[INFO] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
       );
     }
   }
 
-  error(message: string, context?: Record<string, any>): void {
+  error(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.ERROR, this.logLevel)) {
-      this.pushLog(
-        `[ERROR]: [${this.now()}] [${this.prefix}] ${message} ${
-          context ? JSON.stringify(context) : ""
-        }`
+      console.error(
+        `[ERROR] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
       );
     }
   }
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.WARN, this.logLevel)) {
-      this.pushLog(
-        `[WARN]: [${this.now()}] [${this.prefix}] ${message} ${
-          context ? JSON.stringify(context) : ""
-        }`
+      console.warn(
+        `[WARN] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
       );
     }
   }
 
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.DEBUG, this.logLevel)) {
-      if (context) {
-        this.pushLog(
-          `[DEBUG]: [${this.now()}] [${this.prefix}] ${message} ${
-            context ? JSON.stringify(context) : ""
-          }`
-        );
-      } else {
-        this.pushLog(`[DEBUG]: [${this.now()}] [${this.prefix}] ${message}`);
-      }
+      console.debug(
+        `[DEBUG] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
+      );
     }
   }
 
   withContext(context: string): Logger {
-    return new ConsoleLoggerImpl({
+    return new ConsoleLogger({
       prefix: this.appendPrefix(this.prefix, context),
       logLevel: this.logLevel,
     });
@@ -98,7 +70,7 @@ let logger: Logger;
 
 const newConsoleLogger = (config?: ConsoleLoggerConfig): Logger => {
   if (!logger) {
-    logger = new ConsoleLoggerImpl(config);
+    logger = new ConsoleLogger(config);
   }
   return logger;
 };

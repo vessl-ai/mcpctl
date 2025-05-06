@@ -31,3 +31,40 @@ export const BINARY_PATHS = {
   linux: "/usr/local/bin",
   win32: path.join(os.homedir(), "AppData/Local/mcpctl/bin"),
 } as const;
+
+// Config paths
+export const CONFIG_PATHS = {
+  darwin: path.join(os.homedir(), ".mcpctl/config"),
+  linux: path.join(os.homedir(), ".mcpctl/config"),
+  win32: path.join(os.homedir(), "AppData/Local/mcpctl/config"),
+} as const;
+
+// Client config paths
+export const CLIENT_CONFIG_PATHS = {
+  cursor: {
+    darwin: path.join(os.homedir(), ".cursor", "mcp.json"),
+    linux: path.join(os.homedir(), ".cursor", "mcp.json"),
+    win32: path.join(os.homedir(), ".cursor", "mcp.json"),
+  },
+  claude: {
+    darwin: path.join(
+      os.homedir(),
+      "Library",
+      "Application Support",
+      "Claude",
+      "claude_desktop_config.json"
+    ),
+    linux: path.join(
+      os.homedir(),
+      ".config",
+      "claude",
+      "claude_desktop_config.json"
+    ),
+    win32: path.join(
+      os.homedir(),
+      "AppData",
+      "Claude",
+      "claude_desktop_config.json"
+    ),
+  },
+} as const;

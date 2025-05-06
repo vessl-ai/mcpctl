@@ -1,18 +1,63 @@
 import { GLOBAL_CONSTANTS } from "../constants";
 import { GLOBAL_ENV } from "../env";
-import { LoggerBase, maskSecret } from "./logger";
+import { Logger, LoggerBase, LogLevel } from "./logger";
+import { maskSecret } from "./utils";
 
-class TestLogger extends LoggerBase {
-  verbose(message: string, context?: Record<string, any>): void {}
-  info(message: string, context?: Record<string, any>): void {}
-  error(message: string, context?: Record<string, any>): void {}
-  warn(message: string, context?: Record<string, any>): void {}
-  debug(message: string, context?: Record<string, any>): void {}
-  withContext(context: string): TestLogger {
-    return new TestLogger({
-      prefix: this.appendPrefix(this.prefix, context),
-      logLevel: this.logLevel,
+class TestLogger extends LoggerBase implements Logger {
+  constructor() {
+    super({
+      prefix: "test",
+      logLevel: LogLevel.INFO,
     });
+  }
+
+  verbose(message: string, ...args: any[]): void {
+    if (this.isLogLevelEnabled(LogLevel.VERBOSE, this.logLevel)) {
+      console.log(
+        `[VERBOSE] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
+      );
+    }
+  }
+
+  info(message: string, ...args: any[]): void {
+    if (this.isLogLevelEnabled(LogLevel.INFO, this.logLevel)) {
+      console.info(
+        `[INFO] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
+      );
+    }
+  }
+
+  error(message: string, ...args: any[]): void {
+    if (this.isLogLevelEnabled(LogLevel.ERROR, this.logLevel)) {
+      console.error(
+        `[ERROR] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
+      );
+    }
+  }
+
+  warn(message: string, ...args: any[]): void {
+    if (this.isLogLevelEnabled(LogLevel.WARN, this.logLevel)) {
+      console.warn(
+        `[WARN] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
+      );
+    }
+  }
+
+  debug(message: string, ...args: any[]): void {
+    if (this.isLogLevelEnabled(LogLevel.DEBUG, this.logLevel)) {
+      console.debug(
+        `[DEBUG] ${this.appendPrefix(this.prefix, "")} ${message}`,
+        ...args
+      );
+    }
+  }
+
+  withContext(context: string): Logger {
+    return new TestLogger();
   }
 
   // Expose protected method for testing
@@ -20,6 +65,63 @@ class TestLogger extends LoggerBase {
     return maskSecret(message);
   }
 }
+
+describe("Logger", () => {
+  let logger: Logger;
+
+  beforeEach(() => {
+    logger = new TestLogger();
+  });
+
+  it("should log verbose messages", () => {
+    const spy = jest.spyOn(console, "log");
+    logger.verbose("test message");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[VERBOSE] test test message")
+    );
+  });
+
+  it("should log info messages", () => {
+    const spy = jest.spyOn(console, "info");
+    logger.info("test message");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[INFO] test test message")
+    );
+  });
+
+  it("should log error messages", () => {
+    const spy = jest.spyOn(console, "error");
+    logger.error("test message");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[ERROR] test test message")
+    );
+  });
+
+  it("should log warn messages", () => {
+    const spy = jest.spyOn(console, "warn");
+    logger.warn("test message");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[WARN] test test message")
+    );
+  });
+
+  it("should log debug messages", () => {
+    const spy = jest.spyOn(console, "debug");
+    logger.debug("test message");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[DEBUG] test test message")
+    );
+  });
+
+  it("should create logger with context", () => {
+    const contextLogger = logger.withContext("context");
+    const spy = jest.spyOn(console, "info");
+    contextLogger.info("test message");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[INFO] test:context test message")
+    );
+  });
+});
 
 describe("Logger maskSecret tests", () => {
   let logger: TestLogger;
@@ -68,5 +170,17 @@ describe("Logger maskSecret tests", () => {
     const message = `Incomplete ${GLOBAL_CONSTANTS.SECRET_TAG_START}secret`;
     const result = logger.testMaskSecret(message);
     expect(result).toBe("Incomplete secret");
+  });
+
+  it("should mask secrets in messages", () => {
+    const message = "This is a secret: <SECRET>password</SECRET>";
+    const masked = maskSecret(message);
+    expect(masked).toBe("This is a secret: ********");
+  });
+
+  it("should not mask non-secret messages", () => {
+    const message = "This is not a secret";
+    const masked = maskSecret(message);
+    expect(masked).toBe(message);
   });
 });

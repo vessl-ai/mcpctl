@@ -1,6 +1,6 @@
 import fs from "fs";
 import os from "os";
-import path from "path";
+import { CLIENT_CONFIG_PATHS } from "../../core/lib/constants/paths";
 import arg = require("arg");
 
 const deleteCommandOptions = {
@@ -55,66 +55,39 @@ const deleteCommand = async (argv: string[]) => {
 };
 
 const deleteFromCursor = async (serverName: string) => {
-  const cursorConfigFile = path.join(os.homedir(), ".cursor", "mcp.json");
+  const cursorConfigFile =
+    CLIENT_CONFIG_PATHS.cursor[
+      os.platform() as keyof typeof CLIENT_CONFIG_PATHS.cursor
+    ];
   if (!fs.existsSync(cursorConfigFile)) {
     throw new Error("Cursor config file not found");
   }
 
-  const cursorMcpConfig = JSON.parse(fs.readFileSync(cursorConfigFile, "utf8"));
-  if (!cursorMcpConfig.mcpServers) {
-    throw new Error("No mcpServers found in config");
+  const cursorConfig = JSON.parse(fs.readFileSync(cursorConfigFile, "utf8"));
+  if (!cursorConfig.mcpServers || !cursorConfig.mcpServers[serverName]) {
+    throw new Error(`Server '${serverName}' not found in Cursor config`);
   }
 
-  if (!cursorMcpConfig.mcpServers[serverName]) {
-    throw new Error(`Server '${serverName}' not found in config`);
-  }
-
-  delete cursorMcpConfig.mcpServers[serverName];
-  fs.writeFileSync(cursorConfigFile, JSON.stringify(cursorMcpConfig, null, 2));
+  delete cursorConfig.mcpServers[serverName];
+  fs.writeFileSync(cursorConfigFile, JSON.stringify(cursorConfig, null, 2));
 };
 
 const deleteFromClaude = async (serverName: string) => {
-  let claudeConfigFilePath = "";
-
-  switch (os.platform()) {
-    case "darwin":
-      claudeConfigFilePath = path.join(
-        os.homedir(),
-        "Library",
-        "Application Support",
-        "Claude",
-        "claude_desktop_config.json"
-      );
-      break;
-    case "win32":
-      claudeConfigFilePath = path.join(
-        os.homedir(),
-        "AppData",
-        "Claude",
-        "claude_desktop_config.json"
-      );
-      break;
-    default:
-      throw new Error("Unsupported platform");
-  }
-
-  if (!fs.existsSync(claudeConfigFilePath)) {
+  const claudeConfigFile =
+    CLIENT_CONFIG_PATHS.claude[
+      os.platform() as keyof typeof CLIENT_CONFIG_PATHS.claude
+    ];
+  if (!fs.existsSync(claudeConfigFile)) {
     throw new Error("Claude config file not found");
   }
 
-  const claudeConfig = JSON.parse(
-    fs.readFileSync(claudeConfigFilePath, "utf8")
-  );
-  if (!claudeConfig.mcpServers) {
-    throw new Error("No mcpServers found in config");
-  }
-
-  if (!claudeConfig.mcpServers[serverName]) {
-    throw new Error(`Server '${serverName}' not found in config`);
+  const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigFile, "utf8"));
+  if (!claudeConfig.mcpServers || !claudeConfig.mcpServers[serverName]) {
+    throw new Error(`Server '${serverName}' not found in Claude config`);
   }
 
   delete claudeConfig.mcpServers[serverName];
-  fs.writeFileSync(claudeConfigFilePath, JSON.stringify(claudeConfig, null, 2));
+  fs.writeFileSync(claudeConfigFile, JSON.stringify(claudeConfig, null, 2));
 };
 
 export default deleteCommand;

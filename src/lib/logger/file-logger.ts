@@ -3,81 +3,101 @@ import os from "os";
 import path from "path";
 import { Logger, LoggerBase, LogLevel, maskSecret } from "./logger";
 
-export class FileLogger extends LoggerBase implements Logger {
-  private readonly filePath: string;
+export type FileLoggerConfig = {
+  prefix?: string;
+  logLevel?: LogLevel;
+  logPath: string;
+};
 
-  constructor(config?: {
-    filePath?: string;
-    prefix?: string;
-    logLevel?: LogLevel;
-  }) {
+export class FileLogger extends LoggerBase implements Logger {
+  private logPath: string;
+
+  constructor(config: FileLoggerConfig) {
     super({
-      prefix: config?.prefix,
-      logLevel: config?.logLevel,
+      prefix: config.prefix || "",
+      logLevel: config.logLevel || LogLevel.INFO,
     });
-    this.filePath =
-      config?.filePath ?? path.join(os.homedir(), ".mcpctl", "daemon.log");
+    this.logPath = config.logPath;
+    this.ensureLogDirectory();
   }
 
-  private now(): string {
+  protected now(): string {
     return new Date().toISOString();
   }
-  verbose(message: string, context?: Record<string, any>): void {
+
+  private ensureLogDirectory(): void {
+    const dir = path.dirname(this.logPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  }
+
+  private appendToFile(message: string): void {
+    const maskedMessage = maskSecret(message);
+    fs.appendFileSync(this.logPath, `${maskedMessage}\n`);
+  }
+
+  verbose(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.VERBOSE, this.logLevel)) {
-      const msg = `[VERBOSE] ${this.now()} ${this.prefix} ${message} ${
-        context ? JSON.stringify(context) : ""
-      }`;
-      this.writeToFile(msg);
+      this.appendToFile(
+        `[VERBOSE] [${this.now()}] ${this.appendPrefix(
+          this.prefix,
+          ""
+        )} ${message} ${args.length ? JSON.stringify(args) : ""}`
+      );
     }
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.INFO, this.logLevel)) {
-      const msg = `[INFO] ${this.now()} ${this.prefix} ${message} ${
-        context ? JSON.stringify(context) : ""
-      }`;
-      this.writeToFile(msg);
+      this.appendToFile(
+        `[INFO] [${this.now()}] ${this.appendPrefix(
+          this.prefix,
+          ""
+        )} ${message} ${args.length ? JSON.stringify(args) : ""}`
+      );
     }
   }
 
-  error(message: string, error?: any): void {
+  error(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.ERROR, this.logLevel)) {
-      const msg = `[ERROR] ${this.now()} ${this.prefix} ${message} ${
-        error ? JSON.stringify(error) : ""
-      }`;
-      this.writeToFile(msg);
+      this.appendToFile(
+        `[ERROR] [${this.now()}] ${this.appendPrefix(
+          this.prefix,
+          ""
+        )} ${message} ${args.length ? JSON.stringify(args) : ""}`
+      );
     }
   }
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.WARN, this.logLevel)) {
-      const msg = `[WARN] ${this.now()} ${this.prefix} ${message} ${
-        context ? JSON.stringify(context) : ""
-      }`;
-      this.writeToFile(msg);
+      this.appendToFile(
+        `[WARN] [${this.now()}] ${this.appendPrefix(
+          this.prefix,
+          ""
+        )} ${message} ${args.length ? JSON.stringify(args) : ""}`
+      );
     }
   }
 
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, ...args: any[]): void {
     if (this.isLogLevelEnabled(LogLevel.DEBUG, this.logLevel)) {
-      const msg = `[DEBUG] ${this.now()} ${this.prefix} ${message} ${
-        context ? JSON.stringify(context) : ""
-      }`;
-      this.writeToFile(msg);
+      this.appendToFile(
+        `[DEBUG] [${this.now()}] ${this.appendPrefix(
+          this.prefix,
+          ""
+        )} ${message} ${args.length ? JSON.stringify(args) : ""}`
+      );
     }
   }
 
   withContext(context: string): Logger {
     return new FileLogger({
-      filePath: this.filePath,
       prefix: this.appendPrefix(this.prefix, context),
       logLevel: this.logLevel,
+      logPath: this.logPath,
     });
-  }
-
-  private writeToFile(message: string): void {
-    const maskedMessage = maskSecret(message);
-    fs.appendFileSync(this.filePath, `${maskedMessage}\n`);
   }
 }
 
@@ -86,5 +106,10 @@ export const newFileLogger = (config?: {
   prefix?: string;
   logLevel?: LogLevel;
 }): Logger => {
-  return new FileLogger(config);
+  return new FileLogger({
+    logPath:
+      config?.filePath ?? path.join(os.homedir(), ".mcpctl", "daemon.log"),
+    prefix: config?.prefix,
+    logLevel: config?.logLevel,
+  });
 };

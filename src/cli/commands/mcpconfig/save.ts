@@ -1,6 +1,10 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import {
+  CLIENT_CONFIG_PATHS,
+  CONFIG_PATHS,
+} from "../../../core/lib/constants/paths";
 import arg = require("arg");
 
 const saveCommandOptions = {
@@ -53,7 +57,10 @@ const saveCommand = async (argv: string[]) => {
 };
 
 const saveCursorConfig = async (name: string) => {
-  const cursorConfigFile = path.join(os.homedir(), ".cursor", "mcp.json");
+  const cursorConfigFile =
+    CLIENT_CONFIG_PATHS.cursor[
+      os.platform() as keyof typeof CLIENT_CONFIG_PATHS.cursor
+    ];
   if (!fs.existsSync(cursorConfigFile)) {
     throw new Error("Cursor config file not found");
   }
@@ -63,7 +70,11 @@ const saveCursorConfig = async (name: string) => {
     throw new Error("No mcpServers found in config");
   }
 
-  const configDir = path.join(os.homedir(), ".mcpctl", "configs", "cursor");
+  const configDir = path.join(
+    CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS],
+    "configs",
+    "cursor"
+  );
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
   }
@@ -73,42 +84,24 @@ const saveCursorConfig = async (name: string) => {
 };
 
 const saveClaudeConfig = async (name: string) => {
-  let claudeConfigFilePath = "";
-
-  switch (os.platform()) {
-    case "darwin":
-      claudeConfigFilePath = path.join(
-        os.homedir(),
-        "Library",
-        "Application Support",
-        "Claude",
-        "claude_desktop_config.json"
-      );
-      break;
-    case "win32":
-      claudeConfigFilePath = path.join(
-        os.homedir(),
-        "AppData",
-        "Claude",
-        "claude_desktop_config.json"
-      );
-      break;
-    default:
-      throw new Error("Unsupported platform");
-  }
-
-  if (!fs.existsSync(claudeConfigFilePath)) {
+  const claudeConfigFile =
+    CLIENT_CONFIG_PATHS.claude[
+      os.platform() as keyof typeof CLIENT_CONFIG_PATHS.claude
+    ];
+  if (!fs.existsSync(claudeConfigFile)) {
     throw new Error("Claude config file not found");
   }
 
-  const claudeConfig = JSON.parse(
-    fs.readFileSync(claudeConfigFilePath, "utf8")
-  );
+  const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigFile, "utf8"));
   if (!claudeConfig.mcpServers) {
     throw new Error("No mcpServers found in config");
   }
 
-  const configDir = path.join(os.homedir(), ".mcpctl", "configs", "claude");
+  const configDir = path.join(
+    CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS],
+    "configs",
+    "claude"
+  );
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
   }

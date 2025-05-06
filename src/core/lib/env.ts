@@ -1,6 +1,8 @@
 import os from "os";
 import path from "path";
 import { LogLevel } from "../../lib/logger/logger";
+import { CONFIG_PATHS } from "./constants/paths";
+
 export const getProfileName = (): string => {
   const profileName = process.env.MCPCTL_PROFILE;
   if (profileName) {
@@ -23,8 +25,7 @@ export const getConfigDir = (): string => {
   if (configDir) {
     return configDir;
   }
-  const homeDir = os.homedir();
-  return path.join(homeDir, ".mcpctl", "config");
+  return CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS];
 };
 
 export const getConfigPath = (): string => {

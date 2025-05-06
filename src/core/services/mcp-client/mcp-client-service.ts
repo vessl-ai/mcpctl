@@ -275,6 +275,8 @@ export class McpClientServiceImpl implements McpClientService {
     if (serverInstallConfig.profile) {
       args.push("--profile", serverInstallConfig.profile);
     }
+    args.push("--stderr");
+
     return [command, args];
   }
 }

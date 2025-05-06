@@ -1,6 +1,6 @@
 {
   "name": "@vessl-ai/mcpctl",
-  "version": "0.0.7-rc1",
+  "version": "0.0.7-rc1-local4",
   "description": "The MCP Execution Control Tool - A tool for controlling the MCP execution",
   "main": "dist/mcpctl.js",
   "bin": {
@@ -21,11 +21,12 @@
     "daemon": "ts-node src/daemon/main.ts",
     "clean": "rm -rf dist",
     "build": "tsc && node build.js",
+    "pack": "pnpm build && npm pack",
     "docs:init": "uv sync",
     "docs:serve": "uv run mkdocs serve -a localhost:9099",
     "docs:build": "uv run mkdocs build",
     "install-cli:macos": "cp dist/mcpctl.js /usr/local/bin/mcpctl && cp dist/mcpctld.js /usr/local/bin/mcpctld",
-    "install-cli:linux": "sudo cp dist/mcpctl.js /usr/local/bin/mcpctl && sudo cp dist/mcpctld.js /usr/local/bin/mcpctld",
+    "install-cli:linux": "cp dist/mcpctl.js /usr/local/bin/mcpctl && cp dist/mcpctld.js /usr/local/bin/mcpctld",
     "install-cli:windows": "cp dist/mcpctl.js $env:USERPROFILE\\AppData\\Roaming\\npm\\mcpctl.cmd",
     "prepublishOnly": "pnpm clean && pnpm build",
     "postinstall": "node scripts/postinstall.js"
@@ -74,7 +75,6 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@expo/sudo-prompt": "^9.3.2",
     "@modelcontextprotocol/sdk": "^1.9.0",
     "arg": "^5.0.2",
     "argparse": "^2.0.1",
@@ -89,6 +89,7 @@
     "portfinder": "^1.0.35",
     "uuid": "^11.1.0",
     "vscode-jsonrpc": "^8.2.1",
+    "winston": "^3.17.0",
     "zod": "^3.24.2"
   }
 }

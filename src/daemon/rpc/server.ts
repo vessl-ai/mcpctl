@@ -31,7 +31,7 @@ export class RPCServer {
         this.transport.reader,
         this.transport.writer
       );
-      this.logger.debug("Message connection created");
+      this.logger.info("Message connection created");
 
       this.setupHandlers();
       this.connection.listen();
@@ -58,7 +58,10 @@ export class RPCServer {
       Instance.StartRequest.type,
       async ({ config }) => {
         this.logger.info("Processing start instance request", {
-          config,
+          config: {
+            ...config,
+            secrets: config.secrets ? Object.keys(config.secrets) : undefined,
+          },
         });
         try {
           const instance = await this.instanceManager.startInstance(config);
@@ -68,8 +71,11 @@ export class RPCServer {
           return instance;
         } catch (error) {
           this.logger.error("Failed to start instance", {
-            error,
-            config,
+            error: error instanceof Error ? error.message : String(error),
+            config: {
+              ...config,
+              secrets: config.secrets ? Object.keys(config.secrets) : undefined,
+            },
           });
           throw error;
         }
@@ -96,13 +102,16 @@ export class RPCServer {
         this.logger.info("Processing get instance request", { instanceId });
         try {
           const instance = await this.instanceManager.getInstance(instanceId);
-          this.logger.debug("Instance retrieval result", {
+          this.logger.info("Instance retrieval result", {
             instanceId,
             found: !!instance,
           });
           return instance;
         } catch (error) {
-          this.logger.error("Failed to get instance", { error, instanceId });
+          this.logger.error("Failed to get instance", {
+            error: error instanceof Error ? error.message : String(error),
+            instanceId,
+          });
           throw error;
         }
       }
@@ -112,12 +121,14 @@ export class RPCServer {
       this.logger.info("Processing list instances request");
       try {
         const instances = await this.instanceManager.listInstances();
-        this.logger.debug("Instance list retrieved", {
+        this.logger.info("Instance list retrieved", {
           count: instances.length,
         });
         return instances;
       } catch (error) {
-        this.logger.error("Failed to list instances", { error });
+        this.logger.error("Failed to list instances", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       }
     });
@@ -132,12 +143,12 @@ export class RPCServer {
         });
         try {
           await this.instanceManager.updateInstanceStatus(instanceId, status);
-          this.logger.debug("Instance status updated successfully", {
+          this.logger.info("Instance status updated successfully", {
             instanceId,
           });
         } catch (error) {
           this.logger.error("Failed to update instance status", {
-            error,
+            error: error instanceof Error ? error.message : String(error),
             instanceId,
           });
         }
@@ -151,7 +162,7 @@ export class RPCServer {
         version: require("../../../package.json").version,
         uptime: Date.now() - this.startTime,
       };
-      this.logger.debug("Daemon status", { status });
+      this.logger.info("Daemon status", { status });
       return status;
     });
 

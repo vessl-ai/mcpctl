@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { CONFIG_PATHS } from "../../../core/lib/constants/paths";
 import arg = require("arg");
 
 const viewCommandOptions = {
@@ -43,8 +44,7 @@ const viewCommand = async (argv: string[]) => {
 
 const viewConfig = async (client: string, name: string) => {
   const configFile = path.join(
-    os.homedir(),
-    ".mcpctl",
+    CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS],
     "configs",
     client.toLowerCase(),
     `${name}.json`

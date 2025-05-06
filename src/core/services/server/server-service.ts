@@ -15,9 +15,10 @@ class DefaultServerService implements ServerService {
     try {
       daemonClient = await DaemonRPCClient.getInstance(this.logger);
       const instances = await daemonClient.listInstances();
+      this.logger.info("Listed servers", { instances });
       return instances;
     } catch (error) {
-      console.error("Error listing servers:", error);
+      this.logger.error("Error listing servers:", error);
       throw error;
     } finally {
       if (daemonClient) {
@@ -32,7 +33,7 @@ class DefaultServerService implements ServerService {
       daemonClient = await DaemonRPCClient.getInstance(this.logger);
       await daemonClient.stopInstance(instanceId);
     } catch (error) {
-      console.error("Error stopping server:", error);
+      this.logger.error("Error stopping server:", error);
       throw error;
     } finally {
       if (daemonClient) {

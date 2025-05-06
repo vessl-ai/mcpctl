@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { CONFIG_PATHS } from "../../../core/lib/constants/paths";
 import arg = require("arg");
 
 const listCommandOptions = {
@@ -40,7 +41,10 @@ const listCommand = async (argv: string[]) => {
 };
 
 const showAllConfigs = async () => {
-  const configDir = path.join(os.homedir(), ".mcpctl", "configs");
+  const configDir = path.join(
+    CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS],
+    "configs"
+  );
   if (!fs.existsSync(configDir)) {
     console.log("No saved configurations found");
     return;
@@ -73,8 +77,7 @@ const showAllConfigs = async () => {
 
 const showClientConfigs = async (client: string) => {
   const clientDir = path.join(
-    os.homedir(),
-    ".mcpctl",
+    CONFIG_PATHS[os.platform() as keyof typeof CONFIG_PATHS],
     "configs",
     client.toLowerCase()
   );

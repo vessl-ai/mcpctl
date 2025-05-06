@@ -4,9 +4,26 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { exec } = require('@expo/sudo-prompt');
 const { getMcpctldServiceTemplate, SERVICE_COMMANDS } = require('../dist/service-templates.js');
-const { LOG_PATHS, SERVICE_PATHS } = require('../dist/constants/paths.js');
+
+// Define paths directly instead of importing
+const LOG_PATHS = {
+  darwin: path.join(os.homedir(), "Library/Logs/mcpctl"),
+  linux: path.join(os.homedir(), ".local/share/mcpctl/logs"),
+  win32: path.join(os.homedir(), "AppData/Local/mcpctl/logs"),
+};
+
+const SERVICE_PATHS = {
+  darwin: path.join(os.homedir(), "Library/LaunchAgents/com.mcpctl.daemon.plist"),
+  linux: path.join(os.homedir(), ".config/systemd/user/mcpctld.service"),
+  win32: path.join(os.homedir(), "AppData/Local/mcpctl/mcpctld.service"),
+};
+
+const BINARY_PATHS = {
+  darwin: "/usr/local/bin",
+  linux: "/usr/local/bin",
+  win32: path.join(os.homedir(), "AppData/Local/mcpctl/bin"),
+};
 
 // Exit if not installed globally
 if (!process.env.npm_config_global) {
@@ -69,44 +86,17 @@ try {
 
 const platform = os.platform();
 
-// Function to execute commands with sudo
-async function executeWithSudo(command) {
-  return new Promise((resolve, reject) => {
-    exec(command, { name: 'mcpctl' }, (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve({ stdout, stderr });
-      }
-    });
-  });
+// Function to execute commands
+async function executeCommand(command) {
+  return execSync(command, { stdio: 'inherit' });
 }
 
-// Function to execute all commands in a single batch with sudo
+// Function to execute all commands
 async function executeAllCommands(commands) {
   if (commands.length === 0) return;
   
-  // Create a shell script with all commands
-  const scriptContent = commands.join('\n');
-  const scriptPath = path.join(os.tmpdir(), `mcpctl-sudo-${Date.now()}.sh`);
-  
-  try {
-    // Write the script to a temporary file
-    fs.writeFileSync(scriptPath, scriptContent);
-    fs.chmodSync(scriptPath, '755');
-    
-    // Execute the script with sudo
-    await executeWithSudo(`bash ${scriptPath}`);
-  } catch (error) {
-    console.error('Error executing commands:', error);
-    throw error;
-  } finally {
-    // Clean up the temporary script
-    try {
-      fs.unlinkSync(scriptPath);
-    } catch (error) {
-      // Ignore cleanup errors
-    }
+  for (const command of commands) {
+    await executeCommand(command);
   }
 }
 
@@ -117,8 +107,13 @@ function isProcessRunning(processName) {
       const result = execSync(`tasklist /FI "IMAGENAME eq ${processName}" /NH`).toString();
       return result.includes(processName);
     } else {
-      const result = execSync(`pgrep -f ${processName}`).toString();
-      return result.trim().length > 0;
+      // First try direct process name
+      const directResult = execSync(`pgrep -f ${processName}`).toString();
+      if (directResult.trim().length > 0) return true;
+      
+      // Then try node process with the script
+      const nodeResult = execSync(`pgrep -f "node.*${processName}"`).toString();
+      return nodeResult.trim().length > 0;
     }
   } catch (error) {
     // If pgrep returns non-zero exit code, process is not running
@@ -185,7 +180,7 @@ function buildCommandSet() {
   
   // Add daemon stop command if running
   if (daemonRunning) {
-    console.log('[sudo] Stopping already running MCP daemon service...');
+    console.log('Stopping already running MCP daemon service...');
     commands.push(`${mcpctlPath} daemon stop`);
   }
   
@@ -206,8 +201,13 @@ function buildCommandSet() {
   }
   
   // Add service start command
-  const startCommand = SERVICE_COMMANDS[platform].start;
-  commands.push(startCommand.join(' '));
+  if (platform === 'darwin') {
+    commands.push('launchctl load ' + SERVICE_PATHS.darwin);
+  } else if (platform === 'linux') {
+    commands.push('systemctl --user start mcpctld');
+  } else {
+    commands.push('net start mcpctld');
+  }
   
   return commands;
 }
@@ -218,14 +218,14 @@ async function main() {
     // Build the complete command set
     const commands = buildCommandSet();
     
-    // Execute all commands with sudo
-    console.log('Requesting sudo privileges for service setup...');
+    // Execute all commands
+    console.log('Setting up MCP daemon service...');
     await executeAllCommands(commands);
     
     console.log('MCP daemon service setup completed successfully');
   } catch (error) {
     console.error('Error during service setup:', error);
-    console.warn('You may need to run: sudo mcpctl daemon start');
+    console.warn('You may need to run: mcpctl daemon start');
   }
 }
 

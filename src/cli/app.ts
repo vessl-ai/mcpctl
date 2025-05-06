@@ -51,8 +51,7 @@ import {
   newSessionManager,
 } from "../core/services/session/session-manager";
 import { BaseContainer, Container } from "../lib/container/container";
-import { newConsoleLogger } from "../lib/logger/console-logger";
-import { LogLevel, Logger } from "../lib/logger/logger";
+import { LogLevel, Logger, newLogger } from "../lib/logger/logger";
 
 type AppOptions = {
   logLevel?: LogLevel;
@@ -78,10 +77,8 @@ class App {
   }: AppOptions): Promise<void> {
     // Register core dependencies
     if (!logger) {
-      console.log("No logger provided, using console logger");
-    } else {
+      logger = newLogger({ logLevel });
     }
-    logger = logger || newConsoleLogger({ logLevel });
     this.container.register<Logger>("Logger", logger);
 
     this.registerConfigService(logger);

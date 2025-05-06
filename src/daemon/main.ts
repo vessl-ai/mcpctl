@@ -1,7 +1,16 @@
+import { VERSION } from "../version";
 import { DaemonApp } from "./app";
 
 const main = async () => {
   try {
+    // Handle version flag
+    if (process.argv.includes("--version") || process.argv.includes("-V")) {
+      console.log(`mcpctl daemon version ${VERSION}`);
+      console.log(`Node.js version ${process.version}`);
+      console.log(`Platform: ${process.platform} ${process.arch}`);
+      process.exit(0);
+    }
+
     console.log("Starting daemon process...");
     const app = new DaemonApp();
     await app.init();

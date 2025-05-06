@@ -1,9 +1,13 @@
 import arg from "arg";
 import fs from "fs";
 import path from "path";
-import { newConsoleLogger } from "../lib/logger/console-logger";
-import { newFileLogger } from "../lib/logger/file-logger";
-import { Logger, LogLevel, verboseToLogLevel } from "../lib/logger/logger";
+import {
+  Logger,
+  LogLevel,
+  newLogger,
+  verboseToLogLevel,
+} from "../lib/logger/logger";
+import { VERSION } from "../version";
 import { newApp } from "./app";
 import { configCommand } from "./commands/config";
 import { daemonCommand } from "./commands/daemon";
@@ -17,16 +21,23 @@ import { registryCommand } from "./commands/registry";
 import { searchCommand } from "./commands/search";
 import { serverCommand } from "./commands/server";
 import { sessionCommand } from "./commands/session";
+
 const mainCommandOptions = {
   "--verbose": arg.COUNT,
   "-v": "--verbose",
   "--log-file": String,
+  "--version": Boolean,
+  "-V": "--version",
+  "--stdout": Boolean,
+  "--stderr": Boolean,
+  "--help": Boolean,
+  "-h": "--help",
 };
 
 const verboseConsoleLogger =
   (verbose: number | undefined) =>
   (message: string, ...args: any[]) => {
-    if (verbose && verbose >= 0) {
+    if (verbose && verbose > 0) {
       console.log(message, ...args);
     }
   };
@@ -39,6 +50,23 @@ const main = async () => {
   const subArgv = options["_"];
   const verbose = options["--verbose"];
   const verboseLog = verboseConsoleLogger(verbose);
+  let stdout = options["--stdout"] || false;
+  let stderr = options["--stderr"] || false;
+
+  if (!stdout && !stderr) {
+    // default stream all logs to stdout
+    stdout = true;
+  }
+  verboseLog("stdout", stdout);
+  verboseLog("stderr", stderr);
+
+  // Handle version flag
+  if (options["--version"]) {
+    console.log(`mcpctl version ${VERSION}`);
+    console.log(`Node.js version ${process.version}`);
+    console.log(`Platform: ${process.platform} ${process.arch}`);
+    process.exit(0);
+  }
 
   const logFilePath =
     options["--log-file"] || process.env.MCPCTL_LOG_FILE || undefined;
@@ -49,15 +77,24 @@ const main = async () => {
     if (!fs.existsSync(logFilePath)) {
       fs.mkdirSync(path.dirname(logFilePath), { recursive: true });
     }
-    logger = newFileLogger({
-      filePath: logFilePath,
+    logger = newLogger({
       logLevel: verbose ? LogLevel.VERBOSE : LogLevel.ERROR,
+      logPath: logFilePath,
+      console: {
+        stdout: stdout,
+        stderr: stderr,
+      },
     });
   } else {
-    logger = newConsoleLogger({
+    logger = newLogger({
       logLevel: verboseToLogLevel(verbose, LogLevel.ERROR),
+      console: {
+        stdout: stdout,
+        stderr: stderr,
+      },
     });
   }
+
   const app = newApp({ logLevel: verboseToLogLevel(verbose), logger });
   await app.init();
   logger.debug("App initialized");
@@ -78,8 +115,26 @@ const main = async () => {
     console.error("  list\t\tList MCP servers");
     console.error("  delete\t\tDelete MCP server from client");
     console.error("  mcpconfig\t\tManage MCP configurations");
+    console.error("  version\t\tShow version information");
     console.error("\nFor detailed help: mcpctl <command> --help");
     process.exit(1);
+  }
+
+  if (options["--help"]) {
+    console.error("\nAvailable commands:");
+    console.error("  server\t\tManage MCP servers");
+    console.error("  session\t\tManage MCP sessions");
+    console.error("  install\t\tInstall MCP packages");
+    console.error("  profile\t\tManage MCP profiles");
+    console.error("  registry\t\tManage MCP registries");
+    console.error("  search\t\tSearch for MCP packages");
+    console.error("  daemon\t\tManage MCP daemon");
+    console.error("  logs\t\tView MCP logs");
+    console.error("  list\t\tList MCP servers");
+    console.error("  delete\t\tDelete MCP server from client");
+    console.error("  mcpconfig\t\tManage MCP configurations");
+    console.error("  version\t\tShow version information");
+    return;
   }
 
   const mainCommand = subArgv[0];
@@ -87,6 +142,11 @@ const main = async () => {
 
   try {
     switch (mainCommand) {
+      case "version":
+        console.log(`mcpctl version ${VERSION}`);
+        console.log(`Node.js version ${process.version}`);
+        console.log(`Platform: ${process.platform} ${process.arch}`);
+        break;
       case "server": {
         await serverCommand(app, subArgv.slice(1));
         break;
@@ -146,9 +206,9 @@ const main = async () => {
         console.error("  search\t\tSearch for MCP packages");
         console.error("  daemon\t\tManage MCP daemon");
         console.error("  logs\t\tView MCP logs");
-        console.error("  list\t\tList MCP servers");
         console.error("  delete\t\tDelete MCP server from client");
         console.error("  mcpconfig\t\tManage MCP configurations");
+        console.error("  version\t\tShow version information");
         console.error("\nFor detailed help: mcpctl <command> --help");
         process.exit(1);
     }

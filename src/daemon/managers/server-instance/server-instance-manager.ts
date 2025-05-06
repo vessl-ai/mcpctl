@@ -48,7 +48,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async validateConfig(config: RunConfig): Promise<boolean> {
-    this.logger.debug("Validating server instance config", { config });
+    this.logger.info("Validating server instance config", { config });
 
     if (!config.profileName || config.profileName.length === 0) {
       this.logger.error("Invalid Config Profile Name", { config });
@@ -98,7 +98,8 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
         }
         if (existingInstance.status !== McpServerInstanceStatus.RUNNING) {
           this.logger.info("Instance is not running, recreating instance", {
-            existingInstance,
+            instanceId: existingInstance.id,
+            status: existingInstance.status,
           });
           await this.stopInstance(existingInstance.id);
         } else {
@@ -119,7 +120,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
             // 기존 인스턴스 정지는 백그라운드로 처리
             this.stopInstance(configId).catch((err) => {
               this.logger.error("Failed to stop instance in background:", {
-                error: err,
+                error: err instanceof Error ? err.message : String(err),
                 configId,
               });
             });
@@ -128,7 +129,26 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
             this.logger.info("Reusing existing instance", {
               configId,
             });
-            return this.configInstanceMap.get(configId)!;
+            // Return a clean instance object with dummy methods
+            return {
+              id: existingInstance.id,
+              config: existingInstance.config,
+              status: existingInstance.status,
+              startedAt: existingInstance.startedAt,
+              lastUsedAt: existingInstance.lastUsedAt,
+              connectionInfo: existingInstance.connectionInfo,
+              error: existingInstance.error,
+              start: async () => {
+                this.logger.warn("Dummy start method called on instance", {
+                  instanceId: existingInstance.id,
+                });
+              },
+              stop: async () => {
+                this.logger.warn("Dummy stop method called on instance", {
+                  instanceId: existingInstance.id,
+                });
+              },
+            };
           }
         }
       }
@@ -136,7 +156,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       this.logger.info("Creating new server instance", {
         config: {
           ...config,
-          secrets: Object.keys(config.secrets || {}),
+          secrets: config.secrets ? Object.keys(config.secrets) : undefined,
         },
       });
       // create server instance
@@ -149,7 +169,8 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       await serverInstance.start();
 
       this.logger.info(`Instance ${serverInstance.id} started successfully`, {
-        serverInstance,
+        instanceId: serverInstance.id,
+        status: serverInstance.status,
       });
 
       serverInstance.status = McpServerInstanceStatus.RUNNING;
@@ -159,15 +180,37 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
       this.configInstanceMap.set(configId, serverInstance);
       this.instances.set(serverInstance.id, serverInstance);
 
-      this.logger.debug("Instance registered in manager", {
+      this.logger.info("Instance registered in manager", {
         instanceId: serverInstance.id,
         configId,
         status: serverInstance.status,
       });
 
-      return serverInstance;
+      // Return a clean instance object with dummy methods
+      return {
+        id: serverInstance.id,
+        config: serverInstance.config,
+        status: serverInstance.status,
+        startedAt: serverInstance.startedAt,
+        lastUsedAt: serverInstance.lastUsedAt,
+        connectionInfo: serverInstance.connectionInfo,
+        error: serverInstance.error,
+        start: async () => {
+          this.logger.warn("Dummy start method called on instance", {
+            instanceId: serverInstance.id,
+          });
+        },
+        stop: async () => {
+          this.logger.warn("Dummy stop method called on instance", {
+            instanceId: serverInstance.id,
+          });
+        },
+      };
     } catch (error) {
-      this.logger.error("Failed to start instance:", { error, configId });
+      this.logger.error("Failed to start instance:", {
+        error: error instanceof Error ? error.message : String(error),
+        configId,
+      });
       throw error;
     }
   }
@@ -216,9 +259,9 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async getInstance(instanceId: string): Promise<McpServerInstance | null> {
-    this.logger.debug("Retrieving instance information", { instanceId });
+    this.logger.info("Retrieving instance information", { instanceId });
     const instance = this.instances.get(instanceId) || null;
-    this.logger.debug("Instance retrieval result", {
+    this.logger.info("Instance retrieval result", {
       instanceId,
       found: !!instance,
       status: instance?.status,
@@ -227,9 +270,9 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
   }
 
   async listInstances(): Promise<McpServerInstance[]> {
-    this.logger.debug("Listing all instances");
+    this.logger.info("Listing all instances");
     const instances = Array.from(this.instances.values());
-    this.logger.debug("Instance list retrieved", { count: instances.length });
+    this.logger.info("Instance list retrieved", { count: instances.length });
     return instances;
   }
 
@@ -237,7 +280,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
     instanceId: string,
     status: Partial<McpServerInstance>
   ): Promise<void> {
-    this.logger.debug("Updating instance status", {
+    this.logger.info("Updating instance status", {
       instanceId,
       newStatus: status.status,
     });
@@ -255,7 +298,7 @@ class DefaultServerInstanceManager implements ServerInstanceManager {
     // lastUsedAt 자동 업데이트
     instance.lastUsedAt = new Date().toISOString();
 
-    this.logger.debug("Instance status updated successfully", {
+    this.logger.info("Instance status updated successfully", {
       instanceId,
       currentStatus: instance.status,
     });

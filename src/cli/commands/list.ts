@@ -2,7 +2,7 @@ import arg from "arg";
 import chalk from "chalk";
 import fs from "fs";
 import os from "os";
-import path from "path";
+import { CLIENT_CONFIG_PATHS } from "../../core/lib/constants/paths";
 import { McpClientType } from "../../lib/types/mcp-client-type";
 import { App } from "../app";
 
@@ -28,13 +28,16 @@ type ClientServerList = {
 };
 
 const getCursorServers = (): ClientServerList => {
-  const cursorConfigFile = path.join(os.homedir(), ".cursor", "mcp.json");
+  const cursorConfigFile =
+    CLIENT_CONFIG_PATHS.cursor[
+      os.platform() as keyof typeof CLIENT_CONFIG_PATHS.cursor
+    ];
   if (!fs.existsSync(cursorConfigFile)) {
     return { client: "cursor", servers: [] };
   }
 
-  const cursorMcpConfig = JSON.parse(fs.readFileSync(cursorConfigFile, "utf8"));
-  const servers = Object.entries(cursorMcpConfig.mcpServers || {}).map(
+  const cursorConfig = JSON.parse(fs.readFileSync(cursorConfigFile, "utf8"));
+  const servers = Object.entries(cursorConfig.mcpServers || {}).map(
     ([name, config]: [string, any]) => ({
       name,
       type: config.type || "unknown",
@@ -49,36 +52,15 @@ const getCursorServers = (): ClientServerList => {
 };
 
 const getClaudeServers = (): ClientServerList => {
-  let claudeConfigFilePath = "";
-  switch (os.platform()) {
-    case "darwin":
-      claudeConfigFilePath = path.join(
-        os.homedir(),
-        "Library",
-        "Application Support",
-        "Claude",
-        "claude_desktop_config.json"
-      );
-      break;
-    case "win32":
-      claudeConfigFilePath = path.join(
-        os.homedir(),
-        "AppData",
-        "Claude",
-        "claude_desktop_config.json"
-      );
-      break;
-    default:
-      return { client: "claude", servers: [] };
-  }
-
-  if (!fs.existsSync(claudeConfigFilePath)) {
+  const claudeConfigFile =
+    CLIENT_CONFIG_PATHS.claude[
+      os.platform() as keyof typeof CLIENT_CONFIG_PATHS.claude
+    ];
+  if (!fs.existsSync(claudeConfigFile)) {
     return { client: "claude", servers: [] };
   }
 
-  const claudeConfig = JSON.parse(
-    fs.readFileSync(claudeConfigFilePath, "utf8")
-  );
+  const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigFile, "utf8"));
   const servers = Object.entries(claudeConfig.mcpServers || {}).map(
     ([name, config]: [string, any]) => ({
       name,

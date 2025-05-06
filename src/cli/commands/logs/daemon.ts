@@ -3,6 +3,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import inquirer from "inquirer";
 import path from "path";
+import { LOG_PATHS } from "../../../core/lib/constants/paths";
 import { CliError } from "../../../lib/errors";
 import { App } from "../../app";
 
@@ -32,8 +33,7 @@ export const daemonLogsCommand = async (app: App, argv: string[]) => {
   }
 
   const subCommand = subArgv[0];
-  const logDir = "/var/log/mcpctl";
-  const logType = options["--type"] || "error";
+  const logDir = LOG_PATHS[process.platform as keyof typeof LOG_PATHS];
   const viewer = options["--viewer"] || "less";
 
   switch (subCommand) {
@@ -41,13 +41,13 @@ export const daemonLogsCommand = async (app: App, argv: string[]) => {
       await listDaemonLogs(logDir);
       break;
     case "view":
-      await viewDaemonLogs(logDir, logType, viewer);
+      await viewDaemonLogs(logDir, viewer);
       break;
     case "follow":
-      await followDaemonLogs(logDir, logType);
+      await followDaemonLogs(logDir);
       break;
     case "remove":
-      await removeDaemonLogs(logDir, logType);
+      await removeDaemonLogs(logDir);
       break;
     default:
       logger.error(`Error: '${subCommand}' is an unknown subcommand.`);
@@ -89,30 +89,12 @@ async function listDaemonLogs(logDir: string) {
   });
 }
 
-async function viewDaemonLogs(logDir: string, logType: string, viewer: string) {
+async function viewDaemonLogs(logDir: string, viewer: string) {
   // If log type is not specified, ask the user
-  if (logType === "log") {
-    const { selectedLogType } = await inquirer.prompt([
-      {
-        type: "list",
-        name: "selectedLogType",
-        message: "Which log file would you like to view?",
-        choices: [
-          { name: "daemon.log (Main log)", value: "log" },
-          { name: "daemon.error.log (Error log)", value: "error" },
-        ],
-      },
-    ]);
 
-    logType = selectedLogType;
-  }
-
-  const logFile = path.join(
-    logDir,
-    logType === "log" ? "daemon.log" : `daemon.${logType}.log`
-  );
+  const logFile = path.join(logDir, "daemon.log");
   if (!fs.existsSync(logFile)) {
-    console.log(`No daemon ${logType} log found.`);
+    console.log(`No daemon log found.`);
     return;
   }
 
@@ -129,10 +111,10 @@ async function viewDaemonLogs(logDir: string, logType: string, viewer: string) {
   });
 }
 
-async function followDaemonLogs(logDir: string, logType: string) {
-  const logFile = path.join(logDir, `daemon.${logType}.log`);
+async function followDaemonLogs(logDir: string) {
+  const logFile = path.join(logDir, "daemon.log");
   if (!fs.existsSync(logFile)) {
-    console.log(`No daemon ${logType} log found.`);
+    console.log(`No daemon log found.`);
     return;
   }
 
@@ -170,7 +152,7 @@ function formatFileSize(bytes: number): string {
   return `${size.toFixed(1)}${units[unitIndex]}`;
 }
 
-async function removeDaemonLogs(logDir: string, logType: string | undefined) {
+async function removeDaemonLogs(logDir: string) {
   if (!fs.existsSync(logDir)) {
     console.log("No daemon logs found.");
     return;
@@ -186,12 +168,9 @@ async function removeDaemonLogs(logDir: string, logType: string | undefined) {
   }
 
   let targetFiles = files;
-  if (logType) {
-    targetFiles = files.filter((file) => file === `daemon.${logType}.log`);
-    if (targetFiles.length === 0) {
-      console.log(`No daemon ${logType} logs found to remove.`);
-      return;
-    }
+  if (targetFiles.length === 0) {
+    console.log(`No daemon logs found to remove.`);
+    return;
   }
 
   const { confirm } = await inquirer.prompt([

@@ -42,6 +42,16 @@ const nativeNodeModulesPlugin = {
 
 async function build() {
   try {
+    // Update version.ts with current version from package.json
+    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    const versionContent = `/**
+ * Current version of the application
+ * This file is automatically updated during the build process
+ */
+export const VERSION = "${packageJson.version}";
+`;
+    fs.writeFileSync('src/version.ts', versionContent);
+
     // Common build options
     const commonOptions = {
       bundle: true,

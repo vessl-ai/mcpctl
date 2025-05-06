@@ -43,12 +43,13 @@ export const serverListCommand = async (app: App, argv: string[]) => {
   const logger = app.getLogger();
 
   try {
-    console.log(chalk.blue.bold("\n🖥  MCP Server List\n"));
+    logger.info("Listing servers");
+    logger.info(chalk.blue.bold("\n🖥  MCP Server List\n"));
     const serverService = app.getServerService();
     const servers = await serverService.listServers();
 
     if (servers.length === 0) {
-      console.log(chalk.yellow("No servers found."));
+      logger.info(chalk.yellow("No servers found."));
       return;
     }
 

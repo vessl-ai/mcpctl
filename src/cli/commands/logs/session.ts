@@ -36,7 +36,7 @@ export const sessionLogsCommand = async (app: App, argv: string[]) => {
   const subCommand = subArgv[0];
   const clientName = subArgv[1];
   const serverName = subArgv[2];
-  const logDir = path.join(os.homedir(), ".mcpctl", "logs");
+  const logDir = path.join(os.homedir(), "Library/Logs/mcpctl", "sessions");
   const viewer = options["--viewer"] || "less";
 
   if ((!clientName || !serverName) && subCommand !== "list") {

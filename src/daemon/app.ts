@@ -18,8 +18,7 @@ import {
   SecretStore,
 } from "../core/services/secret/secret-store";
 import { BaseContainer, Container } from "../lib/container/container";
-import { newConsoleLogger } from "../lib/logger/console-logger";
-import { Logger } from "../lib/logger/logger";
+import { Logger, newLogger } from "../lib/logger/logger";
 import { SocketTransportFactory } from "../lib/rpc/transport/socket";
 import { newServerInstanceFactory } from "./managers/server-instance/server-instance-factory";
 import {
@@ -56,10 +55,13 @@ export class DaemonApp {
     console.log("logDir", logDir);
     this.container.register<Logger>(
       "logger",
-      newConsoleLogger({
+      newLogger({
         prefix: "Daemon",
         logLevel: logLevel(),
-        useStderr: false,
+        console: {
+          stdout: true,
+          stderr: false,
+        },
       })
     );
 

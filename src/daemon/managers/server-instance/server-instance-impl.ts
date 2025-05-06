@@ -128,31 +128,45 @@ export class LocalServerInstance extends BaseServerInstance {
         }
       );
 
-      // Redirect stdout and stderr to log file
-      this.process.stdout?.pipe(stdoutStream);
-      this.process.stderr?.pipe(stderrStream);
-
-      let buffer = "";
+      // Handle stdout with proper buffering and JSON parsing
+      let stdoutBuffer = "";
       this.process.stdout?.on("data", (chunk: Buffer) => {
-        buffer += chunk.toString("utf8");
-        const lines = buffer.split(/\r?\n/);
-        buffer = lines.pop() ?? "";
+        const data = chunk.toString("utf8");
+        stdoutBuffer += data;
 
-        lines.forEach((line) => {
-          if (!line.trim()) return;
+        // Try to find complete JSON messages
+        let startIndex = 0;
+        while (true) {
+          const jsonStart = stdoutBuffer.indexOf("{", startIndex);
+          if (jsonStart === -1) break;
+
           try {
-            const jsonMsg = JSON.parse(line);
-            this.logger.info("Worker stdout (JSON):", { message: jsonMsg });
-          } catch {
-            this.logger.info("Worker stdout:", { message: line.trim() });
+            // Try to parse from jsonStart to end
+            const potentialJson = stdoutBuffer.slice(jsonStart);
+            const parsed = JSON.parse(potentialJson);
+
+            // If successful, log and remove the parsed part
+            this.logger.info("Worker stdout (JSON):", { message: parsed });
+            stdoutBuffer = stdoutBuffer.slice(0, jsonStart);
+            startIndex = 0;
+          } catch (e) {
+            // If parsing failed, try next potential JSON start
+            startIndex = jsonStart + 1;
           }
-        });
+        }
+
+        // If buffer is too large, log the remaining data as plain text
+        if (stdoutBuffer.length > 10000) {
+          this.logger.info("Worker stdout (text):", { message: stdoutBuffer });
+          stdoutBuffer = "";
+        }
       });
 
+      // Handle stderr
       this.process.stderr?.on("data", (message: any) => {
-        this.logger.error("Worker stderr:", {
-          message: message.toString().trim(),
-        });
+        const msg = message.toString().trim();
+        this.logger.error("Worker stderr:", { message: msg });
+        stderrStream.write(msg + "\n");
       });
 
       this.process.on("exit", (code: number | null, signal: string | null) => {

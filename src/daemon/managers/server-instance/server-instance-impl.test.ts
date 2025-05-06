@@ -1,11 +1,11 @@
 import { spawn } from "child_process";
 import * as os from "os";
 import * as path from "path";
-import { getPortPromise } from "portfinder";
 import { Logger } from "../../../lib/logger/logger";
 import { McpServerHostingType } from "../../../lib/types/hosting";
 import { McpServerInstanceStatus } from "../../../lib/types/instance";
 import { RunConfig } from "../../../lib/types/run-config";
+import { newPortService, PortService } from "../../services/port/port-service";
 import {
   BaseServerInstance,
   LocalServerInstance,
@@ -14,6 +14,7 @@ import {
 jest.mock("child_process");
 jest.mock("portfinder");
 jest.mock("../../../lib/logger/logger");
+jest.mock("../../services/port/port-service");
 
 // Set up temporary directory for tests
 const tempLogDir = path.join(os.tmpdir(), "mcpctl-test-logs");
@@ -22,6 +23,7 @@ process.env.MCPCTL_LOG_DIR = tempLogDir;
 describe("BaseServerInstance", () => {
   let config: RunConfig;
   let logger: Logger;
+  let portService: PortService;
 
   beforeEach(() => {
     config = {
@@ -39,6 +41,8 @@ describe("BaseServerInstance", () => {
       warn: jest.fn(),
       withContext: jest.fn().mockReturnThis(),
     };
+    portService = newPortService(logger);
+    (portService.allocatePort as jest.Mock).mockResolvedValue(8000);
   });
 
   class TestServerInstance extends BaseServerInstance {
@@ -47,7 +51,7 @@ describe("BaseServerInstance", () => {
   }
 
   it("should initialize with correct values", () => {
-    const instance = new TestServerInstance(config, logger);
+    const instance = new TestServerInstance(config, logger, portService);
 
     expect(instance.id).toBeDefined();
     expect(instance.status).toBe(McpServerInstanceStatus.STARTING);
@@ -66,6 +70,7 @@ describe("BaseServerInstance", () => {
 describe("LocalServerInstance", () => {
   let config: RunConfig;
   let logger: Logger;
+  let portService: PortService;
   let mockProcess: any;
   let mockStdout: any;
   let mockStderr: any;
@@ -86,6 +91,8 @@ describe("LocalServerInstance", () => {
       warn: jest.fn(),
       withContext: jest.fn().mockReturnThis(),
     };
+    portService = newPortService(logger);
+    (portService.allocatePort as jest.Mock).mockResolvedValue(12345);
 
     // 프로세스 이벤트 리스너 제대로 모킹하기
     let stdoutBuffer = "";
@@ -131,7 +138,6 @@ describe("LocalServerInstance", () => {
       exitHandler: null,
     };
     (spawn as jest.Mock).mockReturnValue(mockProcess);
-    (getPortPromise as jest.Mock).mockResolvedValue(12345);
   });
 
   afterEach(() => {
@@ -139,7 +145,7 @@ describe("LocalServerInstance", () => {
   });
 
   it("should start process successfully", async () => {
-    const instance = new LocalServerInstance(config, logger);
+    const instance = new LocalServerInstance(config, logger, portService);
     await instance.start();
 
     expect(spawn).toHaveBeenCalledWith(
@@ -183,9 +189,9 @@ describe("LocalServerInstance", () => {
 
   it("should handle start error", async () => {
     const error = new Error("Failed to start");
-    (getPortPromise as jest.Mock).mockRejectedValue(error);
+    (portService.allocatePort as jest.Mock).mockRejectedValue(error);
 
-    const instance = new LocalServerInstance(config, logger);
+    const instance = new LocalServerInstance(config, logger, portService);
     await expect(instance.start()).rejects.toThrow(error);
 
     expect(instance.status).toBe(McpServerInstanceStatus.FAILED);
@@ -193,7 +199,7 @@ describe("LocalServerInstance", () => {
   });
 
   it("should handle process messages", async () => {
-    const instance = new LocalServerInstance(config, logger);
+    const instance = new LocalServerInstance(config, logger, portService);
     await instance.start();
 
     // Clear any previous calls to logger
@@ -219,7 +225,7 @@ describe("LocalServerInstance", () => {
   });
 
   it("should stop process successfully", async () => {
-    const instance = new LocalServerInstance(config, logger);
+    const instance = new LocalServerInstance(config, logger, portService);
     await instance.start();
 
     // 프로세스 종료 시뮬레이션
@@ -236,21 +242,9 @@ describe("LocalServerInstance", () => {
   });
 
   it("should handle stop when process is not running", async () => {
-    const instance = new LocalServerInstance(config, logger);
+    const instance = new LocalServerInstance(config, logger, portService);
     await instance.stop();
 
     expect(instance.status).toBe(McpServerInstanceStatus.STOPPED);
-  });
-
-  it("should handle process error", async () => {
-    const instance = new LocalServerInstance(config, logger);
-    await instance.start();
-
-    const error = new Error("Process error");
-    instance.status = McpServerInstanceStatus.FAILED;
-    instance.error = error;
-
-    expect(instance.status).toBe(McpServerInstanceStatus.FAILED);
-    expect(instance.error).toBe(error);
   });
 });
