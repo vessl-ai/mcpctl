@@ -1,0 +1,293 @@
+import { BaseContainer, Container } from "@vessl-ai/mcpctl-core/container";
+import { LogLevel, Logger, newLogger } from "@vessl-ai/mcpctl-core/logger";
+import {
+  DaemonRPCClient,
+  HttpDaemonRPCClient,
+} from "@vessl-ai/mcpctl-core/rpc";
+import {
+  ConfigService,
+  newConfigService,
+} from "./services/config/config-service";
+import {
+  ConfigStore,
+  newFileConfigStore,
+} from "./services/config/config-store";
+import {
+  McpClientService,
+  newMcpClientService,
+} from "./services/mcp-client/mcp-client-service";
+import {
+  ProfileService,
+  newProfileService,
+} from "./services/profile/profile-service";
+import {
+  ProfileStore,
+  newFileProfileStore,
+} from "./services/profile/profile-store";
+import {
+  RegistryProviderFactory,
+  newRegistryProviderFactory,
+} from "./services/registry/providers";
+import {
+  RegistryDefStore,
+  newConfigRegistryDefStore,
+} from "./services/registry/registry-def-store";
+import {
+  RegistryService,
+  newRegistryService,
+} from "./services/registry/registry-service";
+import {
+  SearchService,
+  newSearchService,
+} from "./services/search/search-service";
+import {
+  SecretService,
+  newSecretService,
+} from "./services/secret/secret-service";
+import {
+  SecretStore,
+  newKeychainSecretStore,
+} from "./services/secret/secret-store";
+import {
+  ServerService,
+  newServerService,
+} from "./services/server/server-service";
+import {
+  SessionManager,
+  newSessionManager,
+} from "./services/session/session-manager";
+
+type AppOptions = {
+  logLevel?: LogLevel;
+  logger?: Logger;
+};
+
+class App {
+  private container: Container;
+  private initPromise: Promise<void>;
+
+  constructor({ logLevel = LogLevel.INFO, logger }: AppOptions) {
+    this.container = new BaseContainer();
+    this.initPromise = this.initializeDependencies({ logLevel, logger });
+  }
+
+  public async init(): Promise<void> {
+    await this.initPromise;
+  }
+
+  private async initializeDependencies({
+    logLevel = LogLevel.INFO,
+    logger,
+  }: AppOptions): Promise<void> {
+    // Register core dependencies
+    if (!logger) {
+      logger = newLogger({ logLevel });
+    }
+    this.container.register<Logger>("Logger", logger);
+
+    // TODO: optimize daemon client registration
+    const daemonClient = new HttpDaemonRPCClient(logger);
+    this.container.register<DaemonRPCClient>("daemonRPCClient", daemonClient);
+
+    this.registerConfigService(logger);
+    this.registerRegistryService(logger);
+    this.registerSearchService(logger);
+    this.registerSecretService(logger);
+    this.registerProfileService(logger);
+    this.registerClientService(logger);
+    this.registerSessionManager(logger);
+    this.registerServerService(logger);
+  }
+
+  private registerServerService(logger: Logger) {
+    this.container.register<ServerService>(
+      "serverService",
+      newServerService(
+        this.container.get<DaemonRPCClient>("daemonRPCClient"),
+        this.container.get<Logger>("Logger").withContext("ServerService")
+      )
+    );
+    logger.debug("ServerService registered");
+  }
+
+  private registerSessionManager(logger: Logger) {
+    this.container.register<SessionManager>(
+      "sessionManager",
+      newSessionManager(
+        this.container.get<DaemonRPCClient>("daemonRPCClient"),
+        this.container.get<Logger>("Logger").withContext("SessionManager")
+      )
+    );
+    logger.debug("SessionManager registered");
+  }
+
+  private registerProfileService(logger: Logger) {
+    this.container.register<ProfileStore>(
+      "profileStore",
+      newFileProfileStore()
+    );
+    logger.debug("ProfileStore registered");
+    this.container.register<ProfileService>(
+      "profileService",
+      newProfileService(
+        this.container.get<ProfileStore>("profileStore"),
+        this.container.get<ConfigService>("configService"),
+        this.container.get<SecretService>("secretService")
+      )
+    );
+    logger.debug("ProfileService registered");
+  }
+
+  private registerSecretService(logger: Logger) {
+    this.container.register<SecretStore>(
+      "secretStore",
+      newKeychainSecretStore()
+    );
+    logger.debug("SecretStore registered");
+    this.container.register<SecretService>(
+      "secretService",
+      newSecretService(
+        this.container.get<SecretStore>("secretStore"),
+        this.container.get<ConfigService>("configService"),
+        this.container.get<Logger>("Logger")
+      )
+    );
+    logger.debug("SecretService registered");
+  }
+
+  private registerClientService(logger: Logger) {
+    this.container.register<McpClientService>(
+      "clientService",
+      newMcpClientService(
+        this.container.get<ProfileService>("profileService"),
+        this.container.get<SecretService>("secretService"),
+        this.container.get<Logger>("Logger")
+      )
+    );
+    logger.debug("ClientService registered");
+  }
+
+  private registerSearchService(logger: Logger) {
+    this.container.register<SearchService>(
+      "searchService",
+      newSearchService(this.container.get<RegistryService>("registryService"))
+    );
+    logger.debug("SearchService registered");
+  }
+
+  private registerRegistryService(logger: Logger) {
+    this.container.register<RegistryDefStore>(
+      "registryDefStore",
+      newConfigRegistryDefStore(
+        this.container.get<ConfigService>("configService")
+      )
+    );
+    logger.debug("RegistryDefStore registered");
+    this.container.register<RegistryProviderFactory>(
+      "registryProviderFactory",
+      newRegistryProviderFactory()
+    );
+    logger.debug("RegistryProviderFactory registered");
+    this.container.register<RegistryService>(
+      "registryService",
+      newRegistryService(
+        this.container.get<RegistryDefStore>("registryDefStore"),
+        this.container.get<RegistryProviderFactory>("registryProviderFactory")
+      )
+    );
+    logger.debug("RegistryService registered");
+  }
+
+  private registerConfigService(logger: Logger) {
+    this.container.register<ConfigStore>(
+      "configStore",
+      newFileConfigStore(
+        this.container.get<Logger>("Logger").withContext("ConfigStore")
+      )
+    );
+    logger.debug("ConfigStore registered");
+    this.container.register<ConfigService>(
+      "configService",
+      newConfigService(this.container.get<ConfigStore>("configStore"))
+    );
+    logger.debug("ConfigService registered");
+  }
+
+  public getConfigService(): ConfigService {
+    const configService = this.container.get<ConfigService>("configService");
+    if (!configService) {
+      throw new Error("ConfigService not found");
+    }
+    return configService;
+  }
+
+  public getRegistryService(): RegistryService {
+    const registryService =
+      this.container.get<RegistryService>("registryService");
+    if (!registryService) {
+      throw new Error("RegistryService not found");
+    }
+    return registryService;
+  }
+  public getSearchService(): SearchService {
+    const searchService = this.container.get<SearchService>("searchService");
+    if (!searchService) {
+      throw new Error("SearchService not found");
+    }
+    return searchService;
+  }
+
+  public getClientService(): McpClientService {
+    const clientService = this.container.get<McpClientService>("clientService");
+    if (!clientService) {
+      throw new Error("ClientService not found");
+    }
+    return clientService;
+  }
+
+  public getProfileService(): ProfileService {
+    const profileService = this.container.get<ProfileService>("profileService");
+    if (!profileService) {
+      throw new Error("ProfileService not found");
+    }
+    return profileService;
+  }
+
+  public getSessionManager(): SessionManager {
+    const sessionManager = this.container.get<SessionManager>("sessionManager");
+    if (!sessionManager) {
+      throw new Error("SessionManager not found");
+    }
+    return sessionManager;
+  }
+
+  public getServerService(): ServerService {
+    const serverService = this.container.get<ServerService>("serverService");
+    if (!serverService) {
+      throw new Error("ServerService not found");
+    }
+    return serverService;
+  }
+
+  public getSecretService(): SecretService {
+    const secretService = this.container.get<SecretService>("secretService");
+    if (!secretService) {
+      throw new Error("SecretService not found");
+    }
+    return secretService;
+  }
+
+  public getLogger(): Logger {
+    const logger = this.container.get<Logger>("Logger");
+    if (!logger) {
+      throw new Error("Logger not found");
+    }
+    return logger;
+  }
+}
+
+const newApp = ({ logLevel = LogLevel.INFO, logger }: AppOptions): App => {
+  return new App({ logLevel, logger });
+};
+
+export { App, newApp };
