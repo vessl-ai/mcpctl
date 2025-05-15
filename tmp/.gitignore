@@ -26,7 +26,6 @@ coverage
 out/
 build
 dist
-bin
 
 
 # Debug
@@ -37,14 +36,3 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
-
-# Logs
-*.log
-
-# Docs
-site
-
-# npm pack
-*.tgz
-
-.venv
