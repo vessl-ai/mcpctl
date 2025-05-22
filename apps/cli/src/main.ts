@@ -5,8 +5,13 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   try {
-    console.log('Starting MCPCTL...');
-    await CommandFactory.run(AppModule);
+    const debugMode = process.env.DEBUG === 'true';
+    if (debugMode) {
+      console.log('Starting MCPCTL...');
+    }
+    await CommandFactory.run(AppModule, {
+      logger: debugMode ? ['error', 'warn', 'log', 'verbose', 'debug'] : [],
+    });
   } catch (error) {
     console.error('Failed to start MCPCTL');
     console.error(error);

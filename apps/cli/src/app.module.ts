@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CommandModule } from './command/command.module';
 import { configurations } from './config';
+import { OsServiceModule } from './os-service/os-service.module';
 
 @Module({
   imports: [
@@ -10,7 +11,7 @@ import { configurations } from './config';
       load: configurations,
       isGlobal: true,
     }),
-    // OsServiceModule,
+    OsServiceModule,
   ],
   providers: [],
 })
