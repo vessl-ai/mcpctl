@@ -20,7 +20,7 @@ export class KeychainSecretStore implements SecretStore {
   private readonly KEYCHAIN_SERVICE_PREFIX = 'mcpctl';
 
   private sanitizeKey(key: string): string {
-    return key.replace(/[^a-zA-Z0-9]/g, '_');
+    return key.replace(/[^a-zA-Z0-9\.-_]/g, '-');
   }
 
   // Set a secret value for a given key

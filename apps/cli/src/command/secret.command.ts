@@ -1,9 +1,15 @@
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import chalk from 'chalk';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { AppConfig } from '../config/app.config';
 
-@SubCommand({ name: 'add', arguments: '<name>', description: 'Add a secret' })
+@SubCommand({
+  name: 'add',
+  aliases: ['set'],
+  arguments: '<name>',
+  description: 'Add a secret',
+})
 export class SecretAddCommand extends CommandRunner {
   constructor(private readonly configService: ConfigService) {
     super();
@@ -15,11 +21,14 @@ export class SecretAddCommand extends CommandRunner {
     // Send POST request to daemon server to add a secret
     // TODO: Replace hardcoded URL with config/env if needed
     const name = passedParams[0];
-    const sourceType = options?.source;
+    let sourceType = options?.source;
     const value = options?.value;
-    if (!name || !sourceType || !value) {
-      // TODO: Use proper CLI error handling
-      console.error('name, --source, --value are required');
+    if (!sourceType) {
+      console.log(chalk.yellow('using default source type: keychain'));
+      sourceType = 'keychain';
+    }
+    if (!name || !value) {
+      console.error(chalk.red.bold('⛔ name, --value are required'));
       return;
     }
     try {
@@ -34,21 +43,28 @@ export class SecretAddCommand extends CommandRunner {
         value,
       });
       // Print result
-      console.log('Secret added:', res.data);
+      console.log(chalk.green.bold('✅ Secret added!'));
+      console.log(chalk.cyan('  name: ') + chalk.whiteBright(name));
+      console.log(chalk.cyan('  source: ') + chalk.whiteBright(sourceType));
+      console.log(chalk.cyan('  value: ') + chalk.whiteBright(value));
     } catch (err) {
       // Print error
       console.error(
-        'Failed to add secret:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to add secret:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
   }
   @Option({
     flags: '--source <vault|keychain|env>',
-    description: 'Secret source',
-    required: true,
+    description: 'Secret source (default: keychain)',
+    required: false,
   })
   parseSource(val: string) {
+    if (val !== 'vault' && val !== 'keychain' && val !== 'env') {
+      console.log('using default source type: keychain');
+      return 'keychain';
+    }
     return val;
   }
   @Option({
@@ -69,7 +85,7 @@ export class SecretListCommand extends CommandRunner {
   async run(inputs: string[], options?: Record<string, any>): Promise<void> {
     let sourceType = options?.source;
     if (!sourceType) {
-      console.log('using default source type: keychain');
+      console.log(chalk.yellow('using default source type: keychain'));
       sourceType = 'keychain';
     }
     try {
@@ -79,11 +95,29 @@ export class SecretListCommand extends CommandRunner {
       }
       const baseUrl = appConfig.controlPlaneBaseUrl;
       const res = await axios.get(`${baseUrl}/secret/${sourceType}`);
-      console.log('Secret list:', res.data);
+      const secrets = res.data;
+      if (!Array.isArray(secrets) || secrets.length === 0) {
+        console.log(chalk.yellow('No secrets found.'));
+        return;
+      }
+      console.log(chalk.yellow.bold('🔐 Secret list:'));
+      for (const secret of secrets) {
+        if (typeof secret === 'object') {
+          console.log(
+            chalk.cyan('• ') +
+              chalk.bold(secret.key || secret.name) +
+              (secret.value
+                ? chalk.gray(' = ') + chalk.whiteBright(secret.value)
+                : ''),
+          );
+        } else {
+          console.log(chalk.cyan('• ') + chalk.whiteBright(secret));
+        }
+      }
     } catch (err) {
       console.error(
-        'Failed to list secrets:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to list secrets:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
   }
@@ -111,9 +145,13 @@ export class SecretGetCommand extends CommandRunner {
     options?: Record<string, any>,
   ): Promise<void> {
     const name = passedParams[0];
-    const sourceType = options?.source;
-    if (!name || !sourceType) {
-      console.error('name, --source are required');
+    let sourceType = options?.source;
+    if (!sourceType) {
+      console.log(chalk.yellow('using default source type: keychain'));
+      sourceType = 'keychain';
+    }
+    if (!name) {
+      console.error(chalk.red.bold('⛔ name is required'));
       return;
     }
     try {
@@ -123,18 +161,40 @@ export class SecretGetCommand extends CommandRunner {
       }
       const baseUrl = appConfig.controlPlaneBaseUrl;
       const res = await axios.get(`${baseUrl}/secret/${sourceType}/${name}`);
-      console.log('Secret value:', res.data);
+      console.log(chalk.green.bold('🔑 Secret value:'));
+      if (typeof res.data === 'object') {
+        for (const [k, v] of Object.entries(res.data)) {
+          console.log(
+            chalk.cyan(`  ${k}`) + chalk.gray(' = ') + chalk.whiteBright(v),
+          );
+        }
+      } else {
+        console.log(chalk.whiteBright(res.data));
+      }
     } catch (err) {
       console.error(
-        'Failed to get secret:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to get secret:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
+  }
+
+  @Option({
+    flags: '--source <vault|keychain|env>',
+    description: 'Secret source (default: keychain)',
+  })
+  parseSource(val: string) {
+    if (val !== 'vault' && val !== 'keychain' && val !== 'env') {
+      console.log('using default source type: keychain');
+      return 'keychain';
+    }
+    return val;
   }
 }
 
 @SubCommand({
   name: 'remove',
+  aliases: ['rm'],
   arguments: '<name>',
   description: 'Remove a secret',
 })
@@ -147,9 +207,13 @@ export class SecretRemoveCommand extends CommandRunner {
     options?: Record<string, any>,
   ): Promise<void> {
     const name = passedParams[0];
-    const sourceType = options?.source;
-    if (!name || !sourceType) {
-      console.error('name, --source are required');
+    let sourceType = options?.source;
+    if (!sourceType) {
+      console.log(chalk.yellow('using default source type: keychain'));
+      sourceType = 'keychain';
+    }
+    if (!name) {
+      console.error(chalk.red.bold('⛔ name is required'));
       return;
     }
     try {
@@ -159,18 +223,30 @@ export class SecretRemoveCommand extends CommandRunner {
       }
       const baseUrl = appConfig.controlPlaneBaseUrl;
       const res = await axios.delete(`${baseUrl}/secret/${sourceType}/${name}`);
-      console.log('Secret removed:', res.data);
+      console.log(chalk.green.bold('🗑️  Secret removed: ') + chalk.cyan(name));
     } catch (err) {
       console.error(
-        'Failed to remove secret:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to remove secret:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
+  }
+  @Option({
+    flags: '--source <vault|keychain|env>',
+    description: 'Secret source (default: keychain)',
+  })
+  parseSource(val: string) {
+    if (val !== 'vault' && val !== 'keychain' && val !== 'env') {
+      console.log('using default source type: keychain');
+      return 'keychain';
+    }
+    return val;
   }
 }
 
 @Command({
   name: 'secret',
+  aliases: ['sec'],
   description: 'Manage secrets',
   subCommands: [
     SecretAddCommand,

@@ -4,6 +4,7 @@ import {
   ServerRunSpec,
 } from '@repo/shared/types/domain/server';
 import axios from 'axios';
+import chalk from 'chalk';
 import * as fs from 'fs/promises';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import * as path from 'path';
@@ -24,14 +25,17 @@ export class ServerStartCommand extends CommandRunner {
     const file = options?.file;
     const profile = options?.profile;
     if (!file) {
-      console.error('--file is required');
+      console.error(chalk.red.bold('⛔ --file is required'));
       return;
     }
     let runSpec;
     try {
       runSpec = await this.loadSpec(file);
     } catch (err) {
-      console.error('Failed to read spec file:', err.message);
+      console.error(
+        chalk.red.bold('⛔ Failed to read spec file:'),
+        chalk.red(err.message),
+      );
       return;
     }
     let env: ProfileEnv = {};
@@ -48,11 +52,14 @@ export class ServerStartCommand extends CommandRunner {
         if (profiles[profile] && profiles[profile].env) {
           env = profiles[profile].env;
         } else {
-          console.error('Profile or env not found');
+          console.error(chalk.red.bold('⛔ Profile or env not found'));
           return;
         }
       } catch (err) {
-        console.error('Failed to read profile:', err.message);
+        console.error(
+          chalk.red.bold('⛔ Failed to read profile:'),
+          chalk.red(err.message),
+        );
         return;
       }
     }
@@ -63,11 +70,23 @@ export class ServerStartCommand extends CommandRunner {
       if (!appConfig) throw new Error('App config not found');
       const baseUrl = appConfig.controlPlaneBaseUrl;
       const res = await axios.post(`${baseUrl}/server/start`, { runSpec });
-      console.log('Server started:', res.data);
+      console.log(chalk.green.bold('🚀 Server started!'));
+      console.log(
+        chalk.cyan('  name: ') + chalk.whiteBright(res.data?.name || 'unknown'),
+      );
+      if (res.data) {
+        for (const [k, v] of Object.entries(res.data)) {
+          if (k !== 'name') {
+            console.log(
+              chalk.cyan(`  ${k}`) + chalk.gray(' = ') + chalk.whiteBright(v),
+            );
+          }
+        }
+      }
     } catch (err) {
       console.error(
-        'Failed to start server:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to start server:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
   }
@@ -113,7 +132,7 @@ export class ServerStopCommand extends CommandRunner {
   async run(passedParams: string[]): Promise<void> {
     const serverName = passedParams[0];
     if (!serverName) {
-      console.error('server-name is required');
+      console.error(chalk.red.bold('⛔ server-name is required'));
       return;
     }
     try {
@@ -121,11 +140,13 @@ export class ServerStopCommand extends CommandRunner {
       if (!appConfig) throw new Error('App config not found');
       const baseUrl = appConfig.controlPlaneBaseUrl;
       const res = await axios.post(`${baseUrl}/server/${serverName}/stop`);
-      console.log('Server stopped:', res.data);
+      console.log(
+        chalk.green.bold('🛑 Server stopped: ') + chalk.cyan(serverName),
+      );
     } catch (err) {
       console.error(
-        'Failed to stop server:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to stop server:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
   }
@@ -143,7 +164,7 @@ export class ServerRestartCommand extends CommandRunner {
   async run(passedParams: string[]): Promise<void> {
     const serverName = passedParams[0];
     if (!serverName) {
-      console.error('server-name is required');
+      console.error(chalk.red.bold('⛔ server-name is required'));
       return;
     }
     try {
@@ -151,11 +172,13 @@ export class ServerRestartCommand extends CommandRunner {
       if (!appConfig) throw new Error('App config not found');
       const baseUrl = appConfig.controlPlaneBaseUrl;
       const res = await axios.post(`${baseUrl}/server/${serverName}/restart`);
-      console.log('Server restarted:', res.data);
+      console.log(
+        chalk.green.bold('🔄 Server restarted: ') + chalk.cyan(serverName),
+      );
     } catch (err) {
       console.error(
-        'Failed to restart server:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to restart server:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
   }
@@ -173,7 +196,7 @@ export class ServerStatusCommand extends CommandRunner {
   async run(passedParams: string[]): Promise<void> {
     const serverName = passedParams[0];
     if (!serverName) {
-      console.error('server-name is required');
+      console.error(chalk.red.bold('⛔ server-name is required'));
       return;
     }
     try {
@@ -183,17 +206,32 @@ export class ServerStatusCommand extends CommandRunner {
       const res = await axios.get<ServerInstance>(
         `${baseUrl}/server/${serverName}/status`,
       );
-      console.log('Server status:', res.data);
+      console.log(
+        chalk.yellow.bold('📊 Server status: ') + chalk.cyan(serverName),
+      );
+      if (res.data && typeof res.data === 'object') {
+        for (const [k, v] of Object.entries(res.data)) {
+          console.log(
+            chalk.cyan(`  ${k}`) + chalk.gray(' = ') + chalk.whiteBright(v),
+          );
+        }
+      } else {
+        console.log(chalk.whiteBright(res.data));
+      }
     } catch (err) {
       console.error(
-        'Failed to get server status:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to get server status:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
   }
 }
 
-@SubCommand({ name: 'list', description: 'List servers' })
+@SubCommand({
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List servers',
+})
 export class ServerListCommand extends CommandRunner {
   constructor(private readonly configService: ConfigService) {
     super();
@@ -204,11 +242,29 @@ export class ServerListCommand extends CommandRunner {
       if (!appConfig) throw new Error('App config not found');
       const baseUrl = appConfig.controlPlaneBaseUrl;
       const res = await axios.get<ServerInstance[]>(`${baseUrl}/server/list`);
-      console.log('Server list:', res.data);
+      const servers = res.data;
+      if (!Array.isArray(servers) || servers.length === 0) {
+        console.log(chalk.yellow('No servers found.'));
+        return;
+      }
+      console.log(chalk.yellow.bold('🖥️  Server list:'));
+      for (const server of servers) {
+        if (typeof server === 'object') {
+          console.log(
+            chalk.cyan('• ') +
+              chalk.bold(server.name || 'unknown') +
+              (server.status
+                ? chalk.gray(' — ') + chalk.whiteBright(server.status)
+                : ''),
+          );
+        } else {
+          console.log(chalk.cyan('• ') + chalk.whiteBright(server));
+        }
+      }
     } catch (err) {
       console.error(
-        'Failed to list servers:',
-        err?.response?.data || err.message,
+        chalk.red.bold('⛔ Failed to list servers:'),
+        chalk.red(err?.response?.data || err.message),
       );
     }
   }
@@ -216,6 +272,7 @@ export class ServerListCommand extends CommandRunner {
 
 @Command({
   name: 'server',
+  aliases: ['svr'],
   description: 'Manage servers',
   subCommands: [
     ServerStartCommand,

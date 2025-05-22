@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import * as fs from 'fs/promises';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import * as path from 'path';
@@ -44,12 +45,12 @@ export class ProfileCreateCommand extends CommandRunner {
     const description = options?.description;
     const copyFrom = options?.copyFrom;
     if (!name) {
-      console.error('name is required');
+      console.error(chalk.red.bold('⛔ name is required'));
       return;
     }
     const profiles = await readProfiles();
     if (profiles[name]) {
-      console.error('Profile already exists');
+      console.error(chalk.red.bold('⛔ Profile already exists'));
       return;
     }
     let env: ProfileEnv = {};
@@ -58,7 +59,7 @@ export class ProfileCreateCommand extends CommandRunner {
     }
     profiles[name] = { description, env };
     await writeProfiles(profiles);
-    console.log('Profile created:', name);
+    console.log(chalk.green.bold('✅ Profile created: ') + chalk.cyan(name));
   }
   @Option({
     flags: '--description <text>',
@@ -78,6 +79,7 @@ export class ProfileCreateCommand extends CommandRunner {
 
 @SubCommand({
   name: 'delete',
+  aliases: ['rm', 'remove'],
   arguments: '<name>',
   description: 'Delete a profile',
 })
@@ -85,28 +87,40 @@ export class ProfileDeleteCommand extends CommandRunner {
   async run(passedParams: string[]): Promise<void> {
     const name = passedParams[0];
     if (!name) {
-      console.error('name is required');
+      console.error(chalk.red.bold('⛔ name is required'));
       return;
     }
     const profiles = await readProfiles();
     if (!profiles[name]) {
-      console.error('Profile not found');
+      console.error(chalk.red.bold('⛔ Profile not found'));
       return;
     }
     delete profiles[name];
     await writeProfiles(profiles);
-    console.log('Profile deleted:', name);
+    console.log(chalk.green.bold('🗑️  Profile deleted: ') + chalk.cyan(name));
   }
 }
 
-@SubCommand({ name: 'list', description: 'List profiles' })
+@SubCommand({
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List profiles',
+})
 export class ProfileListCommand extends CommandRunner {
   async run(): Promise<void> {
     const profiles = await readProfiles();
-    console.log('Profiles:');
+    if (Object.keys(profiles).length === 0) {
+      console.log(chalk.yellow('No profiles found.'));
+      return;
+    }
+    console.log(chalk.yellow.bold('📋 Profiles:'));
     for (const [name, value] of Object.entries(profiles)) {
       const description = (value as any).description;
-      console.log(`- ${name}${description ? ': ' + description : ''}`);
+      console.log(
+        chalk.cyan('• ') +
+          chalk.bold(name) +
+          (description ? chalk.gray(' — ' + description) : ''),
+      );
     }
   }
 }
@@ -116,12 +130,12 @@ export class ProfileUseCommand extends CommandRunner {
   async run(passedParams: string[]): Promise<void> {
     const name = passedParams[0];
     if (!name) {
-      console.error('name is required');
+      console.error(chalk.red.bold('⛔ name is required'));
       return;
     }
     const profiles = await readProfiles();
     if (!profiles[name]) {
-      console.error('Profile not found');
+      console.error(chalk.red.bold('⛔ Profile not found'));
       return;
     }
     // Save current profile name to a file
@@ -130,7 +144,9 @@ export class ProfileUseCommand extends CommandRunner {
       'current_profile',
     );
     await fs.writeFile(currentPath, name, 'utf-8');
-    console.log('Current profile set:', name);
+    console.log(
+      chalk.green.bold('👉 Current profile set: ') + chalk.cyan(name),
+    );
   }
 }
 
@@ -160,18 +176,23 @@ export class ProfileEnvSetCommand extends CommandRunner {
       }
     }
     if (!key || !value || !profile) {
-      console.error('key, value, --profile are required');
+      console.error(chalk.red.bold('⛔ key, value, --profile are required'));
       return;
     }
     const profiles = await readProfiles();
     if (!profiles[profile]) {
-      console.error('Profile not found');
+      console.error(chalk.red.bold('⛔ Profile not found'));
       return;
     }
     profiles[profile].env = profiles[profile].env || {};
     profiles[profile].env[key] = value;
     await writeProfiles(profiles);
-    console.log('Env variable set:', key);
+    console.log(
+      chalk.green('✅ Env variable set: ') +
+        chalk.cyan(key) +
+        chalk.gray(' = ') +
+        chalk.whiteBright(value),
+    );
   }
   @Option({
     flags: '--profile <name>',
@@ -207,20 +228,25 @@ export class ProfileEnvGetCommand extends CommandRunner {
       }
     }
     if (!key || !profile) {
-      console.error('key, --profile are required');
+      console.error(chalk.red.bold('⛔ key, --profile are required'));
       return;
     }
     const profiles = await readProfiles();
     if (!profiles[profile]) {
-      console.error('Profile not found');
+      console.error(chalk.red.bold('⛔ Profile not found'));
       return;
     }
     const value = profiles[profile].env?.[key];
     if (value === undefined) {
-      console.error('Env variable not found');
+      console.error(chalk.red.bold('⛔ Env variable not found'));
       return;
     }
-    console.log('Env variable:', key, '=', value);
+    console.log(
+      chalk.green('🔎 Env variable: ') +
+        chalk.cyan(key) +
+        chalk.gray(' = ') +
+        chalk.whiteBright(value),
+    );
   }
   @Option({
     flags: '--profile <name>',
@@ -248,18 +274,24 @@ export class ProfileEnvListCommand extends CommandRunner {
       }
     }
     if (!profile) {
-      console.error('--profile is required');
+      console.error(chalk.red.bold('⛔ --profile is required'));
       return;
     }
     const profiles = await readProfiles();
     if (!profiles[profile]) {
-      console.error('Profile not found');
+      console.error(chalk.red.bold('⛔ Profile not found'));
       return;
     }
     const env = profiles[profile].env || {};
-    console.log('Env variables:');
+    if (Object.keys(env).length === 0) {
+      console.log(chalk.yellow('No env variables found.'));
+      return;
+    }
+    console.log(chalk.magenta.bold('🌱 Env variables:'));
     for (const [k, v] of Object.entries(env)) {
-      console.log(`- ${k}=${v}`);
+      console.log(
+        chalk.cyan(`  ${k}`) + chalk.gray(' = ') + chalk.whiteBright(v),
+      );
     }
   }
   @Option({
@@ -273,6 +305,7 @@ export class ProfileEnvListCommand extends CommandRunner {
 
 @SubCommand({
   name: 'delete',
+  aliases: ['rm', 'remove'],
   arguments: '<key>',
   description: 'Delete env variable',
 })
@@ -296,21 +329,21 @@ export class ProfileEnvDeleteCommand extends CommandRunner {
       }
     }
     if (!key || !profile) {
-      console.error('key, --profile are required');
+      console.error(chalk.red.bold('⛔ key, --profile are required'));
       return;
     }
     const profiles = await readProfiles();
     if (!profiles[profile]) {
-      console.error('Profile not found');
+      console.error(chalk.red.bold('⛔ Profile not found'));
       return;
     }
     if (!profiles[profile].env?.[key]) {
-      console.error('Env variable not found');
+      console.error(chalk.red.bold('⛔ Env variable not found'));
       return;
     }
     delete profiles[profile].env[key];
     await writeProfiles(profiles);
-    console.log('Env variable deleted:', key);
+    console.log(chalk.green('🗑️  Env variable deleted: ') + chalk.cyan(key));
   }
   @Option({
     flags: '--profile <name>',
@@ -346,27 +379,39 @@ export class ProfileReadCommand extends CommandRunner {
   async run(passedParams: string[]): Promise<void> {
     const name = passedParams[0];
     if (!name) {
-      console.error('name is required');
+      console.error(chalk.red.bold('⛔ name is required'));
       return;
     }
     const profiles = await readProfiles();
     const profile = profiles[name];
     if (!profile) {
-      console.error('Profile not found');
+      console.error(chalk.red.bold('⛔ Profile not found'));
       return;
     }
     // Print profile details
-    console.log(`Profile: ${name}`);
-    console.log(`Description: ${profile.description || ''}`);
-    console.log('Env:');
-    for (const [k, v] of Object.entries(profile.env || {})) {
-      console.log(`  ${k}=${v}`);
+    console.log(chalk.blueBright.bold('=============================='));
+    console.log(chalk.blueBright.bold(`Profile: `) + chalk.cyan(name));
+    console.log(
+      chalk.blueBright('Description: ') +
+        chalk.white(profile.description || chalk.gray('<none>')),
+    );
+    console.log(chalk.blueBright('Env:'));
+    if (profile.env && Object.keys(profile.env).length > 0) {
+      for (const [k, v] of Object.entries(profile.env)) {
+        console.log(
+          chalk.cyan(`  ${k}`) + chalk.gray(' = ') + chalk.whiteBright(v),
+        );
+      }
+    } else {
+      console.log(chalk.gray('  <no env variables>'));
     }
+    console.log(chalk.blueBright.bold('=============================='));
   }
 }
 
 @Command({
   name: 'profile',
+  aliases: ['prof'],
   description: 'Manage profiles',
   subCommands: [
     ProfileCreateCommand,

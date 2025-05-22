@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { bootstrapControlPlane } from '@vessl-ai/mcpctl-control-plane';
+import chalk from 'chalk';
 import { execSync } from 'child_process';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { AppConfig } from '../config/app.config';
@@ -66,13 +67,26 @@ export class ControlPlaneStatusCommand extends CommandRunner {
   async run(): Promise<void> {
     // 1. os service status + 2. ask /control/status api
     const osServiceStatus = await this.osServiceService.getServiceStatus();
-    console.log(osServiceStatus);
+    console.log(chalk.yellow.bold('🛠️  OS Service Status:'));
+    if (typeof osServiceStatus === 'object') {
+      for (const [k, v] of Object.entries(osServiceStatus)) {
+        console.log(
+          chalk.cyan(`  ${k}`) + chalk.gray(' : ') + chalk.whiteBright(v),
+        );
+      }
+    } else {
+      console.log(chalk.whiteBright(osServiceStatus));
+    }
     const res = await fetch(
       `${this.appConfig.controlPlaneBaseUrl}/control/status`,
     );
     const data = await res.json();
-
-    console.log(data);
+    console.log(chalk.green.bold('\n🌐 Control Plane API Status:'));
+    for (const [k, v] of Object.entries(data)) {
+      console.log(
+        chalk.cyan(`  ${k}`) + chalk.gray(' : ') + chalk.whiteBright(v),
+      );
+    }
   }
 }
 
@@ -88,22 +102,32 @@ export class ControlPlaneLogsCommand extends CommandRunner {
   }
 
   async run(inputs: string[], options?: Record<string, any>): Promise<void> {
-    console.log('cli inputs:', inputs);
-    console.log('cli options:', options);
+    console.log(
+      chalk.blueBright('cli inputs:'),
+      chalk.whiteBright(JSON.stringify(inputs)),
+    );
+    console.log(
+      chalk.blueBright('cli options:'),
+      chalk.whiteBright(JSON.stringify(options)),
+    );
     const type = options?.type || 'stdout';
     if (process.platform === 'linux') {
       // parse journalctl
-      console.log('Retrieving logs from journalctl...');
+      console.log(chalk.yellow('Retrieving logs from journalctl...'));
       const logs = execSync(`journalctl -u mcpctl-control-plane -f`);
-      console.log(logs);
+      console.log(chalk.gray(logs.toString()));
     } else {
       const logPath = this.appConfig.controlPlaneLogPath + `/${type}.log`;
-      console.log('Opening log file with less (or cat):', logPath);
+      console.log(
+        chalk.yellow('Opening log file with less (or cat):'),
+        chalk.cyan(logPath),
+      );
       const { spawnSync } = require('child_process');
       const viewer = process.env.PAGER || 'less';
       const result = spawnSync(viewer, [logPath], { stdio: 'inherit' });
       if (result.error) {
         // fallback to cat
+        console.log(chalk.red('less failed, fallback to cat:'));
         spawnSync('cat', [logPath], { stdio: 'inherit' });
       }
     }
@@ -122,6 +146,7 @@ export class ControlPlaneLogsCommand extends CommandRunner {
 
 @Command({
   name: 'control-plane',
+  aliases: ['cp'],
   description: 'Manage control plane',
   subCommands: [
     ControlPlaneStartCommand,
