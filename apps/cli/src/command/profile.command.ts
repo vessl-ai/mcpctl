@@ -146,7 +146,19 @@ export class ProfileEnvSetCommand extends CommandRunner {
   ): Promise<void> {
     const key = passedParams[0];
     const value = passedParams[1];
-    const profile = options?.profile;
+    let profile = options?.profile;
+    if (!profile) {
+      // Try to read current_profile file
+      const currentPath = path.join(
+        path.dirname(PROFILE_PATH),
+        'current_profile',
+      );
+      try {
+        profile = (await fs.readFile(currentPath, 'utf-8')).trim();
+      } catch {
+        // ignore
+      }
+    }
     if (!key || !value || !profile) {
       console.error('key, value, --profile are required');
       return;
@@ -181,7 +193,19 @@ export class ProfileEnvGetCommand extends CommandRunner {
     options?: Record<string, any>,
   ): Promise<void> {
     const key = passedParams[0];
-    const profile = options?.profile;
+    let profile = options?.profile;
+    if (!profile) {
+      // Try to read current_profile file
+      const currentPath = path.join(
+        path.dirname(PROFILE_PATH),
+        'current_profile',
+      );
+      try {
+        profile = (await fs.readFile(currentPath, 'utf-8')).trim();
+      } catch {
+        // ignore
+      }
+    }
     if (!key || !profile) {
       console.error('key, --profile are required');
       return;
@@ -210,7 +234,19 @@ export class ProfileEnvGetCommand extends CommandRunner {
 @SubCommand({ name: 'list', description: 'List env variables' })
 export class ProfileEnvListCommand extends CommandRunner {
   async run(options?: Record<string, any>): Promise<void> {
-    const profile = options?.profile;
+    let profile = options?.profile;
+    if (!profile) {
+      // Try to read current_profile file
+      const currentPath = path.join(
+        path.dirname(PROFILE_PATH),
+        'current_profile',
+      );
+      try {
+        profile = (await fs.readFile(currentPath, 'utf-8')).trim();
+      } catch {
+        // ignore
+      }
+    }
     if (!profile) {
       console.error('--profile is required');
       return;
@@ -246,7 +282,19 @@ export class ProfileEnvDeleteCommand extends CommandRunner {
     options?: Record<string, any>,
   ): Promise<void> {
     const key = passedParams[0];
-    const profile = options?.profile;
+    let profile = options?.profile;
+    if (!profile) {
+      // Try to read current_profile file
+      const currentPath = path.join(
+        path.dirname(PROFILE_PATH),
+        'current_profile',
+      );
+      try {
+        profile = (await fs.readFile(currentPath, 'utf-8')).trim();
+      } catch {
+        // ignore
+      }
+    }
     if (!key || !profile) {
       console.error('key, --profile are required');
       return;
@@ -289,6 +337,34 @@ export class ProfileEnvCommand extends CommandRunner {
   }
 }
 
+@SubCommand({
+  name: 'read',
+  arguments: '<name>',
+  description: 'Read profile details',
+})
+export class ProfileReadCommand extends CommandRunner {
+  async run(passedParams: string[]): Promise<void> {
+    const name = passedParams[0];
+    if (!name) {
+      console.error('name is required');
+      return;
+    }
+    const profiles = await readProfiles();
+    const profile = profiles[name];
+    if (!profile) {
+      console.error('Profile not found');
+      return;
+    }
+    // Print profile details
+    console.log(`Profile: ${name}`);
+    console.log(`Description: ${profile.description || ''}`);
+    console.log('Env:');
+    for (const [k, v] of Object.entries(profile.env || {})) {
+      console.log(`  ${k}=${v}`);
+    }
+  }
+}
+
 @Command({
   name: 'profile',
   description: 'Manage profiles',
@@ -297,6 +373,7 @@ export class ProfileEnvCommand extends CommandRunner {
     ProfileDeleteCommand,
     ProfileListCommand,
     ProfileUseCommand,
+    ProfileReadCommand,
     ProfileEnvCommand,
   ],
 })
