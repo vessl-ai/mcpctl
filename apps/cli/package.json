@@ -2,7 +2,7 @@
   "name": "@vessl-ai/mcpctl",
   "version": "0.0.8",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && rollup -c rollup.config.cjs",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "dev": "ts-node src/main.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -10,7 +10,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -24,7 +25,8 @@
     "chalk": "5.3.0",
     "nest-commander": "^3.17.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "tslib": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
