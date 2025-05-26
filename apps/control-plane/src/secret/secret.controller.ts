@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { SecretRefSource } from '@repo/shared/types/domain/secret';
+import { SecretRefSource } from '@vessl-ai/mcpctl-shared/types/domain/secret';
 import { SecretService } from './secret.service';
 
 @Controller('secret')

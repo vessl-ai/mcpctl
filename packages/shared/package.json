@@ -1,6 +1,6 @@
 {
-  "name": "@repo/shared",
-  "type": "commonjs",
+  "name": "@vessl-ai/mcpctl-shared",
+  "type": "module",
   "version": "0.0.1",
   "scripts": {
     "dev": "tsc --watch",
@@ -45,12 +45,36 @@
     }
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.15.18",
     "typescript": "latest"
   },
   "dependencies": {
     "axios": "^1.9.0",
     "crypto": "^1.0.1"
+  },
+  "main": "./dist/common/index.js",
+  "types": "./src/common/index.ts",
+  "description": "Shared utilities and types for mcpctl by VESSL AI",
+  "author": "Kyle Lee <kyle@vessl.ai>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vessl-ai/mcpctl.git"
+  },
+  "homepage": "https://github.com/vessl-ai/mcpctl#readme",
+  "bugs": {
+    "url": "https://github.com/vessl-ai/mcpctl/issues"
+  },
+  "keywords": [
+    "mcpctl",
+    "model-context-protocol",
+    "typescript"
+  ],
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

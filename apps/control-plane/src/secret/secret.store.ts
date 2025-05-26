@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SecretRefSource } from '@repo/shared/types/domain/secret';
+import { SecretRefSource } from '@vessl-ai/mcpctl-shared/types/domain/secret';
 import {
   deletePassword,
   findCredentials,

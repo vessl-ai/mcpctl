@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   ServerInstance,
   ServerRunSpec,
-} from '@repo/shared/types/domain/server';
+} from '@vessl-ai/mcpctl-shared/types/domain/server';
 import axios from 'axios';
 import chalk from 'chalk';
 import * as fs from 'fs/promises';

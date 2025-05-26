@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ControlPlaneStatus } from '@repo/shared/types/dto/controlplane';
+import { ControlPlaneStatus } from '@vessl-ai/mcpctl-shared/types/dto/controlplane';
 import { ServerService } from '../server/server.service';
 
 @Injectable()

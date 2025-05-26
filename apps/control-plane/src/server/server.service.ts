@@ -4,16 +4,16 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { TransportType } from '@repo/shared/types/common';
+import { TransportType } from '@vessl-ai/mcpctl-shared/types/common';
 import {
   ServerInstance,
   ServerInstanceStatus,
   ServerRunSpec,
-} from '@repo/shared/types/domain/server';
+} from '@vessl-ai/mcpctl-shared/types/domain/server';
 import {
   generateServerInstanceId,
   generateServerRunSpecId,
-} from '@repo/shared/util';
+} from '@vessl-ai/mcpctl-shared/util';
 import { spawn } from 'child_process';
 import { AppCacheService } from '../cache/appcache.service';
 import { ServerCacheKeys } from '../types/cache';

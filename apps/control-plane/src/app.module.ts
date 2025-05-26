@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ClientModule } from './client/client.module';
 import { configurations } from './config/configruation';
 import { ControlModule } from './control/control.module';
 import { LogModule } from './log/log.module';
@@ -12,7 +11,6 @@ import { ServerModule } from './server/server.module';
       isGlobal: true,
       load: configurations,
     }),
-    ClientModule,
     LogModule,
     SecretModule,
     ServerModule,

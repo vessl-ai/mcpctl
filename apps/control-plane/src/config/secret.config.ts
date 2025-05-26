@@ -1,5 +1,5 @@
 import { registerAs } from '@nestjs/config';
-import { SecretRefSource } from '@repo/shared/types/domain/secret';
+import { SecretRefSource } from '@vessl-ai/mcpctl-shared/types/domain/secret';
 
 export interface SecretConfig {
   storeTypes: SecretRefSource[];

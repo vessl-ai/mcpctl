@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SecretRefSource } from '@repo/shared/types/domain/secret';
+import { SecretRefSource } from '@vessl-ai/mcpctl-shared/types/domain/secret';
 import { SecretStoreFactory } from './secret.store';
 @Injectable()
 export class SecretService {

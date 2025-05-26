@@ -1,5 +1,5 @@
 import { Controller, Get, Post } from '@nestjs/common';
-import { ControlPlaneStatus } from '@repo/shared/types/dto/controlplane';
+import { ControlPlaneStatus } from '@vessl-ai/mcpctl-shared/types/dto/controlplane';
 import { ControlService } from './control.service';
 
 @Controller('control')

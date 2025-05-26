@@ -1,98 +1,75 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# mcpctl control plane
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+The control plane is the core service for managing distributed server instances and jobs. Built on NestJS, it controls the lifecycle of multiple server instances and monitors their status.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Main Features
 
-## Description
+- **Server Instance Management**: Start, stop, restart, get status, list instances, and manage specs
+- **Control Plane Control**: Query overall control plane status and shut down the whole plane
+- **Cache Support**: Supports memory, Redis, ETCD, etc. (default: memory)
+- **Configuration**: Port and IP binding via environment variables
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## API Endpoints
 
-## Project setup
+### Control
 
-```bash
-$ pnpm install
-```
+- `POST /control/stop` : Shut down the entire control plane
+- `GET /control/status` : Get control plane status, version, and managed server list
 
-## Compile and run the project
+### Server
 
-```bash
-# development
-$ pnpm run start
+- `POST /server/start` : Start a server instance
+- `POST /server/:name/stop` : Stop a server instance
+- `POST /server/:name/restart` : Restart a server instance
+- `GET /server/:name/status` : Get status of a specific server instance
+- `GET /server/list` : List all server instances
+- `GET /server/specs` : List all registered server specs
+- `GET /server/:name` : Get details of a specific server instance
+- `GET /server/:name/spec` : Get the spec of a specific server instance
 
-# watch mode
-$ pnpm run start:dev
+### Secret
 
-# production mode
-$ pnpm run start:prod
-```
+- `POST /secret` : Set a secret value for a given key and source type (body: `{ sourceType, key, value }`).
+- `GET /secret/:sourceType` : List all secret keys for the given source type.
+- `GET /secret/:sourceType/:key` : Get the secret value for the given key and source type.
+- `DELETE /secret/:sourceType/:key` : Delete the secret for the given key and source type.
 
-## Run tests
+> Supported `sourceType`: `keychain` (default), `vault` (not implemented, don't even try unless you want to see an error)
+
+## How to Run
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm install
+pnpm build
+pnpm start:prod
 ```
 
-## Deployment
+By default, it binds to port 8999 and 127.0.0.1. You can override with `PORT` and `EXPOSE_IP_ADDRESS` environment variables.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Development & Test
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm dev         # Dev server (hot reload)
+pnpm test        # Unit tests
+pnpm lint        # Lint code
+pnpm format      # Format code
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Dependencies
 
-## Resources
+- Node.js 18+
+- NestJS 11
+- supergateway
+- @vessl-ai/mcpctl-shared
 
-Check out a few resources that may come in handy when working with NestJS:
+## Folder Structure
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- `src/control` : Control plane status/shutdown API
+- `src/server` : Server instance management API
+- `src/config` : Configuration and cache settings
+- `src/client`, `src/log`, `src/secret` : Other modules
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+No, seriously, if you don't write a README, collaboration is a joke. Don't ever skip the basics like this again.  
+Comments in English, docs in English. That's the bare minimum for a real developer.

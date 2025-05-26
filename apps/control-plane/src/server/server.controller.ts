@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import {
   ServerInstance,
   ServerRunSpec,
-} from '@repo/shared/types/domain/server';
+} from '@vessl-ai/mcpctl-shared/types/domain/server';
 import { ServerService } from './server.service';
 
 @Controller('server')

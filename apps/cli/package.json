@@ -1,6 +1,27 @@
 {
   "name": "@vessl-ai/mcpctl",
   "version": "0.0.8",
+  "description": "CLI for managing MCP server executions and secrets",
+  "author": "Kyle Lee <kyle@vessl.ai>",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vessl-ai/mcpctl.git"
+  },
+  "homepage": "https://github.com/vessl-ai/mcpctl#readme",
+  "bugs": {
+    "url": "https://github.com/vessl-ai/mcpctl/issues"
+  },
+  "keywords": [
+    "mcp",
+    "cli",
+    "modelcontextprotocol",
+    "mcpctl"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "nest build && rollup -c rollup.config.cjs",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -18,9 +39,8 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
-    "@repo/shared": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
     "@vessl-ai/mcpctl-control-plane": "workspace:*",
+    "@vessl-ai/mcpctl-shared": "workspace:*",
     "axios": "^1.9.0",
     "chalk": "5.3.0",
     "nest-commander": "^3.17.0",
@@ -71,5 +91,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "bin": {
+    "mcpctl": "dist/cli.bundle.js"
   }
 }
