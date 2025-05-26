@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as fs from 'fs/promises';
 import { CommandFactory } from 'nest-commander';
 import * as path from 'path';

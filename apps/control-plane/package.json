@@ -1,9 +1,8 @@
 {
   "name": "@vessl-ai/mcpctl-control-plane",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Vessl MCP Control Plane service for managing distributed jobs.",
   "author": "Kyle Lee <kyle@vessl.ai>",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/vessl-ai/mcpctl.git",
@@ -33,7 +32,7 @@
     }
   },
   "scripts": {
-    "build": "nest build && rollup -c rollup.config.cjs",
+    "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -109,6 +108,6 @@
     "testEnvironment": "node"
   },
   "bin": {
-    "mcpctld": "dist/control-plane.bundle.js"
+    "mcpctld": "dist/main.js"
   }
 }

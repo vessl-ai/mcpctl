@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import chalk from 'chalk';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { AppConfig } from '../config/app.config';
+
+const chalk = require('chalk');
 
 @SubCommand({
   name: 'add',

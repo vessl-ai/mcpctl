@@ -70,6 +70,3 @@ pnpm format      # Format code
 - `src/client`, `src/log`, `src/secret` : Other modules
 
 ---
-
-No, seriously, if you don't write a README, collaboration is a joke. Don't ever skip the basics like this again.  
-Comments in English, docs in English. That's the bare minimum for a real developer.

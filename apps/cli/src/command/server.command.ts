@@ -4,12 +4,14 @@ import {
   ServerRunSpec,
 } from '@vessl-ai/mcpctl-shared/types/domain/server';
 import axios from 'axios';
-import chalk from 'chalk';
 import * as fs from 'fs/promises';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import * as path from 'path';
 import { AppConfig } from '../config/app.config';
 import { ProfileEnv, ProfileMap } from '../types/profile';
+
+const chalk = require('chalk');
+
 @SubCommand({
   name: 'start',
   description: 'Start a server',

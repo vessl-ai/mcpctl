@@ -5,6 +5,8 @@ local_registry="http://localhost:4873"
 # clean storage
 rm -rf ./.verdaccio/storage
 
+pnpm build
+
 # Shared
 cd packages/shared
 pnpm publish --registry $local_registry --no-git-checks

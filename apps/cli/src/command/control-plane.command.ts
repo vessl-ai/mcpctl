@@ -1,11 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { bootstrapControlPlane } from '@vessl-ai/mcpctl-control-plane';
-import chalk from 'chalk';
 import { execSync } from 'child_process';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { AppConfig } from '../config/app.config';
 import { OsServiceService } from '../os-service/os-service.service';
 
+const chalk = require('chalk');
 @SubCommand({ name: 'start', description: 'Start control plane' })
 export class ControlPlaneStartCommand extends CommandRunner {
   constructor(private readonly osServiceService: OsServiceService) {

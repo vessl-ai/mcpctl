@@ -1,8 +1,9 @@
-import chalk from 'chalk';
 import * as fs from 'fs/promises';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import * as path from 'path';
 import { ProfileEnv, ProfileMap } from '../types/profile';
+
+const chalk = require('chalk');
 
 const PROFILE_PATH = path.join(
   process.env.HOME || process.env.USERPROFILE || '.',

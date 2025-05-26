@@ -1,6 +1,5 @@
 {
   "name": "@vessl-ai/mcpctl-shared",
-  "type": "module",
   "version": "0.0.1",
   "scripts": {
     "dev": "tsc --watch",
