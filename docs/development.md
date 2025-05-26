@@ -7,24 +7,16 @@
 - Node.js 18.17.1 or higher
 - pnpm (recommended) or npm
 - Git
-- A code editor (VS Code recommended)
 
-### Setting Up Development Environment
-
-1. Clone the repository:
+### Setup
 
 ```bash
 git clone https://github.com/vessl-ai/mcpctl.git
 cd mcpctl
-```
-
-2. Install dependencies:
-
-```bash
 pnpm install
 ```
 
-3. Build the project:
+### Build
 
 ```bash
 pnpm build
@@ -32,236 +24,97 @@ pnpm build
 
 ## Project Structure
 
-```
+```text
 mcpctl/
-├── src/
-│   ├── cli/        # Command-line interface
-│   │   ├── commands/    # CLI commands
-│   │   └── utils/       # CLI utilities
-│   ├── core/       # Core business logic
-│   │   ├── server/      # Server management
-│   │   ├── session/     # Session management
-│   │   └── config/      # Configuration management
-│   ├── daemon/     # Daemon service
-│   │   ├── service/     # Service implementation
-│   │   └── utils/       # Daemon utilities
-│   └── lib/        # Shared libraries
-│       ├── types/       # TypeScript types
-│       └── utils/       # Shared utilities
-├── tests/          # Test files
-├── scripts/        # Build and utility scripts
-└── docs/           # Documentation
+├── apps/
+│   ├── cli/           # CLI implementation
+│   └── control-plane/ # Control plane service
+├── packages/
+│   └── shared/        # Shared types and utilities
+├── docs/              # Documentation
+├── examples/          # Example specs and configs
+└── tests/             # Test files
 ```
 
 ## Development Workflow
 
-### 1. Branch Management
+### Branching
 
-- `main`: Production-ready code
-- `develop`: Development branch
-- Feature branches: `feature/feature-name`
-- Bug fixes: `fix/bug-name`
-- Documentation: `docs/topic-name`
+- `main`: Production
+- `dev`: Development
+- Feature: `feature/<name>`
+- Bugfix: `fix/<name>`
 
-### 2. Code Style
-
-We use ESLint and Prettier for code formatting:
+### Lint & Format
 
 ```bash
-# Check code style
 pnpm lint
-
-# Fix code style issues
 pnpm lint:fix
 ```
 
-### 3. Testing
+### Testing
 
 ```bash
-# Run tests
 pnpm test
-
-# Run tests with coverage
-pnpm test:coverage
-
-# Run specific test file
-pnpm test path/to/test/file
 ```
 
-### 4. Building
+### Building
 
 ```bash
-# Build the project
 pnpm build
-
-# Build for production
-pnpm build:prod
-
-# Watch mode for development
-pnpm build:watch
 ```
 
-## Adding New Features
+## Adding Features
 
-### 1. CLI Commands
+### CLI Command (apps/cli)
 
-1. Create command file in `src/cli/commands/`:
+- Add command in `apps/cli/src/command/`
+- Register in `command.module.ts`
+- Add tests in `apps/cli/test/`
 
-```typescript
-import { Command } from "commander";
+### Control Plane (apps/control-plane)
 
-export function createCommand(program: Command) {
-  program
-    .command("new-command")
-    .description("Description of the command")
-    .option("-o, --option <value>", "Option description")
-    .action(async (options) => {
-      // Command implementation
-    });
-}
-```
+- Add service/module in `apps/control-plane/src/`
+- Register in main module
+- Add tests in `apps/control-plane/test/`
 
-2. Register command in `src/cli/index.ts`:
+### Shared Types/Utils (packages/shared)
 
-```typescript
-import { createCommand as createNewCommand } from "./commands/new-command";
-
-// In the main function
-createNewCommand(program);
-```
-
-### 2. Core Features
-
-1. Create feature module in `src/core/`:
-
-```typescript
-export class NewFeature {
-  constructor() {
-    // Initialization
-  }
-
-  async execute() {
-    // Feature implementation
-  }
-}
-```
-
-2. Add tests in `tests/core/`:
-
-```typescript
-import { NewFeature } from "../../src/core/new-feature";
-
-describe("NewFeature", () => {
-  it("should execute successfully", async () => {
-    const feature = new NewFeature();
-    await expect(feature.execute()).resolves.not.toThrow();
-  });
-});
-```
-
-### 3. Daemon Service
-
-1. Add service in `src/daemon/service/`:
-
-```typescript
-export class NewService {
-  constructor() {
-    // Service initialization
-  }
-
-  async start() {
-    // Service implementation
-  }
-}
-```
-
-2. Register service in `src/daemon/index.ts`:
-
-```typescript
-import { NewService } from "./service/new-service";
-
-// In the service manager
-this.services.push(new NewService());
-```
+- Add or update in `packages/shared/`
+- Update imports in CLI/Control Plane as needed
 
 ## Best Practices
 
-### 1. Code Organization
-
-- Keep files focused and small
-- Use meaningful names
-- Follow the single responsibility principle
-- Document complex logic
-
-### 2. Error Handling
-
-```typescript
-try {
-  await operation();
-} catch (error) {
-  if (error instanceof SpecificError) {
-    // Handle specific error
-  } else {
-    // Handle general error
-  }
-  throw error; // Re-throw if needed
-}
-```
-
-### 3. Logging
-
-```typescript
-import { logger } from "../lib/utils/logger";
-
-logger.debug("Debug message");
-logger.info("Info message");
-logger.warn("Warning message");
-logger.error("Error message", error);
-```
-
-### 4. Testing
-
-- Write unit tests for all new features
-- Maintain test coverage above 80%
-- Use meaningful test descriptions
-- Mock external dependencies
-
-### 5. Documentation
-
-- Update README.md for user-facing changes
-- Document new commands in CLI reference
-- Add JSDoc comments for public APIs
-- Keep documentation up to date
+- Keep code modular and small
+- Use clear, descriptive names
+- Add comments for complex logic (in English)
+- Write tests for all new features
+- Update documentation for user-facing changes
 
 ## Contributing
 
-1. Fork the repository
+1. Fork the repo
 2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
+3. Make changes, add tests
+4. Run lint and tests
 5. Submit a pull request
 
-### Pull Request Process
+### Pull Request Checklist
 
-1. Update documentation
-2. Add tests for new features
-3. Ensure all tests pass
-4. Update the changelog
-5. Request review from maintainers
+- [ ] Tests pass
+- [ ] Lint passes
+- [ ] Docs updated
+- [ ] Changelog updated (if needed)
 
 ## Release Process
 
 1. Update version in package.json
 2. Update CHANGELOG.md
-3. Create release branch
-4. Build and test
-5. Create GitHub release
-6. Merge to main
-7. Tag release
+3. Build and test
+4. Create GitHub release & tag
 
 ## Getting Help
 
-- Check existing issues
-- Join our community chat
-- Contact maintainers
-- Read the documentation
+- Check issues
+- Read the docs
+- Contact maintainers via GitHub

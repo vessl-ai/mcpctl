@@ -1,149 +1,49 @@
 # Core Concepts
 
-## MCP (Model Control Protocol)
+## What is MCPCTL?
 
-MCP is a protocol that enables communication and control between different AI models and applications. MCPCTL is a tool that helps manage and control MCP servers, which implement this protocol.
+MCPCTL is a CLI tool for managing MCP (Model Control Protocol) servers. It helps you start, stop, and monitor server instances, manage configuration, profiles, and secrets—all from the command line.
 
-## Key Components
+## Key Concepts
 
-### 1. MCP Server
+### MCP Server
 
-An MCP server is an implementation of the Model Control Protocol that:
+A process that implements the Model Control Protocol. It exposes endpoints for model execution and control.
 
-- Handles communication between AI models
-- Manages model execution and control
-- Provides interfaces for client applications
+### Server Instance
 
-### 2. Server Registry
+A running instance of an MCP server, managed by MCPCTL. Each instance has a unique name and state.
 
-A server registry is a repository that contains MCP server definitions and metadata:
+### Profile
 
-- Stores server configurations
-- Manages server versions
-- Provides discovery mechanisms
+A named set of configuration (environment variables, secrets) that can be applied to server instances. Profiles let you easily switch between environments (dev, staging, prod, etc).
 
-### 3. Server Instance
+### Secret
 
-A server instance is a running instance of an MCP server:
+A sensitive value (API key, token, credential) managed securely (default: OS keychain). Secrets are injected into server instances at runtime.
 
-- Has a unique identifier
-- Maintains its own state
-- Can be started, stopped, and monitored
+### Environment Variable
 
-### 4. Connection Session
-
-A connection session represents an active connection between:
-
-- An MCP server instance
-- One or more client applications
-- Contains connection-specific configurations
-
-### 5. Profile
-
-A profile is a collection of configurations that can be applied to:
-
-- Server instances
-- Connection sessions
-- Environment variables
-- Secrets and credentials
-
-## Architecture Overview
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Client    │────▶│  MCPCTL     │────▶│ MCP Server  │
-│ Application │◀────│  Daemon     │◀────│  Instance   │
-└─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  Registry   │
-                    │  Service    │
-                    └─────────────┘
-```
+A key-value pair injected into a server process. Managed per profile.
 
 ## Data Flow
 
-1. **Server Discovery**
+1. User runs a CLI command (e.g. start server)
+2. MCPCTL loads the relevant profile, env, and secrets
+3. MCPCTL starts or manages the server instance
+4. Status and logs are reported back to the user
 
-   - Client requests server search
-   - MCPCTL queries registries
-   - Returns matching server definitions
+## Security
 
-2. **Server Instance Management**
-
-   - Client requests server start
-   - MCPCTL creates instance
-   - Daemon monitors instance
-   - Status updates sent to client
-
-3. **Connection Management**
-   - Client initiates connection
-   - MCPCTL establishes session
-   - Session maintained by daemon
-   - Connection status monitored
-
-## Security Model
-
-### Authentication
-
-- Server authentication
-- Client authentication
-- API key management
-
-### Authorization
-
-- Role-based access control
-- Permission management
-- Resource isolation
-
-### Secrets Management
-
-- Secure storage
-- Encryption at rest
-- Secure transmission
-
-## Configuration Management
-
-### Environment Variables
-
-- Server-specific variables
-- Profile-based variables
-- Global variables
-
-### Secrets
-
-- API keys
-- Credentials
-- Certificates
-
-### Profiles
-
-- Default profiles
-- Custom profiles
-- Profile inheritance
+- Secrets are stored in the OS keychain by default
+- Profiles isolate configuration for different environments
+- No remote secret storage by default (vault: WIP)
 
 ## Best Practices
 
-1. **Server Management**
+- Use profiles for each environment
+- Store secrets in the keychain, not in plain config files
+- Monitor server status and logs regularly
+- Keep MCPCTL and your servers up to date
 
-   - Use profiles for different environments
-   - Implement proper logging
-   - Monitor server health
-
-2. **Security**
-
-   - Rotate credentials regularly
-   - Use secure communication
-   - Implement proper access control
-
-3. **Performance**
-
-   - Monitor resource usage
-   - Implement proper scaling
-   - Optimize configurations
-
-4. **Maintenance**
-   - Regular updates
-   - Backup configurations
-   - Monitor logs
+> For more details, see [Configuration Management](./features/configuration.md) and [Server Instance Management](./features/server-instance.md).

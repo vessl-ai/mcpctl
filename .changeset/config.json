@@ -3,20 +3,7 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "linked": [
-    [
-      "@vessl-ai/mcpctl",
-      "@vessl-ai/mcpctl-control-plane"
-    ],
-    [
-      "@vessl-ai/mcpctl",
-      "@vessl-ai/mcpctl-shared"
-    ],
-    [
-      "@vessl-ai/mcpctl-control-plane",
-      "@vessl-ai/mcpctl-shared"
-    ]
-  ],
+  "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",

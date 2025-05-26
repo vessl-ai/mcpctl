@@ -1,190 +1,90 @@
 # Quick Start Guide
 
-This guide will help you get started with `mcpctl` - the MCP Execution Control Tool.
+This guide will help you get started with `mcpctl` for managing MCP servers.
 
 ## Prerequisites
 
 - Node.js 18.17.1 or higher
-- Operating System: Linux, macOS, or Windows
-- Administrative privileges (for global installation)
+- Linux, macOS, or Windows
 
-## Installation
-
-### Global Installation
-
-This will automatically require sudo privileges for starting the daemon.
+## 1. Install MCPCTL
 
 ```bash
-# Using npm
 npm install -g @vessl-ai/mcpctl
-
-# Using pnpm
+# or
 pnpm install -g @vessl-ai/mcpctl
-
-# Using yarn
-yarn global add @vessl-ai/mcpctl
 ```
 
-### Verify Installation
+## 2. Verify Installation
 
 ```bash
 mcpctl --version
 ```
 
-## First Steps
-
-### 1. Start the Daemon
-
-The mcpctl daemon is required for most operations:
+## 3. Start the Control Plane
 
 ```bash
-# Start the daemon
-mcpctl daemon start
-
-# Check daemon status
-mcpctl daemon status
+mcpctl control-plane start
 ```
 
-### 2. Search for MCP Servers
+## 4. Create a Profile
 
 ```bash
-# Basic search
-mcpctl search --registry glama
-
-# Search with specific name
-mcpctl search --registry glama --name my-mcp-server
-
-# Search with query
-mcpctl search --query 'slack' --registry glama --limit 10
-
-# Search with LLM interactivity
-mcpctl search --query 'slack' --registry glama --use-llm-interactive (or -i)
+mcpctl profile create dev --description "Development environment"
+mcpctl profile use dev
 ```
 
-### 3. Create a Profile
-
-Profiles help manage different configurations:
+## 5. Set Environment Variables and Secrets
 
 ```bash
-# Create a new profile
-mcpctl profile create my-profile
-
-# Set environment variables
-mcpctl config env set --profile my-profile --entry SLACK_TEAM_ID=1234567890
-
-# Set secret
-mcpctl config secret set --profile my-profile --entry SLACK_BOT_TOKEN=your-token
+mcpctl profile env set SLACK_TEAM_ID T00000000
+mcpctl secret add SLACK_BOT_TOKEN --value xoxb-xxx
 ```
 
-### 4. Install and Run a Server
+## 6. Prepare a Server Spec
+
+Create a file `server-slack.json`:
+
+```json
+{
+  "name": "server-slack",
+  "resourceType": "remote",
+  "transport": { "type": "stdio" },
+  "command": "npx -y @modelcontextprotocol/server-slack",
+  "env": { "SLACK_TEAM_ID": "T00000000" },
+  "secrets": {
+    "SLACK_BOT_TOKEN": { "source": "keychain", "key": "SLACK_BOT_TOKEN" }
+  }
+}
+```
+
+## 7. Start a Server
 
 ```bash
-# Install a server to a client
-mcpctl install --client claude --server-name my-mcp-server \
-  --command 'npx -y @wonderwhy-er/desktop-commander'
-
-# Connect to a server using a profile
-mcpctl session connect --profile my-profile --server-name my-server
+mcpctl server start -f server-slack.json --profile dev
 ```
 
-## Common Operations
-
-### Managing Servers
+## 8. Check Server Status
 
 ```bash
-# List all servers
-mcpctl server list
-
-# Get server details
-mcpctl server info --name my-server
+mcpctl server status server-slack
 ```
 
-### Managing Sessions
+## 9. View Server Logs
 
 ```bash
-# List active sessions
-mcpctl session list
-
-# Start a new session
-mcpctl session start --server-name my-server
-
-# Stop a session
-mcpctl session stop --session-id <session-id>
+mcpctl log server server-slack --limit 100
 ```
 
-### Managing Logs
+## 10. Stop and Remove the Server
 
 ```bash
-# View daemon logs
-mcpctl logs daemon view
-
-# View client logs
-mcpctl logs client view claude
-
-# View server logs
-mcpctl logs server view my-server
-
-# View session logs
-mcpctl logs session view session-123
-
-# Follow logs in real-time
-mcpctl logs daemon follow
-mcpctl logs client follow claude
-mcpctl logs server follow my-server
-mcpctl logs session follow session-123
+mcpctl server stop server-slack
+mcpctl server remove server-slack
 ```
-
-### Registry Management
-
-```bash
-# Add a custom registry
-mcpctl registry add --name my-registry --url https://github.com/my-registry
-
-# List registries
-mcpctl registry list
-```
-
-## Troubleshooting
-
-### Daemon Issues
-
-```bash
-# Check daemon status
-mcpctl daemon status
-
-# Restart daemon
-mcpctl daemon restart
-
-# View daemon logs (see stderr logs for more details)
-# Linux/macOS: /var/log/mcpctl/daemon.log, /var/log/mcpctl/daemon.error.log
-# Windows: C:\ProgramData\mcpctl\logs\daemon.log, C:\ProgramData\mcpctl\logs\daemon.error.log
-```
-
-### Common Issues
-
-Please file any issues on [GitHub](https://github.com/vessl-ai/mcpctl/issues).
-
-#### 1. **Daemon not starting**
-
-- Check if you have sufficient permissions
-- Verify port availability
-- Check system logs
-
-#### 2. **Server connection failures**
-
-- Verify server is running
-- Check network connectivity
-- Validate profile configuration
-- View logs for more details
-
-#### 3. **Search not working**
-
-- Check registry connectivity
-- Verify search parameters
 
 ## Next Steps
 
-- Read the [Core Concepts](core-concepts.md) guide
-- Explore the [CLI Reference](cli-reference.md)
-- Check out the [Architecture](architecture.md) documentation
-- Learn about [Development](development.md)
+- See [CLI Reference](cli-reference.md) for all commands
+- See [Configuration Management](features/configuration.md) for profile/env/secret details
+- See [Server Instance Management](features/server-instance.md) for more examples

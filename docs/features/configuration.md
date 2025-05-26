@@ -2,300 +2,118 @@
 
 ## Overview
 
-Configuration management in MCPCTL provides a comprehensive system for managing server configurations, environment variables, secrets, and profiles. This feature ensures secure and flexible configuration handling across different environments.
+MCPCTL provides simple and secure management of profiles, environment variables, and secrets for your servers. All configuration is profile-based, so you can easily switch between different environments.
 
 ## Profile Management
 
-### 1. Profile Operations
+Profiles let you manage separate sets of configuration for different environments (e.g. dev, staging, prod). You can create, delete, list, use, and inspect profiles.
+
+### Create a profile
 
 ```bash
-# Create profile
-mcpctl profile create <name>
-
-# List profiles
-mcpctl profile list [options]
-
-Options:
-  --format <format>     # Output format
-  --verbose            # Show detailed info
-
-# Delete profile
-mcpctl profile delete <name> [options]
-
-Options:
-  --force              # Force deletion
-  --recursive          # Delete associated resources
+mcpctl profile create <name> [--description <text>] [--copy-from <name>]
 ```
 
-### 2. Profile Structure
+### Delete a profile
 
-Example profile configuration:
+```bash
+mcpctl profile delete <name>
+```
 
-```json
-{
-  "name": "production",
-  "servers": {
-    "my-mcp-server": {
-      "type": "local",
-      "command": "mcp-server",
-      "args": ["--port", "8000"],
-      "env": {
-        "env": {
-          "API_KEY": "your-api-key",
-          "DEBUG": "false"
-        },
-        "secrets": {
-          "SLACK_TOKEN": "encrypted-token"
-        }
-      }
-    }
-  }
-}
+### List all profiles
+
+```bash
+mcpctl profile list
+```
+
+### Use a profile (set as default)
+
+```bash
+mcpctl profile use <name>
+```
+
+### Read profile details
+
+```bash
+mcpctl profile read <name>
 ```
 
 ## Environment Variables
 
-### 1. Variable Management
+Environment variables are managed per profile. You can set, get, list, and delete environment variables for any profile.
+
+### Set an environment variable
 
 ```bash
-# Set environment variable
-mcpctl config env set --env KEY=VALUE [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific variable
-  --shared             # Set as shared environment variable
-
-# Get environment variable
-mcpctl config env get [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific variable
-  --shared             # Get shared environment variables
-
-# List environment variables
-mcpctl config env list [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific variables
-  --shared             # List shared environment variables
-
-# Remove environment variables
-mcpctl config env remove --env KEY1,KEY2 [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific variables
-  --shared             # Remove shared environment variables
+mcpctl profile env set <KEY> <VALUE> [--profile <profile-name>]
 ```
 
-### 2. Variable Scope
+### Get an environment variable
 
-1. **Shared Environment Variables**
+```bash
+mcpctl profile env get <KEY> [--profile <profile-name>]
+```
 
-   - Available to all servers
-   - Set with --shared option
-   - Managed at global level
+### List environment variables
 
-2. **Profile/Server-Specific Variables**
-   - Available to specific server in a profile
-   - Set with --profile and --server options
-   - Override shared variables
+```bash
+mcpctl profile env list [--profile <profile-name>]
+```
+
+### Delete an environment variable
+
+```bash
+mcpctl profile env delete <KEY> [--profile <profile-name>]
+```
 
 ## Secrets Management
 
-### 1. Secret Operations
+Secrets are also managed per profile. You can add, get, list, and remove secrets.
+
+- **keychain** is the default and first supported backend for secrets. All secrets are stored in the local OS keychain by default.
+- **vault** support is under development and not yet available.
+
+You can specify the source with `--source <keychain|vault>`. If omitted, `keychain` is used.
+
+### Add a secret
 
 ```bash
-# Set secret
-mcpctl config secret set --entry KEY=VALUE [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific secret
-  --shared             # Set as shared secret
-
-# Get secret
-mcpctl config secret get --key KEY [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific secret
-  --shared             # Get shared secret
-
-# List secrets
-mcpctl config secret list [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific secrets
-  --shared             # List shared secrets
-
-# Remove secret
-mcpctl config secret remove --key KEY [options]
-
-Options:
-  --profile <name>     # Use specific profile
-  --server <name>      # Server-specific secret
-  --shared             # Remove shared secret
+mcpctl secret add <name> --value <value> [--source <keychain|vault>]
 ```
 
-### 2. Secret Structure
-
-Secrets are stored with additional metadata:
-
-```json
-{
-  "key": "secret-value",
-  "description": "Secret description"
-}
-```
-
-## Configuration Files
-
-### 1. File Formats
-
-Supported formats:
-
-- [x] JSON
-- [ ] YAML
-- [ ] TOML
-- [ ] Environment files
-
-### 2. File Operations (TODO)
+### Get a secret
 
 ```bash
-# Import configuration
-mcpctl config import <file> [options]
-
-Options:
-  --profile <name>     # Target profile
-  --format <format>    # File format
-  --merge             # Merge with existing
-
-# Export configuration
-mcpctl config export <file> [options]
-
-Options:
-  --profile <name>     # Source profile
-  --format <format>    # Output format
-  --include-secrets    # Include secrets
+mcpctl secret get <name> [--source <keychain|vault>]
 ```
 
-## Best Practices
-
-### 1. Profile Organization
-
-- Use descriptive profile names
-- Separate environments
-- Document profile purposes
-- Regular profile updates
-
-### 2. Security
-
-- Encrypt sensitive data
-- Use secure storage
-- Implement access control
-- Regular key rotation
-
-### 3. Maintenance
-
-- Regular backups
-- Version control
-- Change documentation
-- Audit trails
-
-## Examples
-
-### Profile Management
+### List secrets
 
 ```bash
-# Create production profile (TODO)
-mcpctl profile create production --description "Production environment"
-
-# Copy from existing (TODO)
-mcpctl profile create staging --copy-from production
-
-# List profiles (TODO)
-mcpctl profile list --format json
+mcpctl secret list [--source <keychain|vault>]
 ```
 
-### Environment Variables
+### Remove a secret
 
 ```bash
-# Set shared environment variable
-mcpctl config env set --env DEBUG=false --shared
-
-# Set server-specific variable
-mcpctl config env set --env PORT=8080 --profile production --server my-mcp-server
-
-# List all environment variables
-mcpctl config env list
-
-# List shared environment variables
-mcpctl config env list --shared
-
-# Remove environment variable
-mcpctl config env remove --env DEBUG --shared
+mcpctl secret remove <name> [--source <keychain|vault>]
 ```
 
-### Secrets Management
+## Example Workflow
 
 ```bash
-# Set shared secret
-mcpctl config secret set --entry API_KEY=your-api-key --shared
+# Create and use a dev profile
+mcpctl profile create dev --description "Development environment"
+mcpctl profile use dev
 
-# Set server-specific secret
-mcpctl config secret set --entry SLACK_TOKEN=xoxb-token --profile production --server my-mcp-server
+# Set environment variable for dev profile
+mcpctl profile env set DEBUG true
 
-# List all secrets
-mcpctl config secret list
+# Add a Slack token secret to keychain
+mcpctl secret add SLACK_BOT_TOKEN --value xoxb-xxx --source keychain
 
-# List shared secrets
-mcpctl config secret list --shared
-
-# Get specific secret
-mcpctl config secret get --key API_KEY --shared
-
-# Remove secret
-mcpctl config secret remove --key API_KEY --shared
+# List all secrets in keychain
+mcpctl secret list --source keychain
 ```
 
-### Configuration Files
-
-```bash
-# Import configuration
-mcpctl config import config.json --profile production
-
-# Export configuration
-mcpctl config export config.yaml --profile staging
-
-# Merge configurations
-mcpctl config import override.json --profile production --merge
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Profile Errors**
-
-   - Check profile existence
-   - Verify permissions
-   - Validate configuration
-   - Check dependencies
-
-2. **Secret Management**
-
-   - Verify encryption
-   - Check key availability
-   - Validate access rights
-   - Review audit logs
-
-3. **Configuration Import/Export**
-   - Validate file format
-   - Check file permissions
-   - Verify data integrity
-   - Review merge conflicts
+> For more details on profiles, see [Profile Management](./profile.md).
