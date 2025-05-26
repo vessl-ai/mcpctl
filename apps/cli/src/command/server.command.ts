@@ -79,8 +79,15 @@ export class ServerStartCommand extends CommandRunner {
       if (res.data) {
         for (const [k, v] of Object.entries(res.data)) {
           if (k !== 'name') {
+            // If value is object or array, pretty print as JSON
+            const valueStr =
+              typeof v === 'object' && v !== null
+                ? JSON.stringify(v, null, 2)
+                : v;
             console.log(
-              chalk.cyan(`  ${k}`) + chalk.gray(' = ') + chalk.whiteBright(v),
+              chalk.cyan(`  ${k}`) +
+                chalk.gray(' = ') +
+                chalk.whiteBright(valueStr),
             );
           }
         }
@@ -88,7 +95,13 @@ export class ServerStartCommand extends CommandRunner {
     } catch (err) {
       console.error(
         chalk.red.bold('⛔ Failed to start server:'),
-        chalk.red(err?.response?.data || err.message),
+        chalk.red(
+          err?.response?.data
+            ? typeof err.response.data === 'object'
+              ? JSON.stringify(err.response.data, null, 2)
+              : err.response.data
+            : err?.message || JSON.stringify(err, null, 2),
+        ),
       );
     }
   }
@@ -213,9 +226,18 @@ export class ServerStatusCommand extends CommandRunner {
       );
       if (res.data && typeof res.data === 'object') {
         for (const [k, v] of Object.entries(res.data)) {
-          console.log(
-            chalk.cyan(`  ${k}`) + chalk.gray(' = ') + chalk.whiteBright(v),
-          );
+          if (k !== 'name') {
+            // If value is object or array, pretty print as JSON
+            const valueStr =
+              typeof v === 'object' && v !== null
+                ? JSON.stringify(v, null, 2)
+                : v;
+            console.log(
+              chalk.cyan(`  ${k}`) +
+                chalk.gray(' = ') +
+                chalk.whiteBright(valueStr),
+            );
+          }
         }
       } else {
         console.log(chalk.whiteBright(res.data));
@@ -272,6 +294,45 @@ export class ServerListCommand extends CommandRunner {
   }
 }
 
+@SubCommand({
+  name: 'remove',
+  arguments: '<server-name>',
+  aliases: ['rm'],
+  description: 'Remove a server',
+})
+export class ServerRemoveCommand extends CommandRunner {
+  constructor(private readonly configService: ConfigService) {
+    super();
+  }
+  async run(passedParams: string[]): Promise<void> {
+    const serverName = passedParams[0];
+    if (!serverName) {
+      console.error(chalk.red.bold('⛔ server-name is required'));
+      return;
+    }
+    try {
+      const appConfig = this.configService.get<AppConfig>('app');
+      if (!appConfig) throw new Error('App config not found');
+      const baseUrl = appConfig.controlPlaneBaseUrl;
+      const res = await axios.post(`${baseUrl}/server/${serverName}/remove`);
+      console.log(
+        chalk.green.bold('🗑️ Server removed: ') + chalk.cyan(serverName),
+      );
+    } catch (err) {
+      console.error(
+        chalk.red.bold('⛔ Failed to remove server:'),
+        chalk.red(
+          err?.response?.data
+            ? typeof err.response.data === 'object'
+              ? JSON.stringify(err.response.data, null, 2)
+              : err.response.data
+            : err?.message || JSON.stringify(err, null, 2),
+        ),
+      );
+    }
+  }
+}
+
 @Command({
   name: 'server',
   aliases: ['svr'],
@@ -282,6 +343,7 @@ export class ServerListCommand extends CommandRunner {
     ServerRestartCommand,
     ServerStatusCommand,
     ServerListCommand,
+    ServerRemoveCommand,
   ],
 })
 export class ServerCommand extends CommandRunner {

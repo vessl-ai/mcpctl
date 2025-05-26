@@ -11,8 +11,8 @@ export const win32ServiceTemplate: ServiceTemplateFactory = ({
 }) => `
 nssm install ${name} ${nodePath} ${entryScript}
 nssm set ${name} AppDirectory ${workingDirectory}
-nssm set ${name} AppEnvironmentExtra NODE_ENV=production
-nssm set ${name} AppStdout ${logPath}\stdout.log
-nssm set ${name} AppStderr ${logPath}\stderr.log
+nssm set ${name} AppEnvironmentExtra NODE_ENV=production;PATH=${process.env.PATH ? `${process.env.PATH};` : ''}C:\\Program Files\\nodejs;C:\\Windows\\system32;C:\\Windows
+nssm set ${name} AppStdout ${logPath}\mcpctl.log
+nssm set ${name} AppStderr ${logPath}\mcpctl.log
 nssm start ${name}
 `;

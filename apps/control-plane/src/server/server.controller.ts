@@ -66,4 +66,9 @@ export class ServerController {
   ): Promise<ServerRunSpec | undefined> {
     return this.serverService.getRunSpecByName(name);
   }
+
+  @Post(':name/remove')
+  async removeServer(@Param('name') name: string): Promise<void> {
+    return this.serverService.removeServerInstance(name);
+  }
 }

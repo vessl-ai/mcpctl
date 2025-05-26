@@ -30,11 +30,14 @@ export const darwinServiceTemplate: ServiceTemplateFactory = ({
     <dict>
         <key>NODE_ENV</key>
         <string>production</string>
+        <!-- Add PATH for launchd, otherwise npx/node/npm will not be found! -->
+        <key>PATH</key>
+        <string>${process.env.PATH ? `${process.env.PATH}:` : ''}/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>${logPath}/stdout.log</string>
+    <string>${logPath}/mcpctl.log</string>
     <key>StandardErrorPath</key>
-    <string>${logPath}/stderr.log</string>
+    <string>${logPath}/mcpctl.log</string>
 </dict>
 </plist>
 `;

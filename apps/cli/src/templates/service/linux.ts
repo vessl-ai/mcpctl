@@ -17,6 +17,8 @@ Type=simple
 ExecStart=${nodePath} ${entryScript}
 Restart=always
 Environment=NODE_ENV=production
+# Add PATH for systemd service, otherwise npx/node/npm may not be found!
+Environment=PATH=${process.env.PATH ? `${process.env.PATH}:` : ''}/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 WorkingDirectory=${workingDirectory}
 StandardOutput=journal
 StandardError=journal
