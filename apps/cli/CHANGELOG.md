@@ -1,5 +1,11 @@
 # @vessl-ai/mcpctl
 
+## 0.0.12
+
+### Patch Changes
+
+- Start control plane when installed
+
 ## 0.0.11
 
 ### Patch Changes

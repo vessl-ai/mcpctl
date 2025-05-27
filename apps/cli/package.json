@@ -1,6 +1,6 @@
 {
   "name": "@vessl-ai/mcpctl",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "CLI for managing MCP server executions and secrets",
   "author": "Kyle Lee <kyle@vessl.ai>",
   "license": "MIT",
@@ -31,7 +31,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "cp:start": "node dist/main.js control-plane start",
+    "postinstall": "npm run cp:start"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
