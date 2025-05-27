@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       
       - name: Install pnpm
@@ -29,8 +29,21 @@ jobs:
         
       - name: Run postinstall
         run: node scripts/postinstall.js
-        
-      - name: Publish to npm
-        run: pnpm publish --no-git-checks
+
+      # Publish shared package first
+      - name: Publish shared
+        run: cd packages/shared && pnpm publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Publish control-plane package second
+      - name: Publish control-plane
+        run: cd apps/control-plane && pnpm publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Publish cli package last
+      - name: Publish cli
+        run: cd apps/cli && pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} 
