@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ControlPlaneStatus } from '@vessl-ai/mcpctl-shared/types/dto/controlplane';
+import { version } from '../../package.json';
 import { ServerService } from '../server/server.service';
 
 @Injectable()
@@ -22,7 +23,7 @@ export class ControlService {
   async status(): Promise<ControlPlaneStatus> {
     return {
       status: 'running',
-      version: '1.0.0',
+      version: version,
       mcpServers: await this.serverService.listInstances(),
     };
   }
