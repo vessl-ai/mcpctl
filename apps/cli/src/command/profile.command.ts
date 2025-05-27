@@ -21,7 +21,7 @@ async function ensureProfileFile() {
   }
 }
 
-async function readProfiles(): Promise<ProfileMap> {
+export async function readProfiles(): Promise<ProfileMap> {
   await ensureProfileFile();
   const raw = await fs.readFile(PROFILE_PATH, 'utf-8');
   return JSON.parse(raw) as ProfileMap;

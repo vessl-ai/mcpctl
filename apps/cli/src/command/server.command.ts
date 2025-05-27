@@ -6,9 +6,9 @@ import {
 import axios from 'axios';
 import * as fs from 'fs/promises';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
-import * as path from 'path';
 import { AppConfig } from '../config/app.config';
-import { ProfileEnv, ProfileMap } from '../types/profile';
+import { ProfileEnv } from '../types/profile';
+import { readProfiles } from './profile.command';
 
 const chalk = require('chalk');
 
@@ -42,15 +42,8 @@ export class ServerStartCommand extends CommandRunner {
     }
     let env: ProfileEnv = {};
     if (profile) {
-      // Load env from profile
-      const PROFILE_PATH = path.join(
-        process.env.HOME || process.env.USERPROFILE || '.',
-        '.mcpctl',
-        'profiles.json',
-      );
       try {
-        const profilesRaw = await fs.readFile(PROFILE_PATH, 'utf-8');
-        const profiles: ProfileMap = JSON.parse(profilesRaw);
+        const profiles = await readProfiles();
         if (profiles[profile] && profiles[profile].env) {
           env = profiles[profile].env;
         } else {

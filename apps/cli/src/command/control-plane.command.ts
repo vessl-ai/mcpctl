@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { bootstrapControlPlane } from '@vessl-ai/mcpctl-control-plane';
-import { execSync } from 'child_process';
+import { spawn } from 'child_process';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { AppConfig } from '../config/app.config';
 import { OsServiceService } from '../os-service/os-service.service';
@@ -77,10 +77,30 @@ export class ControlPlaneStatusCommand extends CommandRunner {
     } else {
       console.log(chalk.whiteBright(osServiceStatus));
     }
-    const res = await fetch(
-      `${this.appConfig.controlPlaneBaseUrl}/control/status`,
-    );
-    const data = await res.json();
+    let data: any;
+    try {
+      // This fetch can fail for a million stupid reasons, so let's actually handle it like a pro
+      const res = await fetch(
+        `${this.appConfig.controlPlaneBaseUrl}/control/status`,
+      );
+      if (!res.ok) {
+        // If the response is not OK, don't even try to parse JSON. Just rage.
+        console.log(
+          chalk.red.bold(
+            `\n[ERROR] Control Plane API returned status ${res.status}: ${res.statusText}`,
+          ),
+        );
+        return;
+      }
+      data = await res.json();
+    } catch (err: any) {
+      // Of course, fetch can throw. Why wouldn't it? Let's tell the user what went wrong.
+      console.log(
+        chalk.red.bold('\n[ERROR] Failed to fetch Control Plane API status:'),
+        chalk.whiteBright(err?.message || err),
+      );
+      return;
+    }
     console.log(chalk.green.bold('\n🌐 Control Plane API Status:'));
     for (const [k, v] of Object.entries(data)) {
       console.log(
@@ -113,9 +133,16 @@ export class ControlPlaneLogsCommand extends CommandRunner {
     const type = options?.type || 'stdout';
     if (process.platform === 'linux') {
       // parse journalctl
-      console.log(chalk.yellow('Retrieving logs from journalctl...'));
-      const logs = execSync(`journalctl -u mcpctl-control-plane -f`);
-      console.log(chalk.gray(logs.toString()));
+      const logs = spawn('journalctl', ['-u', 'mcpctl-control-plane', '-f']);
+      logs.stdout.on('data', (data) => {
+        console.log(chalk.gray(data.toString()));
+      });
+      logs.stderr.on('data', (data) => {
+        console.log(chalk.red(data.toString()));
+      });
+      logs.on('close', (code) => {
+        console.log(chalk.red(`journalctl closed with code ${code}`));
+      });
     } else {
       const logPath = this.appConfig.controlPlaneLogPath + `/${type}.log`;
       console.log(

@@ -6,7 +6,7 @@ import { CacheableMemory, Keyv } from 'cacheable';
 import { existsSync } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { AppCacheConfig, CacheEntryConfig } from '../config/cache.config';
+import { AppCacheConfig } from '../config/cache.config';
 
 @Injectable()
 export class AppCacheService {
@@ -74,7 +74,7 @@ export class AppCacheService {
 
       // save the entries to a file
       const backupDir =
-        this.configService.get<CacheEntryConfig>('cache')?.backupDir;
+        this.configService.get<AppCacheConfig>('cache')?.defaultCache.backupDir;
       if (!backupDir) {
         this.logger.error('No backup directory found');
         return;

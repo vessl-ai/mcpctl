@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import * as fs from 'fs';
+import { spawn } from 'child_process';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import * as path from 'path';
 import { AppConfig } from '../config/app.config';
@@ -72,14 +72,21 @@ export class LogControlPlaneCommand extends CommandRunner {
     super();
   }
   async run(inputs: string[], options?: Record<string, any>): Promise<void> {
-    console.log(chalk.yellow.bold('📄 Logs for the control plane:'));
-
     const appConfig = this.configService.get<AppConfig>('app');
     if (!appConfig) throw new Error('App config not found');
     const logPath = appConfig.controlPlaneLogPath;
     const logFile = path.join(logPath, 'mcpctl.log');
-    const logs = fs.readFileSync(logFile, 'utf8');
-    console.log(logs);
+
+    // Use less to view the log file without loading it all into memory
+    const less = spawn('less', [logFile], { stdio: 'inherit' });
+    less.on('error', (err) => {
+      // If less fails, print error and fallback to cat
+      console.log(chalk.red('less failed, fallback to cat:'));
+      const cat = spawn('cat', [logFile], { stdio: 'inherit' });
+      cat.on('error', (catErr) => {
+        console.log(chalk.red('cat also failed:'), catErr.message);
+      });
+    });
   }
 }
 

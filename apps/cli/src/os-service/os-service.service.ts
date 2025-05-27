@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { execSync, spawnSync } from 'child_process';
+import { execSync } from 'child_process';
 import { mkdirSync, unlinkSync, writeFileSync } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -8,7 +8,7 @@ import { AppConfig } from '../config/app.config';
 import { getServiceTemplate } from '../templates/service';
 @Injectable()
 export class OsServiceService {
-  SERVICE_NAME = 'mcpctl-control-plane';
+  SERVICE_NAME = 'com.vessl.mcpctl-control-plane';
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -40,7 +40,7 @@ export class OsServiceService {
   async launchAsOsService() {
     const name = this.SERVICE_NAME;
     const description = 'mcpctl control plane';
-    const nodePath = spawnSync('which', ['node']).stdout.toString().trim();
+    const nodePath = process.execPath;
     const entryScript = path.join(
       __dirname,
       '..',
@@ -146,34 +146,37 @@ export class OsServiceService {
     }
   }
 
-  async getServiceStatus() {
+  async getServiceStatus(): Promise<string> {
     switch (process.platform) {
       case 'linux': {
         // systemd user service status
         try {
-          execSync(`systemctl --user status ${this.SERVICE_NAME}`);
+          return execSync(
+            `systemctl --user status ${this.SERVICE_NAME}`,
+          ).toString();
         } catch (err) {
-          console.error(`Failed to get systemd user service status: ${err}`);
+          return `Failed to get systemd user service status: ${err}`;
         }
         break;
       }
       case 'darwin': {
         // launchd user agent status
         try {
-          execSync(`launchctl list | grep ${this.SERVICE_NAME}`);
+          return execSync(
+            `launchctl list | grep ${this.SERVICE_NAME}`,
+          ).toString();
         } catch (err) {
-          console.error(`Failed to get launchd agent status: ${err}`);
+          return `Failed to get launchd agent status: ${err}`;
         }
         break;
       }
       case 'win32': {
         // NSSM user-level service status
         try {
-          execSync(`nssm status ${this.SERVICE_NAME}`);
+          return execSync(`nssm status ${this.SERVICE_NAME}`).toString();
         } catch (err) {
-          console.error(`Failed to get NSSM service status: ${err}`);
+          return `Failed to get NSSM service status: ${err}`;
         }
-        break;
       }
       default:
         throw new Error(`Unsupported platform: ${process.platform}`);
