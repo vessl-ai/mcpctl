@@ -64,6 +64,50 @@ Create a file `server-slack.json`:
 mcpctl server start -f server-slack.json --profile dev
 ```
 
+This will return server information containing server url.
+
+```bash
+🚀 Server started!
+  name: server-slack
+  id = server_instance_<uuid>
+  runSpec = {
+  "name": "server-slack",
+  "resourceType": "remote",
+  "transport": {
+    "type": "stdio"
+  },
+  "command": "npx -y @modelcontextprotocol/server-slack",
+  "env": {
+    "SLACK_TEAM_ID": "T00000000"
+  },
+  "secrets": {
+    "SLACK_BOT_TOKEN": {
+      "source": "keychain",
+      "key": "SLACK_BOT_TOKEN"
+    }
+  },
+  "id": "server_runspec_<uuid>"
+}
+  status = running
+  createdAt = 2025-01-01T00:00:00.000Z
+  updatedAt = 2025-01-01T00:00:00.000Z
+  host = localhost
+  port = 8009
+  transport = {
+  "type": "sse"
+}
+  processId = 1809
+  connectionUrl = http://localhost:8009/sse
+```
+
+## 8. Connect to the Server
+
+```bash
+mcpctl client connect server-slack --client claude|cursor
+```
+
+This will add the SSE URL to the MCP JSON file of the client.
+
 ## 8. Check Server Status
 
 ```bash

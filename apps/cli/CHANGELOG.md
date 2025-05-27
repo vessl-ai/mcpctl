@@ -1,5 +1,11 @@
 # @vessl-ai/mcpctl
 
+## 0.0.11
+
+### Patch Changes
+
+- Add installing mcp server to client
+
 ## 0.0.10
 
 ### Patch Changes

@@ -4,6 +4,8 @@ import * as path from 'path';
 export interface AppConfig {
   controlPlaneBaseUrl: string;
   controlPlaneLogPath: string;
+  claudeMcpJsonFilePath: string;
+  cursorMcpJsonFilePath: string;
 }
 
 export default registerAs<AppConfig>('app', () => ({
@@ -12,4 +14,13 @@ export default registerAs<AppConfig>('app', () => ({
   controlPlaneLogPath:
     process.env.CONTROL_PLANE_LOG_PATH ||
     path.join(os.homedir(), '.mcpctl', 'controlplane', 'logs'),
+  claudeMcpJsonFilePath:
+    process.env.CLAUDE_MCP_JSON_FILE_PATH || os.platform() === 'darwin'
+      ? '~/Library/Application Support/Claude/claude_desktop_config.json'
+      : os.platform() === 'win32'
+        ? '%APPDATA%\\Claude\\claude_desktop_config.json'
+        : '/home/user/.config/claude/claude_desktop_config.json',
+  cursorMcpJsonFilePath:
+    process.env.CURSOR_MCP_JSON_FILE_PATH ||
+    path.join(os.homedir(), '.cursor', 'mcp.json'),
 }));
