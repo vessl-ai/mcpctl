@@ -26,10 +26,6 @@ jobs:
         
       - name: Build
         run: pnpm build
-        
-      - name: Run postinstall
-        run: node scripts/postinstall.js
-
       # Publish shared package first
       - name: Publish shared
         run: cd packages/shared && pnpm publish --no-git-checks
