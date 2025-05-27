@@ -90,8 +90,8 @@ export class OsServiceService {
         execSync(`nssm install ${name} ${nodePath} ${entryScript}`);
         execSync(`nssm set ${name} AppDirectory ${workingDirectory}`);
         execSync(`nssm set ${name} AppEnvironmentExtra NODE_ENV=production`);
-        execSync(`nssm set ${name} AppStdout ${logPath}\\stdout.log`);
-        execSync(`nssm set ${name} AppStderr ${logPath}\\stderr.log`);
+        execSync(`nssm set ${name} AppStdout ${path.join(logPath, 'stdout.log')}`);
+        execSync(`nssm set ${name} AppStderr ${path.join(logPath, 'stderr.log')}`);
         execSync(`nssm start ${name}`);
         console.log(`User-level NSSM service registered: ${name}`);
         break;
