@@ -12,6 +12,9 @@
     "test:workflow:local": "pnpm set-local-npmrc && act -W .github/workflows/test-local-pack.yml --container-architecture linux/amd64 && pnpm reset-npmrc",
     "verdaccio": "verdaccio --config ./verdaccio.yaml",
     "test:local:publish": "bash ./scripts/test-local-publish.sh",
+    "docs:init": "uv sync",
+    "docs:serve": "uv run mkdocs serve -a localhost:9099",
+    "docs:build": "uv run mkdocs build",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
