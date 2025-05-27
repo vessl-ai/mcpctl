@@ -108,19 +108,19 @@ mcpctl client connect server-slack --client claude|cursor
 
 This will add the SSE URL to the MCP JSON file of the client.
 
-## 8. Check Server Status
+## 9. Check Server Status
 
 ```bash
 mcpctl server status server-slack
 ```
 
-## 9. View Server Logs
+## 10. View Server Logs
 
 ```bash
 mcpctl log server server-slack --limit 100
 ```
 
-## 10. Stop and Remove the Server
+## 11. Stop and Remove the Server
 
 ```bash
 mcpctl server stop server-slack
