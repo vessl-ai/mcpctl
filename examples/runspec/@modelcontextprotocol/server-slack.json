@@ -1,0 +1,17 @@
+{
+  "name": "server-slack",
+  "resourceType": "remote",
+  "transport": {
+    "type": "stdio"
+  },
+  "command": "npx -y @modelcontextprotocol/server-slack",
+  "env": {
+    "SLACK_TEAM_ID": "T00000000"
+  },
+  "secrets": {
+    "SLACK_BOT_TOKEN": {
+      "source": "keychain",
+      "key": "slack-bot-token"
+    }
+  }
+}

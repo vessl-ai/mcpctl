@@ -46,3 +46,10 @@ site
 
 # npm pack
 *.tgz
+
+.venv
+
+.npmrc
+
+.verdaccio
+.aider*

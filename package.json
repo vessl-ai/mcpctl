@@ -1,95 +1,35 @@
 {
-  "name": "@vessl-ai/mcpctl",
-  "version": "0.0.7-rc1-local4",
-  "description": "The MCP Execution Control Tool - A tool for controlling the MCP execution",
-  "main": "dist/mcpctl.js",
-  "bin": {
-    "mcpctl": "dist/mcpctl.js",
-    "mcpctld": "dist/mcpctld.js"
-  },
-  "files": [
-    "dist/mcpctl.js",
-    "dist/mcpctld.js",
-    "dist/service-templates.js",
-    "dist/*.js.map",
-    "scripts/postinstall.js",
-    "node_modules/keytar"
-  ],
+  "name": "mcpctl",
+  "private": true,
   "scripts": {
-    "test": "jest",
-    "cli": "ts-node src/cli/cli.ts",
-    "daemon": "ts-node src/daemon/main.ts",
-    "clean": "rm -rf dist",
-    "build": "tsc && node build.js",
-    "pack": "pnpm build && npm pack",
-    "docs:init": "uv sync",
-    "docs:serve": "uv run mkdocs serve -a localhost:9099",
-    "docs:build": "uv run mkdocs build",
-    "install-cli:macos": "cp dist/mcpctl.js /usr/local/bin/mcpctl && cp dist/mcpctld.js /usr/local/bin/mcpctld",
-    "install-cli:linux": "cp dist/mcpctl.js /usr/local/bin/mcpctl && cp dist/mcpctld.js /usr/local/bin/mcpctld",
-    "install-cli:windows": "cp dist/mcpctl.js $env:USERPROFILE\\AppData\\Roaming\\npm\\mcpctl.cmd",
-    "prepublishOnly": "pnpm clean && pnpm build",
-    "postinstall": "node scripts/postinstall.js"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types",
+    "reset-npmrc": "bash ./scripts/reset-npmrc.sh",
+    "set-local-npmrc": "bash ./scripts/set-local-npmrc.sh",
+    "test:workflow:local": "pnpm set-local-npmrc && act -W .github/workflows/test-local-pack.yml --container-architecture linux/amd64 && pnpm reset-npmrc",
+    "verdaccio": "verdaccio --config ./verdaccio.yaml",
+    "test:local:publish": "bash ./scripts/test-local-publish.sh"
   },
-  "keywords": [
-    "mcp",
-    "cli",
-    "control",
-    "execution",
-    "modelcontextprotocol",
-    "config-management"
-  ],
-  "author": "Jaejun Kyle Lee<kyle@vessl.ai>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/vessl-ai/mcpctl.git"
-  },
-  "bugs": {
-    "url": "https://github.com/vessl-ai/mcpctl/issues"
-  },
-  "homepage": "https://github.com/vessl-ai/mcpctl#readme",
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "os": [
-    "darwin",
-    "linux",
-    "win32"
-  ],
-  "cpu": [
-    "x64",
-    "arm64"
-  ],
   "devDependencies": {
-    "@jest/globals": "^29.7.0",
-    "@types/argparse": "^2.0.17",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.14.0",
-    "@types/node-fetch": "^2.6.12",
-    "@types/uuid": "^10.0.0",
-    "esbuild": "^0.20.2",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.3.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "@changesets/cli": "^2.29.4",
+    "@rollup/plugin-alias": "^5.1.1",
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "prettier": "^3.5.3",
+    "rollup": "^4.41.0",
+    "turbo": "^2.5.3",
+    "typescript": "5.8.2",
+    "verdaccio": "^6.1.2"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.9.0",
-    "arg": "^5.0.2",
-    "argparse": "^2.0.1",
-    "axios": "^1.8.4",
-    "chalk": "^4.0.0",
-    "cli-table3": "^0.6.5",
-    "eventsource": "^3.0.6",
-    "inquirer": "^12.6.0",
-    "keytar": "^7.9.0",
-    "node-fetch": "^3.3.2",
-    "openai": "^4.95.0",
-    "portfinder": "^1.0.35",
-    "uuid": "^11.1.0",
-    "vscode-jsonrpc": "^8.2.1",
-    "winston": "^3.17.0",
-    "zod": "^3.24.2"
+    "chalk": "4"
   }
 }

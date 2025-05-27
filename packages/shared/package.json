@@ -1,0 +1,79 @@
+{
+  "name": "@vessl-ai/mcpctl-shared",
+  "version": "0.0.2",
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "exports": {
+    "./common": {
+      "types": "./src/common/index.ts",
+      "default": "./dist/common/index.js"
+    },
+    "./constants": {
+      "types": "./src/constants/index.ts",
+      "default": "./dist/constants/index.js"
+    },
+    "./proto/http/server": {
+      "types": "./src/proto/http/server/index.ts",
+      "default": "./dist/proto/http/server/index.js"
+    },
+    "./types/domain/server": {
+      "types": "./src/types/domain/server/index.ts",
+      "default": "./dist/types/domain/server/index.js"
+    },
+    "./types/domain/secret": {
+      "types": "./src/types/domain/secret/index.ts",
+      "default": "./dist/types/domain/secret/index.js"
+    },
+    "./types/dto/server": {
+      "types": "./src/types/dto/server/index.ts",
+      "default": "./dist/types/dto/server/index.js"
+    },
+    "./types/dto/controlplane": {
+      "types": "./src/types/dto/controlplane/index.ts",
+      "default": "./dist/types/dto/controlplane/index.js"
+    },
+    "./types/common": {
+      "types": "./src/types/common/index.ts",
+      "default": "./dist/types/common/index.js"
+    },
+    "./util": {
+      "types": "./src/util/index.ts",
+      "default": "./dist/util/index.js"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "typescript": "latest"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "crypto": "^1.0.1"
+  },
+  "main": "./dist/common/index.js",
+  "types": "./src/common/index.ts",
+  "description": "Shared utilities and types for mcpctl by VESSL AI",
+  "author": "Kyle Lee <kyle@vessl.ai>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vessl-ai/mcpctl.git"
+  },
+  "homepage": "https://github.com/vessl-ai/mcpctl#readme",
+  "bugs": {
+    "url": "https://github.com/vessl-ai/mcpctl/issues"
+  },
+  "keywords": [
+    "mcpctl",
+    "model-context-protocol",
+    "typescript"
+  ],
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

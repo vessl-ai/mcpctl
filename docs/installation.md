@@ -2,148 +2,70 @@
 
 ## Prerequisites
 
-Before installing MCPCTL, ensure you have the following:
-
 - Node.js 18.17.1 or higher
-- Administrator/sudo privileges (for global installation)
-- Package manager (npm, pnpm, or yarn)
+- Package manager (npm or pnpm recommended)
 
-## Installation Methods
+## Install MCPCTL (CLI)
 
-### Global Installation
-
-#### Using npm
+### Using npm
 
 ```bash
-# Linux/macOS
-sudo npm install -g @vessl-ai/mcpctl
-
-# Windows (Run PowerShell as Administrator)
 npm install -g @vessl-ai/mcpctl
 ```
 
-#### Using pnpm
+### Using pnpm
 
 ```bash
-sudo pnpm install -g @vessl-ai/mcpctl
+pnpm install -g @vessl-ai/mcpctl
 ```
 
-#### Using yarn
-
-```bash
-sudo yarn global add @vessl-ai/mcpctl
-```
-
-### What Gets Installed
-
-The installation process will:
-
-1. Install `mcpctl` and `mcpctld` commands globally
-2. Create log directories:
-   - Unix: `/var/log/mcpctl`
-   - Windows: `C:\ProgramData\mcpctl\logs`
-3. Set up and start the daemon service:
-   - macOS: LaunchDaemon
-   - Linux: systemd service
-   - Windows: Windows Service
-
-## Post-Installation
-
-### Verifying Installation
-
-Check if MCPCTL is installed correctly:
+## Verify Installation
 
 ```bash
 mcpctl --version
 ```
 
-### Daemon Service
+## Control Plane (Daemon) Management
 
-#### Starting the Daemon
+After installation, you can manage the control plane (background service) with the following commands:
 
-If the daemon service wasn't started during installation:
+- Start:
+  ```bash
+  mcpctl control-plane start
+  ```
+- Stop:
+  ```bash
+  mcpctl control-plane stop
+  ```
+- Status:
+  ```bash
+  mcpctl control-plane status
+  ```
+- Restart:
+  ```bash
+  mcpctl control-plane restart
+  ```
+
+> On macOS/Linux, you may need to use `sudo` for global install or to start the control plane as a system service.
+
+## Updating MCPCTL
 
 ```bash
-# Linux/macOS
-sudo mcpctl daemon start
-
-# Windows (Run as Administrator)
-mcpctl daemon start
+npm update -g @vessl-ai/mcpctl
+# or
+pnpm update -g @vessl-ai/mcpctl
 ```
 
-#### Checking Daemon Status
+## Uninstall MCPCTL
 
 ```bash
-mcpctl daemon status
-```
-
-#### Restarting the Daemon
-
-```bash
-# Linux/macOS
-sudo mcpctl daemon stop
-sudo mcpctl daemon start
-
-# Windows (Run as Administrator)
-mcpctl daemon stop
-mcpctl daemon start
+npm uninstall -g @vessl-ai/mcpctl
+# or
+pnpm uninstall -g @vessl-ai/mcpctl
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Permission Denied**
-
-   - Ensure you're using sudo/administrator privileges
-   - Check file permissions in log directories
-
-2. **Daemon Service Issues**
-
-   - Check daemon logs:
-     - Unix: `/var/log/mcpctl/daemon.log`
-     - Windows: `C:\ProgramData\mcpctl\logs\daemon.log`
-   - Verify service status
-   - Try restarting the daemon
-
-3. **Node.js Version Issues**
-   - Ensure Node.js version is 18.17.1 or higher
-   - Use nvm or similar tool to manage Node.js versions
-
-### Getting Help
-
-If you encounter issues not covered here:
-
-1. Check the [GitHub Issues](https://github.com/vessl-ai/mcpctl/issues)
-2. Join our community chat
-3. Contact support
-
-## Updating MCPCTL
-
-To update to the latest version:
-
-```bash
-# Linux/macOS
-sudo npm update -g @vessl-ai/mcpctl
-
-# Windows (Run as Administrator)
-npm update -g @vessl-ai/mcpctl
-```
-
-## Uninstallation
-
-To remove MCPCTL:
-
-```bash
-# Linux/macOS
-sudo npm uninstall -g @vessl-ai/mcpctl
-
-# Windows (Run as Administrator)
-npm uninstall -g @vessl-ai/mcpctl
-```
-
-This will:
-
-1. Remove the global commands
-2. Stop and remove the daemon service
-3. Clean up log directories (manual cleanup may be required)
+- Make sure your Node.js version is 18.17.1 or higher
+- If you see permission errors, try with `sudo` (macOS/Linux)
+- For more help, check [GitHub Issues](https://github.com/vessl-ai/mcpctl/issues)
