@@ -16,10 +16,25 @@ export default registerAs<AppConfig>('app', () => ({
     path.join(os.homedir(), '.mcpctl', 'controlplane', 'logs'),
   claudeMcpJsonFilePath:
     process.env.CLAUDE_MCP_JSON_FILE_PATH || os.platform() === 'darwin'
-      ? '~/Library/Application Support/Claude/claude_desktop_config.json'
+      ? path.join(
+          os.homedir(),
+          'Library',
+          'Application Support',
+          'Claude',
+          'claude_desktop_config.json',
+        )
       : os.platform() === 'win32'
-        ? '%APPDATA%\\Claude\\claude_desktop_config.json'
-        : '/home/user/.config/claude/claude_desktop_config.json',
+        ? path.join(
+            process.env.APPDATA || '',
+            'Claude',
+            'claude_desktop_config.json',
+          )
+        : path.join(
+            os.homedir(),
+            '.config',
+            'claude',
+            'claude_desktop_config.json',
+          ),
   cursorMcpJsonFilePath:
     process.env.CURSOR_MCP_JSON_FILE_PATH ||
     path.join(os.homedir(), '.cursor', 'mcp.json'),

@@ -109,6 +109,7 @@ export class ConnectCommand extends CommandRunner {
     const { serverName, serverUrl, clientName, mcpJsonFilePath } = param;
     if (clientName) {
       console.log(chalk.green.bold('🔗 Adding SSE URL to client...'));
+      // TODO: move to a separate service
       if (clientName === 'claude') {
         const claudeMcpJsonFilePath = appConfig.claudeMcpJsonFilePath;
         const claudeMcpJsonFile = await fs.readFile(
@@ -116,9 +117,11 @@ export class ConnectCommand extends CommandRunner {
           'utf8',
         );
         const mcpJson: McpJson = JSON.parse(claudeMcpJsonFile);
+        // for claude, we need to wrap with stdio
         mcpJson.mcpServers[serverName] = {
-          type: 'url',
-          url: serverUrl,
+          type: 'stdio',
+          command: 'npx',
+          args: ['-y', 'supergateway', '--sse', serverUrl],
         };
         await fs.writeFile(
           claudeMcpJsonFilePath,

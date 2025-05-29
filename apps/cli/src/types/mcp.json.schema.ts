@@ -6,7 +6,7 @@ export interface StdioServer {
   type: 'stdio';
   command: string;
   args: string[];
-  env: Record<string, string>;
+  env?: Record<string, string>;
 }
 
 export interface SseServer {
