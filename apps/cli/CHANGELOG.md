@@ -1,5 +1,11 @@
 # @vessl-ai/mcpctl
 
+## 0.0.13
+
+### Patch Changes
+
+- Add sse support for claude
+
 ## 0.0.12
 
 ### Patch Changes
