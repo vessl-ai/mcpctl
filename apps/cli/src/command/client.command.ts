@@ -121,7 +121,7 @@ export class ConnectCommand extends CommandRunner {
         mcpJson.mcpServers[serverName] = {
           type: 'stdio',
           command: 'npx',
-          args: ['-y', 'supergateway', '--sse', serverUrl],
+          args: ['-y', 'mcp-remote', serverUrl],
         };
         await fs.writeFile(
           claudeMcpJsonFilePath,

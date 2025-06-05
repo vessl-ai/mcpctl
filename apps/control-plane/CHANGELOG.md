@@ -1,5 +1,13 @@
 # @vessl-ai/mcpctl-control-plane
 
+## 0.0.4
+
+### Patch Changes
+
+- Add sse server instance type
+- Updated dependencies
+  - @vessl-ai/mcpctl-shared@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes

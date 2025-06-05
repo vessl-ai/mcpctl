@@ -29,4 +29,5 @@ export interface ServerInstance {
     memory: number;
     disk: number;
   };
+  env?: Record<string, string>;
 }

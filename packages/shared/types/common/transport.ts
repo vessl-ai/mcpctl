@@ -6,5 +6,6 @@ export enum TransportType {
 
 export interface Transport {
   type: TransportType;
+  host?: string;
   port?: number;
 }

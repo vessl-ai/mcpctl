@@ -16,7 +16,7 @@ import {
   generateServerInstanceId,
   generateServerRunSpecId,
 } from '@vessl-ai/mcpctl-shared/util';
-import { spawn } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppCacheService } from '../cache/appcache.service';
@@ -82,18 +82,9 @@ export class ServerService implements OnModuleInit, OnModuleDestroy {
     runSpec.id = generateServerRunSpecId();
 
     // 1. start a mcp server with the run config
-    let instance: ServerInstance;
-    switch (runSpec.transport.type) {
-      case TransportType.Stdio:
-        instance = await this.startStdioServer(runSpec);
-        break;
-      case TransportType.Sse:
-        instance = await this.startSseServer(runSpec);
-        break;
-      case TransportType.StreamableHttp:
-        instance = await this.startStreamableHttpServer(runSpec);
-        break;
-    }
+    let instance: ServerInstance = await this.initializeServerInstance(runSpec);
+    instance = await this.startServer(instance);
+
     // 2. save the server spec and instance to the cache
     this.instances[instance.id] = instance;
     await this.upsertRunSpecList(runSpec);
@@ -123,10 +114,11 @@ export class ServerService implements OnModuleInit, OnModuleDestroy {
     return resolvedSecret;
   }
 
-  private async startStdioServer(
+  private async initializeServerInstance(
     runSpec: ServerRunSpec,
   ): Promise<ServerInstance> {
     // 1. start a mcp server with supergateway wrapper
+    const port = runSpec.transport.port ?? (await findFreePort());
     const serverInstance: ServerInstance = {
       id: generateServerInstanceId(),
       name: runSpec.name,
@@ -134,8 +126,8 @@ export class ServerService implements OnModuleInit, OnModuleDestroy {
       status: ServerInstanceStatus.Running,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      host: 'localhost',
-      port: await findFreePort(),
+      host: runSpec.transport.host ?? 'localhost',
+      port,
       transport: runSpec.transport,
     };
 
@@ -153,14 +145,74 @@ export class ServerService implements OnModuleInit, OnModuleDestroy {
       )}`,
     );
 
-    const env = {
+    const env: Record<string, string> = {
       ...serverInstance.runSpec.env,
       ...resolvedSecret,
-      PATH: process.env.PATH, // add PATH for launchd, otherwise npx/node/npm will not be found!
     };
+    if (process.env.PATH) {
+      env['PATH'] = process.env.PATH; // add PATH for launchd, otherwise npx/node/npm will not be found!
+    }
 
-    this.logger.debug(`Env: ${JSON.stringify(env)}`);
+    serverInstance.logsPath = logFile;
+    serverInstance.env = env;
 
+    return serverInstance;
+  }
+
+  private async startServer(serverInstance: ServerInstance) {
+    let child: ChildProcess | undefined;
+    if (serverInstance.transport.type === TransportType.Stdio) {
+      child = await this.startStdioServer(serverInstance);
+    } else if (serverInstance.transport.type === TransportType.Sse) {
+      child = await this.startSseServer(serverInstance);
+    } else if (serverInstance.transport.type === TransportType.StreamableHttp) {
+      child = await this.startStreamableHttpServer(serverInstance);
+    }
+    if (!child) {
+      throw new Error(`Failed to start server ${serverInstance.id}`);
+    }
+    this.logger.debug(
+      `Started server ${serverInstance.id} with args: ${child.spawnargs}, env: ${JSON.stringify(
+        serverInstance.env,
+      )}`,
+    );
+
+    child.on('error', (error) => {
+      this.logger.error(
+        `Failed to start server ${serverInstance.id}: ${error}`,
+      );
+    });
+
+    if (serverInstance.logsPath) {
+      const logFileStream = fs.createWriteStream(serverInstance.logsPath);
+      if (child.stdout) {
+        child.stdout.pipe(logFileStream);
+      }
+      if (child.stderr) {
+        child.stderr.pipe(logFileStream);
+      }
+    }
+
+    child.on('close', async (code, signal) => {
+      this.logger.log(`Server ${serverInstance.id} closed with code ${code}`);
+      const instance = (await this.getServerInstances())[serverInstance.id];
+      if (instance) {
+        instance.status = ServerInstanceStatus.Stopped;
+        instance.updatedAt = new Date().toISOString();
+        await this.setServerInstances(this.instances);
+        await this.deleteRunSpecList(instance.runSpec);
+      }
+      this.logger.log(`Server ${serverInstance.id} stopped`);
+    });
+
+    serverInstance.processId = child.pid;
+    serverInstance.processHandle = child;
+    return serverInstance;
+  }
+
+  private async startStdioServer(
+    serverInstance: ServerInstance,
+  ): Promise<ChildProcess> {
     const child = spawn(
       'npx',
       [
@@ -178,58 +230,35 @@ export class ServerService implements OnModuleInit, OnModuleDestroy {
         '/message',
       ],
       {
-        env,
+        env: serverInstance.env,
       },
     );
-
-    this.logger.debug(
-      `Started server ${serverInstance.id} with args: ${child.spawnargs}, env: ${JSON.stringify(
-        env,
-      )}`,
-    );
-
-    child.on('error', (error) => {
-      this.logger.error(
-        `Failed to start server ${serverInstance.id}: ${error}`,
-      );
-    });
-
-    const logFileStream = fs.createWriteStream(logFile);
-    child.stdout.pipe(logFileStream);
-    child.stderr.pipe(logFileStream);
-
-    child.on('close', async (code, signal) => {
-      this.logger.log(`Server ${serverInstance.id} closed with code ${code}`);
-      const instance = (await this.getServerInstances())[serverInstance.id];
-      if (instance) {
-        instance.status = ServerInstanceStatus.Stopped;
-        instance.updatedAt = new Date().toISOString();
-        await this.setServerInstances(this.instances);
-        await this.deleteRunSpecList(instance.runSpec);
-      }
-      this.logger.log(`Server ${serverInstance.id} stopped`);
-    });
-
-    serverInstance.processId = child.pid;
-    serverInstance.processHandle = child;
 
     serverInstance.transport = {
       type: TransportType.Sse,
     };
     serverInstance.connectionUrl = `http://${serverInstance.host}:${serverInstance.port}/sse`;
-    return serverInstance;
+
+    return child;
   }
 
   private async startSseServer(
-    runSpec: ServerRunSpec,
-  ): Promise<ServerInstance> {
-    // TODO: Implement start logic
-    throw new Error('Not implemented');
+    serverInstance: ServerInstance,
+  ): Promise<ChildProcess> {
+    const [command, ...args] = serverInstance.runSpec.command.split(' ');
+    const child = spawn(command, args, {
+      env: serverInstance.env,
+    });
+    serverInstance.transport = {
+      type: TransportType.Sse,
+    };
+    serverInstance.connectionUrl = `http://${serverInstance.host}:${serverInstance.port}/sse`;
+    return child;
   }
 
   private async startStreamableHttpServer(
-    runSpec: ServerRunSpec,
-  ): Promise<ServerInstance> {
+    serverInstance: ServerInstance,
+  ): Promise<ChildProcess> {
     // TODO: Implement start logic
     throw new Error('Not implemented');
   }

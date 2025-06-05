@@ -1,0 +1,24 @@
+{
+  "name": "server-google-forms",
+  "resourceType": "remote",
+  "transport": {
+    "type": "sse",
+    "host": "localhost",
+    "port": 3000
+  },
+  "command": "npx -y @vessl-ai/google-forms-mcp-server",
+  "env": {
+    "HOST": "localhost",
+    "PORT": "3000"
+  },
+  "secrets": {
+    "GOOGLE_CLIENT_ID": {
+      "source": "keychain",
+      "key": "google-client-id"
+    },
+    "GOOGLE_CLIENT_SECRET": {
+      "source": "keychain",
+      "key": "google-client-secret"
+    }
+  }
+}
