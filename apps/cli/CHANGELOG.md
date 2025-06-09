@@ -1,5 +1,11 @@
 # @vessl-ai/mcpctl
 
+## 0.0.15
+
+### Patch Changes
+
+- Add toolset management
+
 ## 0.0.14
 
 ### Patch Changes

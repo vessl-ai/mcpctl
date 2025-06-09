@@ -1,13 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
   "include": [
-    "**/*.ts", "src/templates/control-plane/entrypoint.js.template",
+    "src/**/*.ts", "src/templates/control-plane/entrypoint.js.template",
   ],
   "exclude": [
     "node_modules",
+    "dist",
     "**/*.test.ts"
   ]
 }

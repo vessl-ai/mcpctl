@@ -133,6 +133,32 @@ mcpctl profile env list [--profile <name>]
 mcpctl profile env delete <key> [--profile <name>]
 ```
 
+### Toolset Management
+
+#### Save Toolset
+
+```bash
+mcpctl toolset save <name> --client <client> [--description <desc>]
+```
+
+// Save the current client config's toolset (servers) as a named toolset file. Optionally add a description.
+
+#### Load Toolset
+
+```bash
+mcpctl toolset load <name> --client <client>
+```
+
+// Load a saved toolset into the current client config. Prompts to save the current config before loading.
+
+#### List Toolsets
+
+```bash
+mcpctl toolset list [--client <client>]
+```
+
+// List all saved toolsets for the given client (or all clients).
+
 ### Control Plane Management
 
 #### Start Control Plane

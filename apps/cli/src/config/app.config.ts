@@ -6,6 +6,7 @@ export interface AppConfig {
   controlPlaneLogPath: string;
   claudeMcpJsonFilePath: string;
   cursorMcpJsonFilePath: string;
+  toolsetDirPath: string;
 }
 
 export default registerAs<AppConfig>('app', () => ({
@@ -38,4 +39,7 @@ export default registerAs<AppConfig>('app', () => ({
   cursorMcpJsonFilePath:
     process.env.CURSOR_MCP_JSON_FILE_PATH ||
     path.join(os.homedir(), '.cursor', 'mcp.json'),
+  toolsetDirPath:
+    process.env.TOOLSET_DIR_PATH ||
+    path.join(os.homedir(), '.mcpctl', 'toolsets'),
 }));

@@ -3,11 +3,12 @@ import { TransportType } from '@vessl-ai/mcpctl-shared/types/common';
 import { ServerInstance } from '@vessl-ai/mcpctl-shared/types/domain/server';
 import axios from 'axios';
 import { spawnSync } from 'child_process';
-import * as fs from 'fs/promises';
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import openEditor from 'open-editor';
+import { ClientService } from '../client/client.service';
 import { AppConfig } from '../config/app.config';
-import { McpJson } from '../types/mcp.json.schema';
+import { ClientType } from '../types/client';
+import { McpJson, SseServer, StdioServer } from '../types/mcp.json.schema';
 
 const chalk = require('chalk');
 
@@ -17,7 +18,10 @@ const chalk = require('chalk');
   arguments: '<server-name>',
 })
 export class ConnectCommand extends CommandRunner {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly clientService: ClientService,
+  ) {
     super();
   }
   async run(inputs: string[], options?: Record<string, any>): Promise<void> {
@@ -109,57 +113,28 @@ export class ConnectCommand extends CommandRunner {
     const { serverName, serverUrl, clientName, mcpJsonFilePath } = param;
     if (clientName) {
       console.log(chalk.green.bold('🔗 Adding SSE URL to client...'));
-      // TODO: move to a separate service
-      if (clientName === 'claude') {
-        const claudeMcpJsonFilePath = appConfig.claudeMcpJsonFilePath;
-        const claudeMcpJsonFile = await fs.readFile(
-          claudeMcpJsonFilePath,
-          'utf8',
-        );
-        const mcpJson: McpJson = JSON.parse(claudeMcpJsonFile);
-        // for claude, we need to wrap with stdio
-        mcpJson.mcpServers[serverName] = {
-          type: 'stdio',
-          command: 'npx',
-          args: ['-y', 'mcp-remote', serverUrl],
-        };
-        await fs.writeFile(
-          claudeMcpJsonFilePath,
-          JSON.stringify(mcpJson, null, 2),
-          'utf8',
-        );
-        console.log(chalk.green.bold('🔗 Added SSE URL to Claude'));
-        return mcpJson;
-      } else if (clientName === 'cursor') {
-        const cursorMcpJsonFilePath = appConfig.cursorMcpJsonFilePath;
-        const cursorMcpJsonFile = await fs.readFile(
-          cursorMcpJsonFilePath,
-          'utf8',
-        );
-        const mcpJson: McpJson = JSON.parse(cursorMcpJsonFile);
-        mcpJson.mcpServers[serverName] = {
-          type: 'url',
-          url: serverUrl,
-        };
-        await fs.writeFile(
-          cursorMcpJsonFilePath,
-          JSON.stringify(mcpJson, null, 2),
-          'utf8',
-        );
-        console.log(chalk.green.bold('🔗 Added SSE URL to Cursor'));
-        return mcpJson;
-      }
+      const server: StdioServer = {
+        type: 'stdio',
+        command: 'npx',
+        args: ['-y', 'mcp-remote', serverUrl],
+      };
+      const mcpJson = await this.clientService.upsertServerToClientConfig(
+        clientName as ClientType,
+        serverName,
+        server,
+      );
+
+      console.log(chalk.green.bold('🔗 Added SSE URL to client'));
+      return mcpJson;
     } else if (mcpJsonFilePath) {
-      const mcpJsonFile = await fs.readFile(mcpJsonFilePath, 'utf8');
-      const mcpJson: McpJson = JSON.parse(mcpJsonFile);
-      mcpJson.mcpServers[serverName] = {
+      const server: SseServer = {
         type: 'url',
         url: serverUrl,
       };
-      await fs.writeFile(
+      const mcpJson = await this.clientService.upsertServerToClientConfigFile(
         mcpJsonFilePath,
-        JSON.stringify(mcpJson, null, 2),
-        'utf8',
+        serverName,
+        server,
       );
       console.log(chalk.green.bold('🔗 Added SSE URL to MCP JSON file'));
       return mcpJson;

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ClientModule } from './client/client.module';
 import { CommandModule } from './command/command.module';
 import { configurations } from './config';
 import { OsServiceModule } from './os-service/os-service.module';
@@ -12,6 +13,7 @@ import { OsServiceModule } from './os-service/os-service.module';
       isGlobal: true,
     }),
     OsServiceModule,
+    ClientModule,
   ],
   providers: [],
 })

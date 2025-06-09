@@ -156,6 +156,32 @@ mcpctl <command> [subcommand] [options]
   mcpctl control-plane logs [--type <stdout|stderr>]
   ```
 
+### Toolset Management (`toolset`)
+
+- Save a toolset:
+
+  ```bash
+  mcpctl toolset save <name> --client <client> [--description <desc>]
+  ```
+
+  // Save the current client config's toolset (servers) as a named toolset file. Optionally add a description.
+
+- Load a toolset:
+
+  ```bash
+  mcpctl toolset load <name> --client <client>
+  ```
+
+  // Load a saved toolset into the current client config. Prompts to save the current config before loading.
+
+- List toolsets:
+
+  ```bash
+  mcpctl toolset list [--client <client>]
+  ```
+
+  // List all saved toolsets for the given client (or all clients).
+
 ## Configuration
 
 - All configuration, profiles, and secrets are stored in `~/.mcpctl` by default.

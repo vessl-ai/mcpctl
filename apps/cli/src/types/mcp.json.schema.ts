@@ -1,6 +1,4 @@
-export interface Server {
-  type: 'stdio' | 'url';
-}
+export type Server = StdioServer | SseServer;
 
 export interface StdioServer {
   type: 'stdio';
