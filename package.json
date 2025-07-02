@@ -19,22 +19,22 @@
     "release": "pnpm build:no-cache && changeset publish"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.4",
+    "@changesets/cli": "^2.29.5",
     "@rollup/plugin-alias": "^5.1.1",
-    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-typescript": "^12.1.2",
-    "prettier": "^3.5.3",
-    "rollup": "^4.41.0",
-    "turbo": "^2.5.3",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "prettier": "^3.6.2",
+    "rollup": "^4.44.1",
+    "turbo": "^2.5.4",
     "typescript": "5.8.2",
-    "verdaccio": "^6.1.2"
+    "verdaccio": "^6.1.5"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "chalk": "4"
+    "chalk": "^4.1.2"
   }
 }
