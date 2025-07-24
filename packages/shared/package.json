@@ -44,11 +44,11 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^22.16.0",
+    "@types/node": "^22.16.5",
     "typescript": "latest"
   },
   "dependencies": {
-    "axios": "^1.10.0",
+    "axios": "^1.11.0",
     "crypto": "^1.0.1"
   },
   "main": "./dist/common/index.js",
